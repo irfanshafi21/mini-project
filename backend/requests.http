@@ -1,0 +1,62 @@
+### Try these in VS Code with the "REST Client" extension (click "Send Request" above each block)
+
+@base = http://localhost:4000/api
+
+### Health check
+GET {{base}}/health
+
+### MANUAL ENTRY - add a question (number Q101, Q102... is assigned automatically)
+POST {{base}}/questions
+Content-Type: application/json
+
+{
+  "unit": 1,
+  "topic": "Java",
+  "subtopic": "Stack",
+  "difficulty": "EASY",
+  "marks": 2,
+  "text": "What is a stack?"
+}
+
+### List / filter / search
+GET {{base}}/questions?unit=1&topic=java&difficulty=easy
+
+### Get one question (101 or Q101)
+GET {{base}}/questions/Q101
+
+### Update
+PUT {{base}}/questions/Q101
+Content-Type: application/json
+
+{
+  "unit": 1,
+  "topic": "Java",
+  "subtopic": "Stack",
+  "difficulty": "MEDIUM",
+  "marks": 5,
+  "text": "Explain stack operations with an example."
+}
+
+### Delete (soft delete)
+DELETE {{base}}/questions/Q101
+
+### Deleted list
+GET {{base}}/questions/deleted
+
+### Undo the last delete
+POST {{base}}/questions/undo
+
+### Statistics
+GET {{base}}/stats
+
+### AUTOMATIC - pick questions by topic / subtopic / marks / difficulty
+POST {{base}}/generate/questions
+Content-Type: application/json
+
+{ "topic": "Java", "subtopic": "Stack", "marks": 2, "difficulty": "EASY", "count": 3 }
+
+### Generate a balanced question paper (unit 0 = all units)
+POST {{base}}/papers/generate
+Content-Type: application/json
+
+{ "unit": 1, "topic": "Java", "totalMarks": 24, "split": { "easy": 40, "medium": 40, "hard": 20 } }

@@ -1,0 +1,69 @@
+import { z } from 'zod';
+
+export const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'];
+export const TOTAL_UNITS = 5;
+
+// "data structures" -> "DATA_STRUCTURES"  (same rule as the Java CLI)
+export const normalizeName = (s) => s.trim().toUpperCase().replace(/\s+/g, '_');
+
+const name = z.string().trim().min(1, 'cannot be empty').max(60).transform(normalizeName);
+const unit = z.coerce.number().int().min(1).max(TOTAL_UNITS);
+const marks = z.coerce.number().int().min(1).max(100);
+const difficulty = z.preprocess(
+  (v) => (typeof v === 'string' ? v.trim().toUpperCase() : v),
+  z.enum(DIFFICULTIES, { error: 'difficulty must be EASY, MEDIUM or HARD' }),
+);
+
+export const questionBody = z.object({
+  unit,
+  topic: name,
+  subtopic: name,
+  difficulty,
+  marks,
+  text: z.string().trim().max(2000).default(''),
+});
+
+export const listQuery = z.object({
+  unit: unit.optional(),
+  topic: name.optional(),
+  subtopic: name.optional(),
+  difficulty: difficulty.optional(),
+  marks: marks.optional(),
+  q: z.string().trim().max(200).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const paperBody = z
+  .object({
+    unit: z.coerce.number().int().min(0).max(TOTAL_UNITS).default(0), // 0 = all units
+    topic: name.optional(),
+    subtopic: name.optional(),
+    totalMarks: z.coerce.number().int().min(1).max(1000),
+    split: z
+      .object({
+        easy: z.coerce.number().min(0).max(100),
+        medium: z.coerce.number().min(0).max(100),
+        hard: z.coerce.number().min(0).max(100),
+      })
+      .default({ easy: 40, medium: 40, hard: 20 }),
+  })
+  .refine((b) => Math.abs(b.split.easy + b.split.medium + b.split.hard - 100) < 0.001, {
+    message: 'split percentages must add up to 100',
+    path: ['split'],
+  });
+
+export const autoBody = z.object({
+  unit: unit.optional(),
+  topic: name,
+  subtopic: name.optional(),
+  marks,
+  difficulty,
+  count: z.coerce.number().int().min(1).max(50).default(5),
+});
+
+// accepts 101 or "Q101"
+export function parseId(raw) {
+  const m = /^q?(\d+)$/i.exec(String(raw).trim());
+  return m ? Number(m[1]) : null;
+}

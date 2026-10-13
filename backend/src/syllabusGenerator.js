@@ -6,6 +6,7 @@ export { planPaper } from './javaCore.js';
 
 export const syllabusBody = z.object({
   subject: z.string().trim().min(1).max(60).transform(normalizeName),
+  unit: z.number().int().min(1).max(5).default(1),
   fileName: z.string().min(1).max(200),
   mimeType: z.enum(['application/pdf', 'text/plain']),
   data: z.string().min(1).max(7_000_000).regex(/^[A-Za-z0-9+/]+={0,2}$/),
@@ -21,7 +22,7 @@ export const syllabusBody = z.object({
 const questionSchema = z.object({
   topic: z.string().trim().min(1).max(200),
   subtopic: z.string().trim().min(1).max(200),
-  text: z.string().trim().min(10).max(3000),
+  text: z.string().trim().min(10).max(2000),
   syllabusReference: z.string().trim().min(1).max(500),
 });
 

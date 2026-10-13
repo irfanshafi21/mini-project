@@ -2,9 +2,11 @@
 
 A simple three-part application: **React + Vite** renders the interface, **Node.js + Express** exposes the API and calls Gemini, and **Java** runs the core paper algorithms. PostgreSQL stores the question bank.
 
-## Paperwise interface
+## Simple interface
 
 The interface has a question bank, subject collections, and a Create a Paper workspace. Add and edit questions by subject, unit, topic, subtopic, difficulty and marks. Search/filter the bank, browse pages, and undo a soft deletion. Create a paper by choosing **Your question bank** or **Upload a syllabus**, then configure the paper and review it before downloading TXT or printing/saving PDF.
+
+The interface uses light blue and warm cream colors. It has no login, registration or user profile. Unused starter images/icons were removed, and frontend styles are in one `App.css` file.
 
 After updating an existing installation, run `npm run db:init` in `backend` once. This adds the subject column and subject-aware duplicate index without deleting question rows. Existing questions are assigned to **General**; edit them to set their subjects. Generated syllabus questions are not automatically stored.
 
@@ -55,8 +57,6 @@ mini-project/
         ├── App.jsx                # Question bank and stored-paper interface
         ├── SyllabusPaper.jsx      # Syllabus upload, generated preview and download
         ├── App.css
-        ├── index.css
-        └── assets/
 ```
 
 ## How it works
@@ -68,30 +68,92 @@ mini-project/
 
 ## Run locally
 
-Install **Node.js 22.12+**, **JDK 17+** (`java -version` must work), and **PostgreSQL**.
+### Open in VS Code on Windows
 
-1. Create the database:
+1. Download/clone this repository, then use **File → Open Folder** in VS Code and open the **mini-project** folder (the folder containing `frontend`, `backend`, `core` and this README). You do not need to open every file separately.
+2. Install Node.js 22.12 or newer, JDK 17 or newer, and PostgreSQL. Open **Terminal → New Terminal** and check:
+   ```powershell
+   node --version
+   npm --version
+   java -version
+   ```
+   If a command is not recognized, install the corresponding tool and reopen VS Code so its PATH updates.
+3. Open pgAdmin, connect to your local PostgreSQL server and open **Query Tool** on its default `postgres` database. Run these statements separately:
    ```sql
    CREATE DATABASE questionbank;
    CREATE DATABASE questionbank_test;
    ```
-2. Copy `backend/.env.example` to `backend/.env`. Set `DATABASE_URL` and `GEMINI_API_KEY`. Never put the key in React or Git.
-3. Start the API:
-   ```sh
+   Skip a statement if that database already exists. The second database is only for automated tests.
+4. In the VS Code terminal, starting in the **mini-project root folder**, run:
+   ```powershell
+   Copy-Item backend/.env.example backend/.env
+   ```
+   Open `backend/.env` in VS Code and update it:
+   ```dotenv
+   DATABASE_URL=postgresql://postgres:YOUR_POSTGRES_PASSWORD@localhost:5432/questionbank
+   PORT=4000
+   GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+   GEMINI_MODEL=gemini-3.8-flash
+   ```
+   Replace the password and API key placeholders with your own values. URL-encode special characters in the database password. The key stays in this local ignored file. A Gemini key is needed only for syllabus generation.
+5. **Terminal 1 — backend:**
+   ```powershell
    cd backend
    npm ci
    npm run db:init
    npm start
    ```
-4. In another terminal, start React:
-   ```sh
+   Keep it running. Open `http://localhost:4000/api/health` in your browser; the expected response is `{"status":"ok"}`. `db:init` also upgrades older question banks with subjects; it does not delete the questions.
+6. Click the terminal **+** button in VS Code to create **Terminal 2**. Make sure this new terminal starts in the **mini-project root folder**, then run:
+   ```powershell
    cd frontend
    npm ci
    npm run dev
    ```
-5. Open the URL Vite prints. To change the API address, copy `frontend/.env.example` to `frontend/.env.local` and set `VITE_API_URL`.
+   Open the **Local URL printed by Vite**, usually `http://localhost:5173`. If port 5173 is occupied, use the next port Vite prints.
+7. Add questions with a subject, or use **Create a paper** to choose the question bank or syllabus upload.
 
-`JAVA_COMMAND` can optionally point to a Java executable if it is not on PATH. The syllabus API does not need PostgreSQL; the existing bank features do.
+Do not launch `index.html` directly, use Live Server, or run individual Java files in VS Code for the web app. Vite serves React, and Express starts Java automatically when a paper is requested.
+
+### Starting again later
+
+Keep PostgreSQL running. You only need two terminals:
+
+```powershell
+# Terminal 1, from mini-project
+cd backend
+npm start
+```
+
+```powershell
+# Terminal 2, from mini-project
+cd frontend
+npm run dev
+```
+
+Press **Ctrl+C** in each terminal to stop. Run `npm ci` again only after dependency changes, and run `npm run db:init` after schema updates.
+
+### If something does not start
+
+- **Database connection failed:** check that PostgreSQL is running and `DATABASE_URL` uses your password and an existing database.
+- **Question bank unavailable:** check Terminal 1 for errors and open `/api/health`.
+- **Java core unavailable:** check `java -version`; the app needs a JDK and the `core` folder beside `backend`.
+- **Gemini key/model/quota error:** check `GEMINI_API_KEY` and `GEMINI_MODEL`, then restart the backend after changing `.env`.
+- **Port 4000 already in use:** stop the previous backend, or change `PORT` in `backend/.env` and set the matching `VITE_API_URL` in `frontend/.env.local`.
+
+### Which files are needed?
+
+Most files are small configuration or source modules, not separate applications. You normally edit only `App.jsx`, `SyllabusPaper.jsx`, `App.css`, the Express routes, and `PaperEngine.java`.
+
+- `package.json` and `package-lock.json`: dependencies and repeatable installation; keep both in frontend and backend.
+- `index.html`, `main.jsx`, `vite.config.js`: React + Vite startup.
+- `schema.sql`, `init-db.js`: create/update the PostgreSQL table.
+- Backend modules and routes: API, validation, Gemini and the Java bridge.
+- Test files: verification; they are not required to run the app but are worth keeping.
+- `.env.example`: safe configuration template; `.env` is your local secret file.
+- `node_modules` and `dist`: generated folders; do not edit or upload them. `npm ci` and `npm run build` recreate them.
+
+Unused starter assets and the extra stylesheet were removed to keep the structure smaller.
 
 ## Syllabus generation
 

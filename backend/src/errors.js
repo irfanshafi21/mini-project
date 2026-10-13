@@ -11,6 +11,7 @@ export const notFound = (what = 'Question') => new HttpError(404, `${what} not f
 
 // one place that turns every error into a clean JSON response
 export function errorHandler(err, req, res, _next) {
+  if (err.type === 'entity.too.large') return res.status(413).json({ error: 'Syllabus upload is too large. Maximum file size is 5 MB.' });
   if (err instanceof ZodError) {
     return res.status(400).json({
       error: 'Validation failed',

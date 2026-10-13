@@ -147,6 +147,29 @@ textarea { resize: vertical; }
 
 /* Light blue workspace with warm accents and a consistent spacing scale. */
 @media screen {
+  .generation-panel .calculated-count { background: #edf5fc; border-color: #c9deed; color: #235f89; font-weight: 700; }
+  .form-row.marks-grid { gap: 14px; }
+  .mark-tile { background: #f5f9fe; border: 1px solid #dce8f3; border-radius: 12px; padding: 16px; gap: 12px; }
+  .marks-grid .mark-tile>.mark-tile-heading { min-height: 0; display: flex; align-items: flex-start; flex-direction: column; gap: 3px; }
+  .mark-tile-heading>span:first-child { font-size: 16px; font-weight: 700; color: #315f80; }
+  .mark-section { font-size: 10px; color: #657f92; font-weight: 500; letter-spacing: .6px; text-transform: uppercase; }
+  .marks-grid .mark-tile input { background: white; font-size: 19px; text-align: center; font-weight: 600; padding-inline: 8px; }
+  .mark-subtotal { color: #657f92; font-size: 11px; font-weight: 500; }
+  .pattern-summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-radius: 10px; padding: 13px 17px; background: #edf5fc; color: #41647e; font-size: 13px; }
+  .pattern-summary strong { color: #245c84; font-size: 16px; }
+  .pattern-summary.incomplete { background: #fff4e5; color: #8a653c; }
+  .pattern-summary.incomplete strong { color: #8a653c; }
+  .allocation-badge { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; border-radius: 20px; padding: 6px 11px; background: #fff1df; color: #886037; }
+  .allocation-badge.complete { background: #eaf3f9; color: #306584; }
+  .allocation-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+}
+@media screen and (max-width: 650px) {
+  .form-row.marks-grid { gap: 12px; }
+  .mark-tile { padding: 14px; }
+  .marks-grid .mark-tile>.mark-tile-heading { min-height: 0; }
+  .pattern-summary { font-size: 12px; padding-inline: 13px; }
+}
+@media screen {
   :root { color: #243e54; background: #f8f9fb; line-height: 1.6; }
   body { background: linear-gradient(135deg, #f0f7ff 0%, #f8f9fb 42%, #fff8ee 100%); }
   .sidebar { padding: 16px max(28px, calc((100vw - 1180px) / 2)); background: #ffffffed; border-color: #e2eaf1; min-height: 84px; }

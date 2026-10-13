@@ -337,7 +337,7 @@ For an existing installation, keep your local `.env`, update backend source and 
 
 ## Subject overview and generation activity
 
-Click a subject card to view total active stored questions, counts for 2-, 5-, 10- and 16-mark questions, and generation activity. Other mark values are reported separately. View question bank opens the subject-filtered library.
+Click a subject card to view total active stored questions, counts for 2-, 5-, 10- and 16-mark questions, and combined generated-question and paper totals. The separate Generation activity panel is hidden. Other mark values are reported separately. View question bank opens the subject-filtered library.
 
 Generation counters persist in PostgreSQL: new syllabus questions, questions selected from the bank, and successful complete papers. The combined generated-question count counts question appearances across those papers; selecting the same bank question again counts again. Failed and incomplete generations do not increment counters. Historical activity before this update cannot be reconstructed and starts at zero. Generated content is not automatically inserted into the question bank.
 

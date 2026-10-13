@@ -44,7 +44,7 @@ The interface has a question bank, subject collections, and a Create a Paper wor
 
 1. Open **Subjects → Add subject**, enter a subject name, and select **Save subject**.
 2. The new subject appears immediately with **0 questions**, even before you add any questions. Subject names are case-insensitive, and duplicate names are rejected.
-3. Select a subject card to open its filtered question bank. Use **Add question** in the question bank and select that registered subject in the Subject field.
+3. Select a subject card to open its overview, then choose View question bank to browse that subject. Use **Add question** in the question bank and select that registered subject in the Subject field.
 4. Saved subjects are also available in filters and the question-paper Subject selector. Deleting the last question does not delete the subject.
 
 After pulling this update, run `npm run db:init` in `backend` once and restart the backend. This creates the `subjects` table and registers existing question subjects without deleting any question data.
@@ -333,3 +333,12 @@ The startup message only confirms that the HTTP server started. `/api/health` ch
 There is no authentication, user permissions or saved paper history. Generated questions need academic review. Groq mode does not perform OCR. AI availability, cost and quota are external dependencies.
 
 For an existing installation, keep your local `.env`, update backend source and package files together, run `npm.cmd ci`, and restart the backend. The Groq update does not require database changes. Do not upload `.env`, `node_modules` or `dist` to GitHub.
+
+
+## Subject overview and generation activity
+
+Click a subject card to view total active stored questions, counts for 2-, 5-, 10- and 16-mark questions, and generation activity. Other mark values are reported separately. View question bank opens the subject-filtered library.
+
+Generation counters persist in PostgreSQL: new syllabus questions, questions selected from the bank, and successful complete papers. The combined generated-question count counts question appearances across those papers; selecting the same bank question again counts again. Failed and incomplete generations do not increment counters. Historical activity before this update cannot be reconstructed and starts at zero. Generated content is not automatically inserted into the question bank.
+
+This update changes `frontend/src/App.jsx`, `frontend/src/App.css`, `backend/sql/schema.sql`, `backend/src/routes/subjects.js`, `backend/src/routes/generate.js`, `backend/src/routes/syllabus.js`, `backend/test/api.test.js` and this README. Run `npm.cmd run db:init` inside `backend` after updating, then restart the backend. Existing questions and subjects are preserved. The new read-only API is `GET /api/subjects/:name/overview`.

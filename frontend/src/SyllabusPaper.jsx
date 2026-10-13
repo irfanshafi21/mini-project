@@ -1,98 +1,34 @@
 import { useState } from 'react'
-
-function readFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result.split(',')[1])
-    reader.onerror = () => reject(new Error('Could not read the syllabus file'))
-    reader.readAsDataURL(file)
-  })
-}
-
-export default function SyllabusPaper({ apiUrl }) {
-  const [file, setFile] = useState(null)
-  const [form, setForm] = useState({ totalMarks: 50, count: 10, easy: 40, medium: 40, hard: 20 })
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [paper, setPaper] = useState(null)
-  const change = e => setForm(previous => ({ ...previous, [e.target.name]: e.target.value }))
-
+export default function SyllabusPaper({ apiUrl, subjects = [], source = 'syllabus' }) {
+  const syllabus = source === 'syllabus'
+  const [file, setFile] = useState(null), [drag, setDrag] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState(''), [result, setResult] = useState(null)
+  const [form, setForm] = useState({ subject: '', unit: '0', topic: '', totalMarks: 50, count: 10, easy: 40, medium: 40, hard: 20 })
+  const change = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }))
+  function choose(value) { setError(''); setResult(null); if (!value || !/\.(pdf|txt)$/i.test(value.name) || !value.size || value.size > 5 * 1024 * 1024) { setFile(null); setError('Choose a non-empty PDF or TXT syllabus, up to 5 MB.'); return } setFile(value) }
   async function generate(e) {
-    e.preventDefault()
-    setError('')
-    const extension = file?.name.split('.').pop().toLowerCase()
-    if (!file || !['pdf', 'txt'].includes(extension)) return setError('Choose a PDF or TXT syllabus.')
-    if (!file.size || file.size > 5 * 1024 * 1024) return setError('Choose a non-empty file no larger than 5 MB.')
-    const values = Object.fromEntries(Object.entries(form).map(([key, value]) => [key, Number(value)]))
-    if (values.easy + values.medium + values.hard !== 100) return setError('Difficulty percentages must add up to 100.')
-    if (values.totalMarks < values.count || values.totalMarks > values.count * 100) return setError('Allow 1–100 marks per question.')
-    setBusy(true)
-    setPaper(null)
+    e.preventDefault(); setError('')
+    if (Number(form.easy) + Number(form.medium) + Number(form.hard) !== 100) return setError('Difficulty percentages must total 100%.')
+    if (syllabus && !file) return setError('Choose your syllabus file first.')
+    if (syllabus && (Number(form.totalMarks) < Number(form.count) || Number(form.totalMarks) > Number(form.count) * 100)) return setError('Allow 1–100 marks for each question.')
+    setBusy(true); setResult(null)
     try {
-      const data = await readFile(file)
-      const response = await fetch(`${apiUrl}/papers/from-syllabus`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: file.name, mimeType: extension === 'pdf' ? 'application/pdf' : 'text/plain', data,
-          totalMarks: values.totalMarks, count: values.count,
-          split: { easy: values.easy, medium: values.medium, hard: values.hard } }),
-      })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.details?.map(d => d.message).join('; ') || result.error || 'Generation failed')
-      setPaper(result.paper)
-    } catch (err) {
-      setError(err.message === 'Failed to fetch' ? 'Cannot reach the backend. Make sure it is running.' : err.message)
-    } finally {
-      setBusy(false)
-    }
+      const body = { subject: form.subject, totalMarks: Number(form.totalMarks), split: { easy: Number(form.easy), medium: Number(form.medium), hard: Number(form.hard) } }
+      if (syllabus) { const data = await new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result.split(',')[1]); r.onerror = () => reject(new Error('Could not read your file.')); r.readAsDataURL(file) }); Object.assign(body, { fileName: file.name, mimeType: /\.pdf$/i.test(file.name) ? 'application/pdf' : 'text/plain', data, count: Number(form.count) }) }
+      else { body.unit = Number(form.unit); if (form.topic.trim()) body.topic = form.topic.trim() }
+      const r = await fetch(`${apiUrl}/papers/${syllabus ? 'from-syllabus' : 'generate'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), response = await r.json()
+      if (!r.ok) throw new Error(response.details?.map(d => d.message).join(' · ') || response.error)
+      setResult(response)
+    } catch (err) { setError(err.message === 'Failed to fetch' ? 'Cannot reach the API. Please try again.' : err.message) } finally { setBusy(false) }
   }
-
   function download() {
-    const text = [`QUESTION PAPER`, `Syllabus: ${paper.fileName}`, `Total marks: ${paper.totalMarks}`, '',
-      ...paper.questions.map(q => `${q.number}. ${q.text}\n[${q.marks} marks | ${q.difficulty}]\nTopic: ${q.topic} / ${q.subtopic}\nSyllabus reference: ${q.syllabusReference}\n`)].join('\n')
-    const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }))
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'syllabus-question-paper.txt'
-    link.click()
-    URL.revokeObjectURL(url)
+    const paper = result.paper, text = [`QUESTION PAPER`, `Subject: ${paper.subject}`, `Total marks: ${paper.totalMarks} / ${paper.requestedMarks}`, '', ...paper.questions.map((q, i) => `${i + 1}. ${q.text || `${q.topic} — ${q.subtopic}`}\n[${q.marks} marks · ${q.difficulty}]${q.syllabusReference ? `\nSyllabus reference: ${q.syllabusReference}` : ''}\n`)].join('\n')
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' })), a = document.createElement('a'); a.href = url; a.download = 'question-paper.txt'; a.click(); URL.revokeObjectURL(url)
   }
-
-  return <section className="add-section syllabus-section">
-    <h2>Generate from Syllabus</h2>
-    <p>Upload your syllabus and Gemini will write new questions covering its topics. PDF or TXT, up to 5 MB. The document is sent to Google Gemini for processing.</p>
-    <form onSubmit={generate}>
-      <fieldset disabled={busy}>
-        <div className="form-group">
-          <label htmlFor="syllabus-file">Syllabus file</label>
-          <input id="syllabus-file" type="file" accept=".pdf,.txt,application/pdf,text/plain" required onChange={e => { setFile(e.target.files[0] || null); setPaper(null) }} />
-        </div>
-        <div className="form-row">
-          {[['totalMarks', 'Total marks', 1, 1000], ['count', 'Number of questions', 1, 50]].map(([name, label, min, max]) =>
-            <div className="form-group" key={name}><label htmlFor={`syllabus-${name}`}>{label}</label>
-              <input id={`syllabus-${name}`} name={name} type="number" min={min} max={max} required value={form[name]} onChange={change} /></div>)}
-        </div>
-        <p>Difficulty distribution applies to question counts, rounded to whole questions. Marks are spread evenly across questions.</p>
-        <div className="form-row">
-          {['easy', 'medium', 'hard'].map(name => <div className="form-group" key={name}>
-            <label htmlFor={`syllabus-${name}`}>{name[0].toUpperCase() + name.slice(1)} %</label>
-            <input id={`syllabus-${name}`} name={name} type="number" min="0" max="100" required value={form[name]} onChange={change} />
-          </div>)}
-        </div>
-        <button className="save-button" type="submit">{busy ? 'Generating paper…' : 'Generate with Gemini'}</button>
-      </fieldset>
-    </form>
-    <div aria-live="polite">{busy && <p>This can take up to 90 seconds.</p>}{error && <p className="error" role="alert">{error}</p>}</div>
-    {paper && <div className="syllabus-result">
-      <div className="section-header"><h2>Generated Question Paper</h2><span>{paper.totalMarks} marks</span></div>
-      <p>{paper.questions.length} questions · {paper.fileName}</p>
-      <p>Review the questions and syllabus references before using the paper.</p>
-      <button type="button" onClick={download}>Download paper (.txt)</button>
-      <div className="question-list">{paper.questions.map(q => <article className="question-card" key={q.id}>
-        <div className="question-top"><strong>Question {q.number}</strong><span className="badge">{q.difficulty} · {q.marks} marks</span></div>
-        <p className="question-text">{q.text}</p>
-        <div className="question-details"><span>{q.topic}</span><span>{q.subtopic}</span></div>
-        <p className="syllabus-reference">Syllabus reference: {q.syllabusReference}</p>
-      </article>)}</div>
-    </div>}
-  </section>
+  return <><section className="panel generation-panel"><span className="eyebrow">STEP 02 / CONFIGURE</span><h2>{syllabus ? 'Let your syllabus lead the way.' : 'Build from your question bank.'}</h2><p className="muted">{syllabus ? 'Gemini writes new questions from your course outline. Java balances the paper.' : 'Choose a subject. We’ll select suitable questions from your saved collection.'}</p><form onSubmit={generate}><fieldset disabled={busy}>
+    <label className="field"><span>Subject</span>{syllabus ? <><input name="subject" list="paper-subjects" required maxLength="60" value={form.subject} onChange={change} placeholder="e.g. Data Structures" /><datalist id="paper-subjects">{subjects.map(s => <option key={s} value={s.replaceAll('_', ' ')} />)}</datalist></> : <select name="subject" required value={form.subject} onChange={change}><option value="">Select a subject</option>{subjects.map(s => <option key={s} value={s}>{s.replaceAll('_', ' ')}</option>)}</select>}</label>
+    {syllabus ? <><label className={`upload-zone ${drag ? 'dragging' : ''} ${file ? 'has-file' : ''}`} onDragOver={e => { e.preventDefault(); if (!busy) setDrag(true) }} onDragLeave={() => setDrag(false)} onDrop={e => { e.preventDefault(); setDrag(false); if (!busy) choose(e.dataTransfer.files[0]) }}><span className="upload-icon">↑</span><strong>{file ? file.name : 'Drop your syllabus here'}</strong><span>{file ? `${(file.size / 1024).toFixed(0)} KB · Click to replace` : 'or click to browse · PDF or TXT · up to 5 MB'}</span><input aria-label="Upload syllabus" type="file" accept=".pdf,.txt" onChange={e => choose(e.target.files[0])} /></label><p className="small muted">Your document is sent to Google Gemini for processing. It is not stored by this app.</p></> : <div className="form-row"><label className="field"><span>Unit</span><select name="unit" value={form.unit} onChange={change}><option value="0">All units</option>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>Unit {n}</option>)}</select></label><label className="field"><span>Topic (optional)</span><input name="topic" maxLength="60" value={form.topic} onChange={change} placeholder="All topics" /></label></div>}
+    <div className="form-row"><label className="field"><span>Total marks</span><input name="totalMarks" type="number" min="1" max="1000" required value={form.totalMarks} onChange={change} /></label>{syllabus && <label className="field"><span>Number of questions</span><input name="count" type="number" min="1" max="50" required value={form.count} onChange={change} /></label>}</div><h3>Difficulty mix</h3><p className="small muted">{syllabus ? 'Percentages apply to question counts. Marks are spread evenly.' : 'Targets apply to marks. Available questions may change the final mix.'}</p><div className="form-row">{['easy', 'medium', 'hard'].map(l => <label className="field" key={l}><span>{l[0].toUpperCase() + l.slice(1)} %</span><input name={l} type="number" min="0" max="100" required value={form[l]} onChange={change} /></label>)}</div><div className="form-footer"><span className="small muted">{Number(form.easy) + Number(form.medium) + Number(form.hard)}% allocated</span><button className="primary">{busy ? 'Creating your paper…' : syllabus ? 'Generate with Gemini ✧' : 'Generate question paper →'}</button></div>
+    </fieldset></form><div aria-live="polite">{busy && <p className="generation-status"><span className="spinner" />{syllabus ? 'Reading your syllabus and writing questions. This may take up to 90 seconds.' : 'Selecting and balancing your saved questions…'}</p>}{error && <p className="error" role="alert">{error}</p>}</div></section>
+    {result && <section className="paper-preview" aria-label="Generated question paper"><div className="section-heading"><div><span className="eyebrow">STEP 03 / YOUR PAPER</span><h2>Ready for a closer look.</h2><p className="muted small">Review every question before sharing with your class.</p></div><div className="preview-actions"><button className="secondary" onClick={() => window.print()}>Print / PDF</button><button className="primary" onClick={download}>Download TXT ↓</button></div></div>{result.warning && <p className="warning" role="status">{result.warning}</p>}<div className="paper-sheet"><div className="paper-header"><span className="eyebrow">EXAMINATION QUESTION PAPER</span><h2>{result.paper.subject?.replaceAll('_', ' ') || 'General'}</h2><div><span>{result.paper.questions.length} questions</span><span>Total: {result.paper.totalMarks} marks</span></div></div><ol className="paper-questions">{result.paper.questions.map((q, i) => <li key={q.id || i}><div><p>{q.text || `${q.topic} — ${q.subtopic}`}</p><span className="small muted">{q.difficulty.toLowerCase()}{q.syllabusReference ? ` · ${q.syllabusReference}` : ''}</span></div><strong>{q.marks}<span>marks</span></strong></li>)}</ol><div className="paper-end">END OF QUESTION PAPER</div></div></section>}
+  </>
 }

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { query } from '../db.js';
 import { HttpError } from '../errors.js';
 import { toApi } from '../mapper.js';
-import { generatePaper } from '../paperGenerator.js';
+import { generatePaper } from '../javaCore.js';
 import { autoBody, paperBody } from '../validation.js';
 
 const router = Router();
@@ -27,7 +27,7 @@ router.post('/papers/generate', async (req, res) => {
   const { rows } = await query(`SELECT * FROM questions WHERE ${where.join(' AND ')}`, params);
   if (!rows.length) throw new HttpError(404, 'No questions available for this unit/topic');
 
-  const result = generatePaper(rows.map(toApi), b.totalMarks, b.split);
+  const result = await generatePaper(rows.map(toApi), b.totalMarks, b.split);
   const complete = result.totalMarks === b.totalMarks;
   res.json({
     paper: {

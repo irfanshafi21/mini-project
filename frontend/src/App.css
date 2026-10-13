@@ -146,6 +146,7 @@ textarea { resize: vertical; }
 @media print { .paper-section-heading { break-after: avoid; } }
 
 /* Light blue workspace with warm accents and a consistent spacing scale. */
+.saved-notice { background: #eaf5ed; color: #315b3e; border: 1px solid #cde3d3; padding: 14px 18px; border-radius: 10px; font-size: 13px; margin-block: 16px; }
 @media screen {
   .back-subjects { padding-left: 0; margin-bottom: 16px; }
   .subject-overview-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 25px 28px; border-radius: 16px; background: #e9f3fc; border: 1px solid #d4e5f3; }
@@ -323,3 +324,5 @@ textarea { resize: vertical; }
   .paper-section-heading { gap: 4px; }
   .paper-questions p { font-size: 14px; }
 }
+
+@media print { .saved-notice { display: none; } }

@@ -5,12 +5,18 @@
 ### Health check
 GET {{base}}/health
 
+### Register the subject first
+POST {{base}}/subjects
+Content-Type: application/json
+
+{ "name": "General" }
+
 ### MANUAL ENTRY - add a question (number Q101, Q102... is assigned automatically)
 POST {{base}}/questions
 Content-Type: application/json
 
 {
-  "unit": 1,
+  "subject": "GENERAL", "unit": 1,
   "topic": "Java",
   "subtopic": "Stack",
   "difficulty": "EASY",
@@ -29,7 +35,7 @@ PUT {{base}}/questions/Q101
 Content-Type: application/json
 
 {
-  "unit": 1,
+  "subject": "GENERAL", "unit": 1,
   "topic": "Java",
   "subtopic": "Stack",
   "difficulty": "MEDIUM",
@@ -53,10 +59,10 @@ GET {{base}}/stats
 POST {{base}}/generate/questions
 Content-Type: application/json
 
-{ "topic": "Java", "subtopic": "Stack", "marks": 2, "difficulty": "EASY", "count": 3 }
+{ "subject": "GENERAL", "topic": "Java", "subtopic": "Stack", "marks": 2, "difficulty": "EASY", "count": 3 }
 
 ### Generate a balanced question paper (unit 0 = all units)
 POST {{base}}/papers/generate
 Content-Type: application/json
 
-{ "unit": 1, "topic": "Java", "totalMarks": 24, "split": { "easy": 40, "medium": 40, "hard": 20 } }
+{ "subject": "GENERAL", "unit": 1, "topic": "Java", "totalMarks": 24, "split": { "easy": 40, "medium": 40, "hard": 20 } }

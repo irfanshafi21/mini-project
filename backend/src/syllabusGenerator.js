@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { HttpError } from './errors.js';
+import { planPaper } from './javaCore.js';
+export { planPaper } from './javaCore.js';
 
 export const syllabusBody = z.object({
   fileName: z.string().min(1).max(200),
@@ -20,22 +22,6 @@ const questionSchema = z.object({
   syllabusReference: z.string().trim().min(1).max(500),
 });
 
-// Allocate exact marks in advance; Gemini writes the questions for these slots.
-export function planPaper(total, count, split) {
-  const levels = ['EASY', 'MEDIUM', 'HARD'];
-  const raw = levels.map(level => count * split[level.toLowerCase()] / 100);
-  const counts = raw.map(Math.floor);
-  const order = raw.map((n, i) => ({ i, fraction: n - counts[i] }))
-    .sort((a, b) => b.fraction - a.fraction);
-  const remainder = count - counts.reduce((a, b) => a + b, 0);
-  for (let i = 0; i < remainder; i++) counts[order[i].i]++;
-  const difficulties = levels.flatMap((level, i) => Array(counts[i]).fill(level));
-  return difficulties.map((difficulty, i) => ({
-    number: i + 1, difficulty,
-    marks: Math.floor(total / count) + (i < total % count ? 1 : 0),
-  }));
-}
-
 export async function generateSyllabusPaper(body, { fetchImpl = fetch, apiKey = process.env.GEMINI_API_KEY,
   model = process.env.GEMINI_MODEL || 'gemini-3.8-flash' } = {}) {
   if (!apiKey) throw new HttpError(503, 'Set GEMINI_API_KEY in the backend .env file to enable syllabus generation');
@@ -46,7 +32,7 @@ export async function generateSyllabusPaper(body, { fetchImpl = fetch, apiKey = 
   if (body.mimeType === 'application/pdf' && bytes.subarray(0, 5).toString() !== '%PDF-') {
     throw new HttpError(400, 'The uploaded file is not a PDF');
   }
-  const slots = planPaper(body.totalMarks, body.count, body.split);
+  const slots = await planPaper(body.totalMarks, body.count, body.split);
   const filePart = body.mimeType === 'application/pdf'
     ? { inlineData: { mimeType: 'application/pdf', data: body.data } }
     : { text: `SYLLABUS DOCUMENT:\n${bytes.toString('utf8')}` };

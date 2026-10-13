@@ -144,3 +144,135 @@ textarea { resize: vertical; }
   .paper-section-heading { flex-direction: column; gap: 6px; }
 }
 @media print { .paper-section-heading { break-after: avoid; } }
+
+/* Light blue workspace with warm accents and a consistent spacing scale. */
+@media screen {
+  :root { color: #243e54; background: #f8f9fb; line-height: 1.6; }
+  body { background: linear-gradient(135deg, #f0f7ff 0%, #f8f9fb 42%, #fff8ee 100%); }
+  .sidebar { padding: 16px max(28px, calc((100vw - 1180px) / 2)); background: #ffffffed; border-color: #e2eaf1; min-height: 84px; }
+  .brand { font-size: 21px; letter-spacing: -.6px; gap: 12px; color: #235b82; white-space: nowrap; }
+  .brand-mark { width: 42px; height: 42px; border-radius: 13px; background: #2f79b0; box-shadow: 0 5px 12px #347fb720; }
+  nav { padding: 5px; background: #f0f5fa; border: 1px solid #e6edf3; border-radius: 13px; }
+  .nav-item { border-radius: 9px; font-size: 13px; padding: 10px 16px; transition: background .15s, color .15s; }
+  .nav-item:hover { background: #e3eef8; }
+  .nav-item.active { background: white; color: #205d8c; box-shadow: 0 2px 6px #294a7010; }
+  main { padding: 38px 28px 64px; }
+  .page-heading { margin-bottom: 28px; }
+  h1 { font-size: 32px; line-height: 1.25; letter-spacing: -1px; margin-bottom: 9px; color: #203e56; }
+  h2 { letter-spacing: -.4px; }
+  .muted { color: #657b8d; font-size: 14px; }
+  .small { font-size: 12px; }
+  .primary, .secondary { border-radius: 10px; padding: 12px 18px; font-size: 13px; min-height: 46px; transition: background .15s, box-shadow .15s; }
+  .primary { background: #2c77ad; box-shadow: 0 3px 8px #2c77ad15; }
+  .primary:hover { background: #236493; box-shadow: 0 4px 12px #2c77ad25; }
+  .secondary { border-color: #d6e2eb; color: #365e7c; }
+  .quick-create { padding: 28px 30px; border-radius: 18px; background: linear-gradient(110deg, #e1effc, #f0f7ff); border-color: #cee1f2; }
+  .quick-create h2 { font-size: 23px; color: #234f70; }
+  .quick-create p { color: #56768e; font-size: 14px; }
+  .metrics { gap: 18px; margin: 22px 0 34px; }
+  .metric { padding: 22px; border-radius: 15px; border-color: #e0e8ef; box-shadow: 0 3px 10px #25486804; gap: 16px; }
+  .metric-icon { width: 46px; height: 46px; border-radius: 13px; background: #ebf4fd; color: #367aa9; }
+  .metric:nth-child(2) .metric-icon { background: #fff1de; color: #996b30; }
+  .metric:nth-child(3) .metric-icon { background: #faeae2; color: #a06d52; }
+  .metric strong { font-size: 28px; line-height: 1.3; }
+  .metric div>span { margin-top: 4px; color: #62798a; }
+  .pill { margin-left: 6px; padding: 3px 9px; font-size: 12px; }
+  .filter-bar { border-radius: 13px; padding: 10px 14px; border-color: #dde6ee; gap: 12px; margin-bottom: 22px; }
+  .search-field { gap: 10px; }
+  input, select, textarea { border-color: #d5e1eb; border-radius: 9px; color: #2d4a61; font-size: 14px; background: #fff; }
+  input::placeholder, textarea::placeholder { color: #708394; }
+  .field input, .field select { min-height: 48px; }
+  .field { font-size: 13px; color: #35556d; gap: 9px; min-width: 0; }
+  .question-grid, .subject-grid { gap: 20px; }
+  .question-card { padding: 23px; border-radius: 15px; border-color: #e0e8ef; box-shadow: 0 3px 12px #25486804; }
+  .question-code { color: #5f7688; font-weight: 600; letter-spacing: .5px; }
+  .question-card h3 { font-size: 15px; color: #2b455a; line-height: 1.65; }
+  .subject-label { color: #356a90; font-size: 12px; }
+  .subject-label span { color: #6f8393; }
+  .badge { border-radius: 20px; padding: 4px 10px; font-weight: 600; }
+  .question-tags span { color: #607587; background: #f1f5f8; border-radius: 6px; padding: 4px 8px; font-size: 11px; }
+  .card-footer { padding-top: 12px; }
+  .text-button { border-radius: 6px; font-weight: 600; }
+  .text-button:hover { background: #edf5fc; }
+  .danger-text:hover { background: #fff0e8; }
+  .empty-state { padding: 56px 24px; border-radius: 16px; background: #ffffffb8; }
+  .empty-state p { color: #627c90; }
+  .flow-label { background: #ffffffa8; border: 1px solid #e0e8ef; border-radius: 12px; padding: 13px 18px; color: #54748b; width: fit-content; flex-wrap: wrap; }
+  .flow-label>span { background: #e5f0fb; color: #2c6c99; font-weight: 700; }
+  .source-grid { gap: 22px; margin: 24px 0 28px; }
+  .source-card { border-radius: 16px; padding: 25px; transition: border-color .15s, background .15s; }
+  .source-card:hover { background: #f5faff; border-color: #8eb9d8; }
+  .source-card.selected { padding: 24px; background: #edf6ff; border-color: #3d89bf; }
+  .source-top { margin-bottom: 18px; }
+  .source-icon, .subject-symbol { border-radius: 13px; background: #e6f1fc; color: #357fb3; }
+  .source-card p { color: #657f92; line-height: 1.7; }
+  .eyebrow { color: #587a94; font-size: 11px; letter-spacing: 1px; font-weight: 700; }
+  .panel { padding: 30px; border-radius: 18px; border-color: #dce6ee; box-shadow: 0 5px 20px #284a6805; }
+  .generation-panel { max-width: 920px; margin-inline: auto; }
+  .generation-panel h2 { font-size: 25px; }
+  .generation-panel h3 { margin: 26px 0 12px; font-size: 16px; }
+  .form-row { gap: 20px; margin: 20px 0; }
+  .marks-grid .field>span { min-height: 20px; align-items: center; }
+  .marks-grid input { background: #f6faff; border-color: #cbdfee; }
+  .difficulty-grid input { background: #fffcf7; }
+  .upload-zone { background: #fffaf2; border-color: #d8bd92; border-radius: 13px; min-height: 170px; margin: 24px 0 12px; }
+  .upload-zone>span:last-of-type { color: #8b7354; }
+  .has-file, .dragging { background: #edf6ff; border-color: #7aaed1; }
+  .form-footer { padding-top: 24px; margin-top: 26px; }
+  .error, .warning { border: 1px solid #f2dccb; border-radius: 10px; color: #8d5738; }
+  .editor-dialog { padding: 30px; border-radius: 18px; border-color: #d8e5ef; box-shadow: 0 24px 80px #17395430; }
+  .editor-dialog::backdrop { background: #1c3b5560; backdrop-filter: blur(3px); }
+  .icon-button { display: grid; place-items: center; font-size: 16px; line-height: 1; font-weight: 600; }
+  .subject-card { border-radius: 16px; padding: 26px; transition: border-color .15s, background .15s; }
+  .subject-card:hover { border-color: #8eb9d8; background: #fbfdff; }
+  .subject-card h2 { font-size: 19px; overflow-wrap: anywhere; }
+  .subject-card p { color: #657f92; }
+  .tone-1 { background: #fff0d9; color: #9d743c; }
+  .tone-2 { background: #fae8dd; color: #996b50; }
+  .paper-sheet { border-radius: 14px; padding: 44px; box-shadow: 0 8px 32px #24466a08; }
+  .paper-header h2 { font-size: 25px; }
+  .paper-header>div { color: #547187; }
+  .paper-section-heading { background: #f1f7fc; border: 0; border-left: 3px solid #5c9ac5; padding: 13px 15px; border-radius: 0 8px 8px 0; }
+  .paper-section-heading h3 { color: #315f80; font-size: 15px; }
+  .paper-questions li { padding-block: 25px; }
+  .paper-questions p { font-size: 15px; line-height: 1.75; }
+  .paper-end { color: #657f92; letter-spacing: 1.5px; }
+}
+@media screen and (max-width: 900px) {
+  .sidebar { padding-inline: 24px; gap: 16px; }
+  .nav-item { padding-inline: 11px; }
+  .filter-bar select { min-width: 130px; }
+}
+@media screen and (max-width: 650px) {
+  .sidebar { align-items: center; padding: 18px 16px; gap: 16px; }
+  nav { width: 100%; }
+  .nav-item { min-height: 44px; padding: 9px 6px; font-size: 11px; }
+  .nav-item svg { width: 17px; }
+  main { padding: 28px 16px 44px; }
+  h1 { font-size: 27px; }
+  .page-heading { gap: 12px; }
+  .page-heading .primary { padding: 10px 12px; white-space: nowrap; }
+  .page-heading .muted { font-size: 12px; }
+  .quick-create { padding: 22px; gap: 18px; }
+  .quick-create h2 { font-size: 21px; }
+  .metrics { gap: 9px; }
+  .metric { padding: 14px 10px; border-radius: 12px; }
+  .metric-icon { width: 34px; height: 34px; border-radius: 10px; }
+  .metric strong { font-size: 23px; }
+  .metric div>span { font-size: 10px; }
+  .flow-label { font-size: 11px; padding: 12px; width: 100%; }
+  .source-grid { gap: 14px; }
+  .panel, .editor-dialog { padding: 24px 18px; }
+  .generation-panel h2 { font-size: 22px; }
+  .form-row { gap: 12px; }
+  .marks-grid .field>span { min-height: 36px; }
+  .difficulty-grid { gap: 10px; }
+  .difficulty-grid input { padding-inline: 10px; }
+  .form-footer { gap: 14px; }
+  .preview-actions { width: 100%; }
+  .preview-actions button { flex: 1; }
+  .paper-sheet { padding: 27px 20px; }
+  .paper-header h2 { font-size: 21px; }
+  .paper-section-heading { gap: 4px; }
+  .paper-questions p { font-size: 14px; }
+}

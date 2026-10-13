@@ -16,9 +16,13 @@ CREATE TABLE IF NOT EXISTS questions (
 );
 
 -- fast topic-wise search (the HashMap of the Java version)
+-- Safe migration: existing questions keep their data under GENERAL.
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS subject TEXT NOT NULL DEFAULT 'GENERAL';
+CREATE INDEX IF NOT EXISTS idx_questions_subject ON questions (subject) WHERE NOT is_deleted;
 CREATE INDEX IF NOT EXISTS idx_questions_topic      ON questions (topic)            WHERE NOT is_deleted;
 CREATE INDEX IF NOT EXISTS idx_questions_unit_level ON questions (unit, difficulty) WHERE NOT is_deleted;
 
 -- the same question text cannot be added twice in one unit
-CREATE UNIQUE INDEX IF NOT EXISTS uq_questions_unit_text
-  ON questions (unit, lower(text)) WHERE text <> '' AND NOT is_deleted;
+DROP INDEX IF EXISTS uq_questions_unit_text;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_questions_subject_unit_text
+  ON questions (subject, unit, lower(text)) WHERE text <> '' AND NOT is_deleted;

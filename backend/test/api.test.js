@@ -15,6 +15,8 @@ let base;
 before(async () => {
   await query(fs.readFileSync(new URL('../sql/schema.sql', import.meta.url), 'utf8'));
   await query('TRUNCATE questions RESTART IDENTITY');
+  await query('DELETE FROM subjects');
+  for (const name of ['GENERAL','DATA_STRUCTURES','PROGRAMMING','ALGORITHMS']) await query('INSERT INTO subjects(name) VALUES($1)', [name]);
   server = app.listen(0);
   base = `http://127.0.0.1:${server.address().port}`;
 });
@@ -33,7 +35,7 @@ async function call(method, path, body) {
   return { status: res.status, body: await res.json() };
 }
 
-const q = (unit, topic, subtopic, difficulty, marks, text) => ({ unit, topic, subtopic, difficulty, marks, text });
+const q = (unit, topic, subtopic, difficulty, marks, text) => ({ subject: 'GENERAL', unit, topic, subtopic, difficulty, marks, text });
 
 test('health check', async () => {
   const r = await call('GET', '/api/health');
@@ -119,7 +121,7 @@ test('statistics', async () => {
 });
 
 test('paper generation: 24 marks for unit 1, topic JAVA', async () => {
-  const r = await call('POST', '/api/papers/generate', { unit: 1, topic: 'java', totalMarks: 24 });
+  const r = await call('POST', '/api/papers/generate', { subject: 'GENERAL', unit: 1, topic: 'java', totalMarks: 24 });
   assert.equal(r.status, 200);
   assert.equal(r.body.paper.totalMarks, 24);
   assert.equal(r.body.paper.complete, true);
@@ -128,19 +130,19 @@ test('paper generation: 24 marks for unit 1, topic JAVA', async () => {
 });
 
 test('paper generation reports when the bank is too small, and validates the split', async () => {
-  const short = await call('POST', '/api/papers/generate', { unit: 1, topic: 'java', totalMarks: 40 });
+  const short = await call('POST', '/api/papers/generate', { subject: 'GENERAL', unit: 1, topic: 'java', totalMarks: 40 });
   assert.equal(short.body.paper.complete, false);
   assert.equal(short.body.paper.totalMarks, 24);
   assert.match(short.body.warning, /Only 24 of 40/);
 
-  const bad = await call('POST', '/api/papers/generate', { totalMarks: 20, split: { easy: 50, medium: 50, hard: 50 } });
+  const bad = await call('POST', '/api/papers/generate', { subject: 'GENERAL', totalMarks: 20, split: { easy: 50, medium: 50, hard: 50 } });
   assert.equal(bad.status, 400);
 
-  assert.equal((await call('POST', '/api/papers/generate', { unit: 5, totalMarks: 10 })).status, 404);
+  assert.equal((await call('POST', '/api/papers/generate', { subject: 'GENERAL', unit: 5, totalMarks: 10 })).status, 404);
 });
 
 test('automatic selection by topic, marks and difficulty reports any shortfall', async () => {
-  const r = await call('POST', '/api/generate/questions', { topic: 'java', marks: 5, difficulty: 'medium', count: 5 });
+  const r = await call('POST', '/api/generate/questions', { subject: 'GENERAL', topic: 'java', marks: 5, difficulty: 'medium', count: 5 });
   assert.equal(r.status, 200);
   assert.equal(r.body.found, 2);
   assert.equal(r.body.shortfall, 3);
@@ -182,4 +184,19 @@ test('a subject can be created before questions and persists with a zero count',
   assert.equal((await call('GET', '/api/stats')).body.bySubject.SOFTWARE_ENGINEERING, 1);
   await call('DELETE', `/api/questions/${added.body.id}`);
   assert.equal((await call('GET', '/api/stats')).body.bySubject.SOFTWARE_ENGINEERING, 0);
+});
+
+test('unregistered subjects are rejected without creating records or invoking generation', async () => {
+  const unknown = 'NOT_REGISTERED';
+  const question = { ...q(1, 'Trees', 'Traversal', 'EASY', 5, 'Explain tree traversal.'), subject: unknown };
+  assert.equal((await call('POST', '/api/questions', question)).status, 400);
+  assert.equal((await call('PUT', '/api/questions/101', question)).status, 400);
+  assert.equal((await call('GET', '/api/questions?subject=' + unknown)).status, 400);
+  assert.equal((await call('POST', '/api/papers/generate', { subject: unknown, totalMarks: 10 })).status, 400);
+  assert.equal((await call('POST', '/api/generate/questions', { subject: unknown, topic: 'Trees', marks: 5, difficulty: 'EASY' })).status, 400);
+  assert.equal((await call('POST', '/api/papers/from-syllabus', { subject: unknown, fileName: 's.txt', mimeType: 'text/plain', data: Buffer.from('Trees').toString('base64'), totalMarks: 10, count: 2, split: { easy: 40, medium: 40, hard: 20 } })).status, 400);
+  assert.equal((await call('GET', '/api/stats')).body.bySubject[unknown], undefined);
+  const missing = { ...question }; delete missing.subject;
+  assert.equal((await call('POST', '/api/questions', missing)).status, 400);
+  await assert.rejects(query("INSERT INTO questions(subject,unit,topic,subtopic,difficulty,marks) VALUES($1,1,'T','S','EASY',5)", [unknown]), e => e.code === '23503');
 });

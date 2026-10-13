@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { generateSyllabusPaper, planPaper, syllabusBody } from '../src/syllabusGenerator.js';
 
-const body = { fileName: 'syllabus.txt', mimeType: 'text/plain', data: Buffer.from('Unit 1: Arrays, stacks and queues.').toString('base64'), totalMarks: 25, count: 5, split: { easy: 40, medium: 40, hard: 20 } };
+const body = { subject: 'GENERAL', fileName: 'syllabus.txt', mimeType: 'text/plain', data: Buffer.from('Unit 1: Arrays, stacks and queues.').toString('base64'), totalMarks: 25, count: 5, split: { easy: 40, medium: 40, hard: 20 } };
 const questions = Array.from({ length: 5 }, (_, i) => ({ topic: 'Data structures', subtopic: 'Arrays', text: `Explain array operation number ${i + 1}.`, syllabusReference: 'Unit 1: Arrays' }));
 const options = (fetchImpl) => ({ apiKey: 'test-key', model: 'test-model', fetchImpl });
 test('Java plans exact marks and rounded counts, including small papers', async () => {
@@ -52,6 +52,8 @@ test('rejects truncated, duplicate and wrong-count papers', async () => {
 test('HTTP upload route validates JSON and returns generation results without a database', async () => {
   const { app } = await import('../src/app.js');
   const { pool } = await import('../src/db.js');
+  const originalQuery = pool.query;
+  pool.query = async () => ({ rows: [{ name: 'GENERAL' }] });
   const originalFetch = globalThis.fetch;
   const originalKey = process.env.GEMINI_API_KEY;
   process.env.GEMINI_API_KEY = 'test-key';
@@ -66,6 +68,7 @@ test('HTTP upload route validates JSON and returns generation results without a 
     assert.equal((await response.json()).paper.totalMarks, 25);
   } finally {
     globalThis.fetch = originalFetch;
+    pool.query = originalQuery;
     if (originalKey === undefined) delete process.env.GEMINI_API_KEY;
     else process.env.GEMINI_API_KEY = originalKey;
     await new Promise(resolve => server.close(resolve));

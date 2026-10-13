@@ -5,6 +5,8 @@ import { toApi } from '../mapper.js';
 import { generatePaper } from '../javaCore.js';
 import { autoBody, paperBody } from '../validation.js';
 
+import { requireRegisteredSubject } from './subjects.js';
+
 const router = Router();
 
 /**
@@ -14,6 +16,7 @@ const router = Router();
  */
 router.post('/papers/generate', async (req, res) => {
   const b = paperBody.parse(req.body);
+  await requireRegisteredSubject(b.subject);
   const where = ['NOT is_deleted'];
   const params = [];
   const add = (sql, v) => {
@@ -54,6 +57,7 @@ router.post('/papers/generate', async (req, res) => {
  */
 router.post('/generate/questions', async (req, res) => {
   const b = autoBody.parse(req.body);
+  await requireRegisteredSubject(b.subject);
   const where = ['NOT is_deleted', 'topic = $1', 'marks = $2', 'difficulty = $3'];
   const params = [b.topic, b.marks, b.difficulty];
   if (b.subject) {

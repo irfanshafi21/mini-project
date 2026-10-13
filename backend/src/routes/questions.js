@@ -4,6 +4,8 @@ import { HttpError, notFound } from '../errors.js';
 import { toApi } from '../mapper.js';
 import { listQuery, parseId, questionBody } from '../validation.js';
 
+import { requireRegisteredSubject } from './subjects.js';
+
 const router = Router();
 
 const idFrom = (req) => {
@@ -15,6 +17,7 @@ const idFrom = (req) => {
 // GET /api/questions?unit=1&topic=java&difficulty=medium&marks=5&q=stack&page=1&limit=20
 router.get('/', async (req, res) => {
   const f = listQuery.parse(req.query);
+  if (f.subject) await requireRegisteredSubject(f.subject);
   const where = ['NOT is_deleted'];
   const params = [];
   const add = (sql, value) => {
@@ -49,7 +52,7 @@ router.get('/deleted', async (_req, res) => {
 // POST /api/questions   -> manual question entry; the question number is assigned automatically
 router.post('/', async (req, res) => {
   const b = questionBody.parse(req.body);
-  await query('INSERT INTO subjects (name) VALUES ($1) ON CONFLICT (name) DO NOTHING', [b.subject]);
+  await requireRegisteredSubject(b.subject);
   const { rows } = await query(
     `INSERT INTO questions (unit, topic, subtopic, difficulty, marks, text, subject)
      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
@@ -78,7 +81,7 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const id = idFrom(req);
   const b = questionBody.parse(req.body);
-  await query('INSERT INTO subjects (name) VALUES ($1) ON CONFLICT (name) DO NOTHING', [b.subject]);
+  await requireRegisteredSubject(b.subject);
   const { rows } = await query(
     `UPDATE questions
      SET unit = $2, topic = $3, subtopic = $4, difficulty = $5, marks = $6, text = $7, subject = $8, updated_at = now()

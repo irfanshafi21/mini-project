@@ -2,6 +2,12 @@
 
 A simple three-part application: **React + Vite** renders the interface, **Node.js + Express** exposes the API and calls Gemini, and **Java** runs the core paper algorithms. PostgreSQL stores the question bank.
 
+## Paperwise interface
+
+The interface has a question bank, subject collections, and a Create a Paper workspace. Add and edit questions by subject, unit, topic, subtopic, difficulty and marks. Search/filter the bank, browse pages, and undo a soft deletion. Create a paper by choosing **Your question bank** or **Upload a syllabus**, then configure the paper and review it before downloading TXT or printing/saving PDF.
+
+After updating an existing installation, run `npm run db:init` in `backend` once. This adds the subject column and subject-aware duplicate index without deleting question rows. Existing questions are assigned to **General**; edit them to set their subjects. Generated syllabus questions are not automatically stored.
+
 ## File structure
 
 ```text

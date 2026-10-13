@@ -186,6 +186,44 @@ test('a subject can be created before questions and persists with a zero count',
   assert.equal((await call('GET', '/api/stats')).body.bySubject.SOFTWARE_ENGINEERING, 0);
 });
 
+test('subject overview excludes deleted questions and tracks only successful complete papers', async () => {
+  const subject = 'OVERVIEW_TEST';
+  await call('POST', '/api/subjects', { name: subject });
+  const ids = [];
+  for (const marks of [2,5,10,16,3]) {
+    const added = await call('POST', '/api/questions', { ...q(1, 'CPU', 'Registers', 'EASY', marks, `Explain the ${marks} mark CPU topic.`), subject });
+    assert.equal(added.status, 201); ids.push(added.body.id);
+  }
+  await call('DELETE', `/api/questions/${ids[4]}`);
+  let overview = (await call('GET', `/api/subjects/${subject}/overview`)).body;
+  assert.equal(overview.totalQuestions, 4);
+  assert.deepEqual(overview.byMarks, {2:1,5:1,10:1,16:1});
+  assert.equal(overview.otherMarks, 0);
+  assert.equal(overview.generatedQuestions, 0);
+  const pattern = {subject,totalMarks:2,count:1,markCounts:{2:1,5:0,10:0,16:0},split:{easy:100,medium:0,hard:0}};
+  assert.equal((await call('POST','/api/papers/generate',pattern)).status,200);
+  assert.equal((await call('POST','/api/papers/generate',{...pattern,totalMarks:32,count:2,markCounts:{2:0,5:0,10:0,16:2}})).status,400);
+  const originalFetch = globalThis.fetch, originalProvider = process.env.AI_PROVIDER, originalKey = process.env.GROQ_API_KEY;
+  process.env.AI_PROVIDER = 'groq'; process.env.GROQ_API_KEY = 'test';
+  globalThis.fetch = (url, options) => String(url).startsWith('https://api.groq.com/') ? Promise.resolve({ok:true,json:async()=>({choices:[{finish_reason:'stop',message:{content:JSON.stringify({questions:[{topic:'CPU',subtopic:'Registers',text:'Define the program counter register.',syllabusReference:'CPU registers'}]})}}]})}) : originalFetch(url,options);
+  try {
+    assert.equal((await call('POST','/api/papers/from-syllabus',{...pattern,fileName:'s.txt',mimeType:'text/plain',data:Buffer.from('Unit 1: CPU registers and instruction processing.').toString('base64')})).status,200);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if(originalProvider === undefined) delete process.env.AI_PROVIDER; else process.env.AI_PROVIDER = originalProvider;
+    if(originalKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = originalKey;
+  }
+  overview = (await call('GET', `/api/subjects/${subject}/overview`)).body;
+  assert.equal(overview.generatedQuestions, 2);
+  assert.equal(overview.generatedPapers, 2);
+  assert.equal(overview.bankQuestions, 1);
+  assert.equal(overview.syllabusQuestions, 1);
+  assert.equal(overview.totalQuestions, 4);
+  assert.equal((await call('GET','/api/subjects/UNKNOWN_SUBJECT/overview')).status,404);
+  await call('DELETE', `/api/questions/${ids[0]}`);
+  assert.equal((await call('GET', `/api/subjects/${subject}/overview`)).body.byMarks[2],0);
+});
+
 test('unregistered subjects are rejected without creating records or invoking generation', async () => {
   const unknown = 'NOT_REGISTERED';
   const question = { ...q(1, 'Trees', 'Traversal', 'EASY', 5, 'Explain tree traversal.'), subject: unknown };

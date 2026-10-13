@@ -1,6 +1,40 @@
-# Examination Question Bank
+# Question Bank & Examination Paper Generator
 
-A simple three-part application: **React + Vite** renders the interface, **Node.js + Express** exposes the API and calls Gemini, and **Java** runs the core paper algorithms. PostgreSQL stores the question bank.
+> Register subjects. Organise questions. Create sectioned examination papers from your bank or a syllabus.
+
+[Features](#simple-interface) | [Architecture](#how-it-works) | [Installation](#run-locally) | [API](#api) | [Marks and sections](#question-counts-by-marks) | [Troubleshooting](#troubleshooting)
+
+| Frontend | Backend | Core algorithms | Storage | Syllabus generation |
+|---|---|---|---|---|
+| React + Vite | Node.js + Express | Java JDK | PostgreSQL | Groq or Gemini |
+
+## Groq setup
+
+Groq support extracts text from PDF files in the backend before generating questions. Upload a text-based PDF or UTF-8 TXT syllabus, up to 5 MB. Scanned image-only PDFs require OCR first. Extracted text is limited to 100,000 characters. Generated questions are validated against the Java marks plan before the preview appears.
+
+In **backend/.env**, use these settings alongside your existing database URL:
+
+```dotenv
+AI_PROVIDER=groq
+GROQ_API_KEY=YOUR_GROQ_API_KEY
+GROQ_MODEL=openai/gpt-oss-20b
+```
+
+Create a key in the [Groq Console](https://console.groq.com/keys). Use a model available to your account that supports [strict structured outputs](https://console.groq.com/docs/structured-outputs). Keep the actual key only in your ignored local `.env` file.
+
+After updating the backend files, run:
+
+```powershell
+cd backend
+npm.cmd ci
+npm.cmd start
+```
+
+Gemini remains optional: select `AI_PROVIDER=gemini` and configure its own `GEMINI_API_KEY` and available `GEMINI_MODEL`. Provider keys are not interchangeable. There is no automatic fallback between providers. The frontend, database and Java marks rules work with either provider.
+
+---
+
+A simple three-part application: **React + Vite** renders the interface, **Node.js + Express** exposes the API and calls the selected generation provider, and **Java** runs the core paper algorithms. PostgreSQL stores registered subjects and questions. AI generation uses an external API; no local ML model is trained.
 
 ## Simple interface
 
@@ -17,7 +51,7 @@ After pulling this update, run `npm run db:init` in `backend` once and restart t
 
 The interface uses light blue and warm cream colors. It has no login, registration or user profile. Unused starter images/icons were removed, and frontend styles are in one `App.css` file.
 
-After updating an existing installation, run `npm run db:init` in `backend` once. This adds the subject column and subject-aware duplicate index without deleting question rows. Existing questions are assigned to **General**; edit them to set their subjects. Generated syllabus questions are not automatically stored.
+Generated syllabus questions are not automatically stored. Review them before using a paper for an examination.
 
 ## File structure
 
@@ -40,7 +74,7 @@ mini-project/
 │   │   ├── server.js              # HTTP startup
 │   │   ├── db.js                  # PostgreSQL connection
 │   │   ├── javaCore.js            # Node → Java bridge
-│   │   ├── syllabusGenerator.js   # Syllabus validation and Gemini integration
+│   │   ├── syllabusGenerator.js   # PDF text extraction, Groq/Gemini and output validation
 │   │   ├── validation.js
 │   │   ├── mapper.js
 │   │   ├── errors.js
@@ -51,6 +85,7 @@ mini-project/
 │   │       ├── generate.js
 │   │       └── syllabus.js
 │   └── test/
+│       ├── groq.test.js
 │       ├── api.test.js
 │       ├── marks.test.js
 │       ├── javaCore.test.js
@@ -72,9 +107,23 @@ mini-project/
 
 ## How it works
 
+```mermaid
+flowchart TD
+    UI[React browser interface] --> API[Express API on Node.js]
+    API --> DB[(PostgreSQL)]
+    API --> JAVA[Java marks and selection engine]
+    API --> SOURCE[Syllabus PDF or TXT]
+    SOURCE --> AI[Selected generation provider]
+    AI --> VALIDATE[Validate generated questions]
+    JAVA --> VALIDATE
+    DB --> JAVA
+    VALIDATE --> PAPER[Sectioned preview]
+    PAPER --> EXPORT[Print / PDF or TXT]
+```
+
 - **Stored question paper:** React → Express → PostgreSQL question pool → Java selection → React preview.
-- **Syllabus paper:** React uploads PDF/TXT → Express → Java calculates exact question slots → Gemini writes questions for those slots → Express validates the result → React preview/TXT download.
-- Java owns the total-marks and difficulty algorithms. Node owns HTTP, database access, input validation and external API integration. Gemini supplies question content; there is no locally trained ML model.
+- **Syllabus paper:** React uploads PDF/TXT → Express checks the registered subject → Java calculates question slots → the provider writes questions → Express validates the result → React preview/TXT download. Groq receives extracted text; Gemini can receive the PDF directly.
+- Java owns the total-marks and difficulty algorithms. Node owns HTTP, database access, input validation and external API integration.
 - Java runs as a subprocess using JDK source-file launch. No Maven, Java server or extra port is needed. Keep `core/` next to `backend/` when deploying. Source-file launch recompiles on each request, which is appropriate for this small project.
 
 ## Run locally
@@ -82,7 +131,7 @@ mini-project/
 ### Open in VS Code on Windows
 
 1. Download/clone this repository, then use **File → Open Folder** in VS Code and open the **mini-project** folder (the folder containing `frontend`, `backend`, `core` and this README). You do not need to open every file separately.
-2. Install Node.js 22.12 or newer, JDK 17 or newer, and PostgreSQL. Open **Terminal → New Terminal** and check:
+2. Install Node.js 22.13 or newer supported LTS, JDK 17 or newer, and PostgreSQL. Open **Terminal → New Terminal** and check:
    ```powershell
    node --version
    npm --version
@@ -103,10 +152,11 @@ mini-project/
    ```dotenv
    DATABASE_URL=postgresql://postgres:YOUR_POSTGRES_PASSWORD@localhost:5432/questionbank
    PORT=4000
-   GEMINI_API_KEY=YOUR_GEMINI_API_KEY
-   GEMINI_MODEL=gemini-3.8-flash
+   AI_PROVIDER=groq
+   GROQ_API_KEY=YOUR_GROQ_API_KEY
+   GROQ_MODEL=openai/gpt-oss-20b
    ```
-   Replace the password and API key placeholders with your own values. URL-encode special characters in the database password. The key stays in this local ignored file. A Gemini key is needed only for syllabus generation.
+   Replace the password and API key placeholders with your own values. URL-encode special characters in the database password. The key stays in this local ignored file and is needed only for syllabus generation. The file must be named `.env`, directly inside `backend`, not `backend.env` or `.env.txt`.
 5. **Terminal 1 — backend:**
    ```powershell
    cd backend
@@ -170,7 +220,7 @@ Unused starter assets and the extra stylesheet were removed to keep the structur
 
 Upload a PDF or UTF-8 TXT file, maximum 5 MB. Choose total marks, question count and difficulty percentages. Java allocates the selected or automatic marks pattern and rounds difficulty percentages to question counts using largest remainders. The returned total is exact. Generated questions include syllabus references and are not automatically added to the database.
 
-Documents are sent to Google Gemini and held in memory by this app. Review the generated questions and references before use. Gemini model availability, quota and billing depend on your account; `GEMINI_MODEL` is configurable. The app reports unreadable documents, incomplete/duplicate output, unavailable Java, and Gemini failures.
+Uploads are held in memory by this app. Groq receives extracted syllabus text; Gemini mode sends the document to Google. Provider data policies also apply. Review questions and references before use. Model availability, quota and billing depend on your account. The app rejects incomplete, duplicate or wrong-count output and reports unreadable documents and generation failures.
 
 ## API
 
@@ -191,13 +241,19 @@ Documents are sent to Google Gemini and held in memory by this app. Review the g
 | `POST /api/papers/generate` | Java selects a paper from the bank |
 | `POST /api/papers/from-syllabus` | Java plans slots; Gemini writes questions |
 
-Syllabus request JSON: `fileName`, `mimeType` (`application/pdf` or `text/plain`), `data` (base64 file content), `totalMarks`, `count`, and `split` (`easy`, `medium`, `hard`, summing to 100).
+Syllabus request JSON: registered `subject`, `fileName`, `mimeType` (`application/pdf` or `text/plain`), `data` (base64 file content), `totalMarks`, `count`, optional `markCounts`, and `split` (`easy`, `medium`, `hard`, summing to 100).
 
 ## Checks
 
+Run all database-independent Java and provider tests from `backend`:
+
+```powershell
+node --test test/javaCore.test.js test/syllabus.test.js test/marks.test.js test/groq.test.js
+```
+
 From `backend`, run `npm run test:core` for actual Java bridge and mocked Gemini tests. Run `npm test` for the full suite, using a dedicated PostgreSQL test database (`TEST_DATABASE_URL`); database tests clear their configured test table. From `frontend`, run `npm run lint` and `npm run build`.
 
-Legacy requests without markCounts use greedy selection. The standard marks workflow uses bounded exact selection; difficulty remains a target. Authentication and rate limits are needed before exposing the paid Gemini endpoint publicly.
+Legacy requests without markCounts use the earlier algorithms. The standard marks workflow uses bounded exact selection; difficulty remains a target. Authentication and rate limits are needed before exposing the generation endpoint publicly.
 
 ## Registered-subject workflow
 
@@ -211,6 +267,69 @@ Both paper sources accept counts of 2-, 5-, 10- and 16-mark questions. All four 
 
 UI labels use plain text or SVG icons to prevent corrupted symbols. Update frontend/src/App.jsx, frontend/src/SyllabusPaper.jsx, backend/src/validation.js, backend/src/syllabusGenerator.js, backend/src/javaCore.js, backend/src/routes/generate.js and core/src/PaperEngine.java together, then restart both servers. No database migration is needed for this marks update.
 
+### Example: a 50-mark paper
+
+| Section | Marks per question | Number of questions | Subtotal |
+|---|---:|---:|---:|
+| A | 2 | 2 | 4 |
+| B | 5 | 2 | 10 |
+| C | 10 | 2 | 20 |
+| D | 16 | 1 | 16 |
+| **Total** | | **7** | **50** |
+
+Leave Number of questions blank to derive 7 from these counts. With all four counts zero and no explicit count, automatic syllabus planning chooses the smallest feasible count using the standard mark values. Bank mode is additionally constrained by the stored question pool.
+
 ## Sections and optional question count
 
 Leaving Number of questions blank (or 0) uses the sum of the four custom mark counts. With all four counts at 0, Java allocates the count automatically. Nonzero explicit question counts must still match a custom pattern. Preview, Print/PDF and TXT group questions by marks: Section A = 2 marks, B = 5, C = 10, D = 16. Empty sections are omitted and question numbering continues across sections. Count inputs use equal-width columns, with two columns on small screens. This update changes frontend/src/SyllabusPaper.jsx, frontend/src/App.css and README.md only. Restart the frontend; no database changes are required.
+
+## View your stored database
+
+In pgAdmin expand **Servers → your server → Databases → questionbank → Schemas → public → Tables**. Right-click `subjects` or `questions` and choose **View/Edit Data → All Rows**. Refresh Tables after initialising the database.
+
+Read-only Query Tool examples:
+
+```sql
+SELECT * FROM subjects ORDER BY name;
+SELECT * FROM questions WHERE NOT is_deleted ORDER BY id;
+SELECT * FROM questions WHERE is_deleted ORDER BY deleted_at DESC;
+```
+
+Question IDs start at 101. Deleted questions remain in the database for restoration. Subjects are linked to questions through a foreign key; indexes support filters and reject duplicate active text within a subject and unit.
+
+## Troubleshooting
+
+| Symptom | Action |
+|---|---|
+| PostgreSQL password must be a string | Check that `backend/.env` exists, contains the correct `DATABASE_URL`, and restart the backend |
+| Internal server error on health | Read the backend terminal; check the PostgreSQL service, credentials, database and schema |
+| `ENOTEMPTY` while installing | Stop running app processes and pause OneDrive sync or move outside OneDrive before reinstalling |
+| Missing `dotenv` or `cors` | Complete a successful dependency installation before starting |
+| PowerShell blocks npm | Use `npm.cmd` instead of `npm` |
+| Java unavailable | Check JDK installation, PATH and that `core` is beside `backend` |
+| API key rejected | Check the selected provider's key and account access; restart after configuration changes |
+| Model unavailable | Choose a model available to your account with the required output support |
+| Rate limit reached | Wait for the provider's quota window to reset |
+| Generation temporarily unavailable / 503 | Provider is busy; retry later. Reinstalling the project does not resolve provider overload |
+| Groq cannot read a PDF | Use a text-based PDF or TXT; apply OCR to scanned pages first |
+| Wrong or incomplete generated count | Try fewer questions or a clearer syllabus; inspect the backend error |
+| Impossible marks pattern | Check the weighted sum and count; bank mode needs enough eligible questions |
+| Frontend cannot connect | Keep the backend running; check health and `VITE_API_URL` |
+
+The startup message only confirms that the HTTP server started. `/api/health` checks PostgreSQL; it does not test Java or an AI provider.
+
+## Technology choices and limitations
+
+| Choice | Justification |
+|---|---|
+| React | Reusable components and state for forms, filters, modals and previews |
+| Vite | Fast development feedback and a straightforward production build |
+| Node.js | Asynchronous HTTP, database and subprocess integration |
+| Express | A small REST API with clear routes and middleware |
+| PostgreSQL | Persistent relational data, foreign keys, constraints and indexes |
+| Java | A dedicated, independently verifiable marks and selection engine |
+| External AI API | Question generation without training or hosting an ML model |
+
+There is no authentication, user permissions or saved paper history. Generated questions need academic review. Groq mode does not perform OCR. AI availability, cost and quota are external dependencies.
+
+For an existing installation, keep your local `.env`, update backend source and package files together, run `npm.cmd ci`, and restart the backend. The Groq update does not require database changes. Do not upload `.env`, `node_modules` or `dist` to GitHub.

@@ -1,59 +1,303 @@
-# Question Bank & Examination Paper Generator
+<div align="center">
 
-> Register subjects. Organise questions. Create sectioned examination papers from your bank or a syllabus.
+# 📘 Question Bank & Paper Generator
 
-[Features](#simple-interface) | [Architecture](#how-it-works) | [Installation](#run-locally) | [API](#api) | [Marks and sections](#question-counts-by-marks) | [Troubleshooting](#troubleshooting)
+### From a syllabus to a structured examination paper
 
-| Frontend | Backend | Core algorithms | Storage | Syllabus generation |
-|---|---|---|---|---|
-| React + Vite | Node.js + Express | Java JDK | PostgreSQL | Groq or Gemini |
+Register subjects, build your question library, and create papers with a clear marks pattern.
 
-## Groq setup
+![React](https://img.shields.io/badge/React-Frontend-61DAFB?style=flat-square&logo=react&logoColor=222222)
+![Vite](https://img.shields.io/badge/Vite-Development-646CFF?style=flat-square&logo=vite&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-Backend-339933?style=flat-square&logo=nodedotjs&logoColor=white)
+![Express](https://img.shields.io/badge/Express-REST_API-353535?style=flat-square&logo=express&logoColor=white)
+![Java](https://img.shields.io/badge/Java-Paper_Engine-E58B35?style=flat-square)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=flat-square&logo=postgresql&logoColor=white)
 
-Groq support extracts text from PDF files in the backend before generating questions. Upload a text-based PDF or UTF-8 TXT syllabus, up to 5 MB. Scanned image-only PDFs require OCR first. Extracted text is limited to 100,000 characters. Generated questions are validated against the Java marks plan before the preview appears.
+**Light blue interface · Warm accents · Subject-based collections · PDF / TXT export**
 
-In **backend/.env**, use these settings alongside your existing database URL:
+[Features](#features) · [Workflow](#workflow) · [Architecture](#architecture) · [Setup](#local-setup) · [Paper rules](#paper-rules) · [Troubleshooting](#troubleshooting)
+
+</div>
+
+---
+
+> [!TIP]
+> **Already installed?** Keep PostgreSQL running. Start `npm.cmd start` in `backend` and `npm.cmd run dev` in `frontend`. Open the Local URL printed by Vite.
+
+## Features
+
+| Workspace | Available features |
+| :--- | :--- |
+| **Subjects** | Register subjects and view stored-question totals, counts by marks, and paper-generation totals |
+| **Question bank** | Add, edit, search, filter and paginate questions; soft-delete and restore |
+| **Paper sources** | Select existing questions or upload a syllabus to generate new questions |
+| **Marks pattern** | Set counts for 2-, 5-, 10- and 16-mark questions, with a live question total and marks subtotal |
+| **Difficulty mix** | Configure easy, medium and hard percentages |
+| **Automatic saving** | Save validated syllabus-generated questions to the selected subject and unit |
+| **Paper preview** | Group questions into Sections A–D and review the final paper |
+| **Exports** | Download TXT or use the browser's Print / PDF option |
+
+The website has no login or user profile. Subject registration means adding an academic subject, not creating a user account. AI generation uses an external API; this project does not train a local ML model.
+
+## Workflow
+
+```mermaid
+flowchart LR
+    A[Register a subject] --> B{Choose paper source}
+    B --> C[Saved question bank]
+    B --> D[Upload syllabus]
+    C --> E[Set marks and difficulty]
+    D --> E
+    E --> F[Generate paper]
+    F --> G[Review sections]
+    G --> H[Print / PDF or TXT]
+```
+
+### 1. Register and organise
+
+Open **Subjects → Add subject**, enter the name, and save. The subject appears immediately with zero questions. Names are normalised, duplicate subjects are rejected, and other subject fields use dropdowns.
+
+Click a subject to see its overview. **View question bank** opens that subject's filtered collection. Deleting the last question does not delete the subject.
+
+### 2. Choose your source
+
+| Your question bank | Upload a syllabus |
+| :--- | :--- |
+| Select a registered subject | Select a registered subject and destination unit |
+| Optionally filter by unit and topic | Upload a PDF or UTF-8 TXT syllabus |
+| Java selects eligible stored questions | Java plans the slots; an AI provider writes the questions |
+| Existing entries are reused | New validated questions are saved automatically |
+
+### 3. Configure, review and export
+
+Enter total marks, set question counts by marks, and choose the difficulty mix. Generate the paper, review its content, then select **Download TXT** or **Print / PDF**.
+
+> [!NOTE]
+> Syllabus questions are saved to the selected subject and unit. Existing active text in that same subject and unit is skipped. The original uploaded file is not stored. Review the saved questions for academic correctness.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    UI[React interface] -->|HTTP JSON| API[Node.js + Express]
+    API -->|Read subjects and questions| DB[(PostgreSQL)]
+    API -->|Plan slots or select questions| JAVA[Java PaperEngine]
+    API --> FILE[Validate PDF / TXT upload]
+    FILE --> PROVIDER[Groq extracted text / Gemini document]
+    JAVA --> VALIDATE[Validate generated count and content]
+    PROVIDER --> VALIDATE
+    VALIDATE -->|Save questions and counters atomically| DB
+    JAVA --> PREVIEW[Sectioned paper preview]
+    VALIDATE --> PREVIEW
+    PREVIEW --> EXPORT[Print / PDF and TXT]
+```
+
+**Bank paper:** React → Express → PostgreSQL pool → Java selection → preview.
+
+**Syllabus paper:** React → registered-subject check → Java slots → upload processing → provider generation → output validation → database save → preview.
+
+The frontend calls `VITE_API_URL`, normally `http://localhost:4000/api`. Express owns HTTP, database access, validation and provider integration. Java owns marks planning and question selection, using JDK source-file launch as a subprocess. Keep `core` beside `backend`; there is no separate Java server or Maven requirement.
+
+### Technology choices
+
+| Choice | Justification |
+|---|---|
+| React | Reusable components and state for forms, filters, modals and previews |
+| Vite | Fast development feedback and a straightforward production build |
+| Node.js | Asynchronous HTTP, database and subprocess integration |
+| Express | A small REST API with clear routes and middleware |
+| PostgreSQL | Persistent relational data, foreign keys, constraints and indexes |
+| Java | A dedicated, independently verifiable marks and selection engine |
+| External AI API | Question generation without training or hosting an ML model |
+
+---
+
+## Local setup
+
+### Prerequisites
+
+| Tool | Requirement | Official download |
+| :--- | :--- | :--- |
+| Node.js | 22.13 or newer supported LTS | [Node.js](https://nodejs.org/en/download) |
+| Java | JDK 17 or newer | [Adoptium](https://adoptium.net/temurin/releases/) |
+| PostgreSQL | Running local server; pgAdmin is useful | [PostgreSQL](https://www.postgresql.org/download/windows/) |
+| VS Code | Editor with integrated terminals | [VS Code](https://code.visualstudio.com/download) |
+| Git | Optional when downloading a ZIP | [Git](https://git-scm.com/downloads) |
+
+PostgreSQL's optional Stack Builder extensions are not needed. Remember the database password and port chosen during installation. Reopen VS Code after installing tools so PATH updates take effect.
+
+### Step 1 — Get the project
+
+Download this repository's ZIP, extract it, and open the folder containing `backend`, `frontend`, `core` and `README.md` in VS Code. Alternatively:
+
+```powershell
+git clone https://github.com/irfanshafi21/mini-project.git
+cd mini-project
+```
+
+Check the installations in a terminal:
+
+```powershell
+node --version
+npm.cmd --version
+java -version
+```
+
+### Step 2 — Create the database
+
+In pgAdmin connect to your local PostgreSQL server. Right-click **Databases → Create → Database**, name it `questionbank`, and save. Alternatively, open Query Tool on `postgres` and run once:
+
+```sql
+CREATE DATABASE questionbank;
+```
+
+Skip this if the database already exists. Tables are created by `db:init` below.
+
+### Step 3 — Configure the backend
+
+From the project root:
+
+```powershell
+Copy-Item backend/.env.example backend/.env
+```
+
+Edit **backend/.env**:
 
 ```dotenv
+DATABASE_URL=postgresql://postgres:YOUR_POSTGRES_PASSWORD@localhost:5432/questionbank
+PORT=4000
 AI_PROVIDER=groq
 GROQ_API_KEY=YOUR_GROQ_API_KEY
 GROQ_MODEL=openai/gpt-oss-20b
 ```
 
-Create a key in the [Groq Console](https://console.groq.com/keys). Use a model available to your account that supports [strict structured outputs](https://console.groq.com/docs/structured-outputs). Keep the actual key only in your ignored local `.env` file.
+Replace both placeholders with your own credentials. URL-encode special characters in the database password. The exact filename is `.env`, directly inside `backend`.
 
-After updating the backend files, run:
+Get your key from the [Groq Console](https://console.groq.com/keys). Select an account-available model supporting [strict structured outputs](https://console.groq.com/docs/structured-outputs). The documented model is configurable; provider availability and quota depend on your account.
+
+> [!IMPORTANT]
+> Keep the actual API key and database password in local `.env` only. Never upload `.env` to GitHub or put API keys in frontend variables.
+
+<details>
+<summary><strong>Optional: use Gemini instead of Groq</strong></summary>
+
+Set `AI_PROVIDER=gemini`, `GEMINI_API_KEY` and `GEMINI_MODEL` in the backend configuration. Choose a model available to your account. Gemini can receive the PDF directly; Groq receives extracted text. Keys are not interchangeable and there is no automatic provider fallback.
+
+</details>
+
+### Step 4 — Start the backend
+
+In Terminal 1, from the project root:
 
 ```powershell
 cd backend
 npm.cmd ci
+npm.cmd run db:init
 npm.cmd start
 ```
 
-Gemini remains optional: select `AI_PROVIDER=gemini` and configure its own `GEMINI_API_KEY` and available `GEMINI_MODEL`. Provider keys are not interchangeable. There is no automatic fallback between providers. The frontend, database and Java marks rules work with either provider.
+Keep this terminal open. Visit [localhost:4000/api/health](http://localhost:4000/api/health). Expected response:
 
----
+```json
+{ "status": "ok" }
+```
 
-A simple three-part application: **React + Vite** renders the interface, **Node.js + Express** exposes the API and calls the selected generation provider, and **Java** runs the core paper algorithms. PostgreSQL stores registered subjects and questions. AI generation uses an external API; no local ML model is trained.
+The startup message confirms the HTTP server started. Health checks PostgreSQL, not Java or an AI provider. `db:init` creates tables and applies the included migrations while preserving existing questions.
 
-## Simple interface
+### Step 5 — Start the frontend
 
-The interface has a question bank, subject collections, and a Create a Paper workspace. Add and edit questions by subject, unit, topic, subtopic, difficulty and marks. Search/filter the bank, browse pages, and undo a soft deletion. Create a paper by choosing **Your question bank** or **Upload a syllabus**, then configure the paper and review it before downloading TXT or printing/saving PDF.
+Open Terminal 2 at the project root:
 
-### Adding subjects and questions
+```powershell
+cd frontend
+npm.cmd ci
+npm.cmd run dev
+```
 
-1. Open **Subjects → Add subject**, enter a subject name, and select **Save subject**.
-2. The new subject appears immediately with **0 questions**, even before you add any questions. Subject names are case-insensitive, and duplicate names are rejected.
-3. Select a subject card to open its overview, then choose View question bank to browse that subject. Use **Add question** in the question bank and select that registered subject in the Subject field.
-4. Saved subjects are also available in filters and the question-paper Subject selector. Deleting the last question does not delete the subject.
+Open the Local URL Vite prints, normally [localhost:5173](http://localhost:5173). If that port is occupied, use the next printed port. Do not launch `index.html` directly or use Live Server.
 
-After pulling this update, run `npm run db:init` in `backend` once and restart the backend. This creates the `subjects` table and registers existing question subjects without deleting any question data.
+<details>
+<summary><strong>Using a different backend address</strong></summary>
 
-The interface uses light blue and warm cream colors. It has no login, registration or user profile. Unused starter images/icons were removed, and frontend styles are in one `App.css` file.
+Create `frontend/.env.local` and set:
 
-Generated syllabus questions are automatically saved to the selected registered subject and unit. Review them before using a paper for an examination.
+```dotenv
+VITE_API_URL=http://localhost:4000/api
+```
 
-## File structure
+Change it to match your backend's host and port. Restart Vite after changing frontend configuration and restart Express after changing backend `.env`.
+
+</details>
+
+### Starting again later
+
+Keep PostgreSQL running. Start these in separate terminals:
+
+| Backend folder | Frontend folder |
+| :--- | :--- |
+| `npm.cmd start` | `npm.cmd run dev` |
+
+Press **Ctrl+C** to stop each server. Run `npm.cmd ci` after dependency changes and `npm.cmd run db:init` after schema updates.
+
+## Paper rules
+
+### Live question counts
+
+**Number of questions** starts at **0** and is read-only. It updates immediately from the four mark counts: 2 two-mark questions show 2; adding 2 five-mark questions shows 4. Each mark card shows its section and subtotal.
+
+| Section | Marks per question | Example count | Subtotal |
+| :--- | ---: | ---: | ---: |
+| A | 2 | 2 | 4 |
+| B | 5 | 2 | 10 |
+| C | 10 | 2 | 20 |
+| D | 16 | 1 | 16 |
+| **Total** | | **7 questions** | **50 marks** |
+
+- With a custom pattern, `0` skips that mark category.
+- All four counts at `0` request automatic allocation.
+- Custom subtotals must equal Total marks. The limit is 50 questions and 1,000 marks.
+- Automatic syllabus planning uses 2, 5, 10 and 16 marks. Without an explicit API count it chooses the smallest feasible question count.
+- Bank mode needs enough eligible stored questions and never repeats an entry within one paper.
+- Empty sections are omitted. Question numbering continues across sections in preview, print and TXT.
+
+Legacy API requests omitting `markCounts` retain the earlier algorithms. Existing questions with other mark values can still be browsed and appear in legacy papers.
+
+### Difficulty mix
+
+Easy, medium and hard percentages must sum to **100**. Syllabus planning applies them to question counts, rounded using largest remainders. Bank selection treats difficulty as a target constrained by available questions and marks.
+
+### Uploads and automatic saving
+
+PDF or UTF-8 TXT uploads must be non-empty and no larger than **5 MB**. Groq extracts PDF text locally, limits the text to 100,000 characters, and rejects unreadable or scanned image-only PDFs. Apply OCR first or upload TXT. Extracted text is sent to Groq; Gemini mode sends the document to Google. Provider data policies also apply.
+
+Validated syllabus questions are saved under the selected subject and unit (1–5). The API defaults the unit to 1 if omitted. Topic labels are normalised and limited to 60 characters. Exact active text duplicates in the same subject and unit are skipped. Saving the paper's questions and updating generation counters occur atomically in one database statement.
+
+The save notice reports new entries and existing duplicates. The bank and subject totals refresh automatically. Syllabus references remain in the paper preview/TXT; the bank stores text, subject, unit, topic, subtopic, difficulty and marks. The uploaded file and full generated paper are not stored. Previous generations are not backfilled.
+
+## Subjects and database
+
+Click a subject card for its stored-question total, 2/5/10/16-mark breakdown, generated-question total and paper count. Other stored mark values are reported separately.
+
+Generation totals count question appearances across successful complete papers, including bank selections and syllabus generations. Reusing a question in a later paper counts again. Failed or incomplete generations do not increment counters. Tracking starts from the counter update; earlier activity cannot be reconstructed. The separate activity panel is hidden.
+
+| Table | Stored information |
+| :--- | :--- |
+| `subjects` | Registered names, creation timestamp and generation counters |
+| `questions` | Question ID, subject, unit, topic, subtopic, text, difficulty, marks, deletion state and timestamps |
+
+IDs begin at 101. Deletion is soft deletion so questions can be restored. A foreign key enforces registered subjects. Indexes support filters and prevent duplicate active text within a subject and unit.
+
+### Inspect data in pgAdmin
+
+Expand **Servers → your server → Databases → questionbank → Schemas → public → Tables**. Right-click a table and select **View/Edit Data → All Rows**. Refresh Tables after initialising the database.
+
+```sql
+SELECT * FROM subjects ORDER BY name;
+SELECT * FROM questions WHERE NOT is_deleted ORDER BY id;
+SELECT * FROM questions WHERE is_deleted ORDER BY deleted_at DESC;
+```
+
+## Project structure
 
 ```text
 mini-project/
@@ -105,197 +349,78 @@ mini-project/
         ├── App.css
 ```
 
-## How it works
 
-```mermaid
-flowchart TD
-    UI[React browser interface] --> API[Express API on Node.js]
-    API --> DB[(PostgreSQL)]
-    API --> JAVA[Java marks and selection engine]
-    API --> SOURCE[Syllabus PDF or TXT]
-    SOURCE --> AI[Selected generation provider]
-    AI --> VALIDATE[Validate generated questions]
-    JAVA --> VALIDATE
-    DB --> JAVA
-    VALIDATE --> PAPER[Sectioned preview]
-    PAPER --> EXPORT[Print / PDF or TXT]
+Keep manifests, lockfiles and startup configuration. `node_modules` and `dist` are generated folders; do not edit or upload them.
+
+## API reference
+
+Base address: `http://localhost:4000/api`.
+
+| Method | Path | Purpose |
+| :--- | :--- | :--- |
+| GET | `/health` | PostgreSQL health |
+| GET | `/stats` | Bank statistics and registered-subject counts |
+| POST | `/subjects` | Register a subject |
+| GET | `/subjects/:name/overview` | Subject totals, marks counts and generation counters |
+| GET | `/questions` | Filtered, searchable, paginated bank |
+| POST | `/questions` | Add a question |
+| GET | `/questions/:id` | Read a question |
+| PUT | `/questions/:id` | Edit a question |
+| DELETE | `/questions/:id` | Soft-delete a question |
+| GET | `/questions/deleted` | Deleted-question list |
+| POST | `/questions/undo` | Undo latest deletion |
+| POST | `/questions/:id/restore` | Restore a question |
+| POST | `/generate/questions` | Select matching stored questions |
+| POST | `/papers/generate` | Generate a bank paper through Java |
+| POST | `/papers/from-syllabus` | Generate, validate and save syllabus questions |
+
+<details>
+<summary><strong>Example paper pattern</strong></summary>
+
+```json
+{
+  "subject": "COMPUTER_ORGANISATION",
+  "unit": 1,
+  "totalMarks": 50,
+  "count": 7,
+  "markCounts": { "2": 2, "5": 2, "10": 2, "16": 1 },
+  "split": { "easy": 40, "medium": 40, "hard": 20 }
+}
 ```
 
-- **Stored question paper:** React → Express → PostgreSQL question pool → Java selection → React preview.
-- **Syllabus paper:** React uploads PDF/TXT → Express checks the registered subject → Java calculates question slots → the provider writes questions → Express validates the result → React preview/TXT download. Groq receives extracted text; Gemini can receive the PDF directly.
-- Java owns the total-marks and difficulty algorithms. Node owns HTTP, database access, input validation and external API integration.
-- Java runs as a subprocess using JDK source-file launch. No Maven, Java server or extra port is needed. Keep `core/` next to `backend/` when deploying. Source-file launch recompiles on each request, which is appropriate for this small project.
+For syllabus requests also send `fileName`, `mimeType` (`application/pdf` or `text/plain`) and base64 `data`. `count: 0` lets Java derive the count. Successful syllabus responses include `savedToBank`, `alreadyInBank` and `savedUnit`. See `backend/requests.http` for other examples.
 
-## Run locally
+</details>
 
-### Open in VS Code on Windows
+## Validation and tests
 
-1. Download/clone this repository, then use **File → Open Folder** in VS Code and open the **mini-project** folder (the folder containing `frontend`, `backend`, `core` and this README). You do not need to open every file separately.
-2. Install Node.js 22.13 or newer supported LTS, JDK 17 or newer, and PostgreSQL. Open **Terminal → New Terminal** and check:
-   ```powershell
-   node --version
-   npm --version
-   java -version
-   ```
-   If a command is not recognized, install the corresponding tool and reopen VS Code so its PATH updates.
-3. Open pgAdmin, connect to your local PostgreSQL server and open **Query Tool** on its default `postgres` database. Run these statements separately:
-   ```sql
-   CREATE DATABASE questionbank;
-   CREATE DATABASE questionbank_test;
-   ```
-   Skip a statement if that database already exists. The second database is only for automated tests.
-4. In the VS Code terminal, starting in the **mini-project root folder**, run:
-   ```powershell
-   Copy-Item backend/.env.example backend/.env
-   ```
-   Open `backend/.env` in VS Code and update it:
-   ```dotenv
-   DATABASE_URL=postgresql://postgres:YOUR_POSTGRES_PASSWORD@localhost:5432/questionbank
-   PORT=4000
-   AI_PROVIDER=groq
-   GROQ_API_KEY=YOUR_GROQ_API_KEY
-   GROQ_MODEL=openai/gpt-oss-20b
-   ```
-   Replace the password and API key placeholders with your own values. URL-encode special characters in the database password. The key stays in this local ignored file and is needed only for syllabus generation. The file must be named `.env`, directly inside `backend`, not `backend.env` or `.env.txt`.
-5. **Terminal 1 — backend:**
-   ```powershell
-   cd backend
-   npm ci
-   npm run db:init
-   npm start
-   ```
-   Keep it running. Open `http://localhost:4000/api/health` in your browser; the expected response is `{"status":"ok"}`. `db:init` also upgrades older question banks with subjects; it does not delete the questions.
-6. Click the terminal **+** button in VS Code to create **Terminal 2**. Make sure this new terminal starts in the **mini-project root folder**, then run:
-   ```powershell
-   cd frontend
-   npm ci
-   npm run dev
-   ```
-   Open the **Local URL printed by Vite**, usually `http://localhost:5173`. If port 5173 is occupied, use the next port Vite prints.
-7. Add questions with a subject, or use **Create a paper** to choose the question bank or syllabus upload.
+The project validates requests, registered subjects, file metadata, marks patterns, generated question counts and duplicate output. Tests exercise Java and mock provider responses; they do not require a real AI key.
 
-Do not launch `index.html` directly, use Live Server, or run individual Java files in VS Code for the web app. Vite serves React, and Express starts Java automatically when a paper is requested.
-
-### Starting again later
-
-Keep PostgreSQL running. You only need two terminals:
-
-```powershell
-# Terminal 1, from mini-project
-cd backend
-npm start
-```
-
-```powershell
-# Terminal 2, from mini-project
-cd frontend
-npm run dev
-```
-
-Press **Ctrl+C** in each terminal to stop. Run `npm ci` again only after dependency changes, and run `npm run db:init` after schema updates.
-
-### If something does not start
-
-- **Database connection failed:** check that PostgreSQL is running and `DATABASE_URL` uses your password and an existing database.
-- **Question bank unavailable:** check Terminal 1 for errors and open `/api/health`.
-- **Java core unavailable:** check `java -version`; the app needs a JDK and the `core` folder beside `backend`.
-- **Gemini key/model/quota error:** check `GEMINI_API_KEY` and `GEMINI_MODEL`, then restart the backend after changing `.env`.
-- **Port 4000 already in use:** stop the previous backend, or change `PORT` in `backend/.env` and set the matching `VITE_API_URL` in `frontend/.env.local`.
-
-### Which files are needed?
-
-Most files are small configuration or source modules, not separate applications. You normally edit only `App.jsx`, `SyllabusPaper.jsx`, `App.css`, the Express routes, and `PaperEngine.java`.
-
-- `package.json` and `package-lock.json`: dependencies and repeatable installation; keep both in frontend and backend.
-- `index.html`, `main.jsx`, `vite.config.js`: React + Vite startup.
-- `schema.sql`, `init-db.js`: create/update the PostgreSQL table.
-- Backend modules and routes: API, validation, Gemini and the Java bridge.
-- Test files: verification; they are not required to run the app but are worth keeping.
-- `.env.example`: safe configuration template; `.env` is your local secret file.
-- `node_modules` and `dist`: generated folders; do not edit or upload them. `npm ci` and `npm run build` recreate them.
-
-Unused starter assets and the extra stylesheet were removed to keep the structure smaller.
-
-## Syllabus generation
-
-Upload a PDF or UTF-8 TXT file, maximum 5 MB. Choose total marks, question count and difficulty percentages. Java allocates the selected or automatic marks pattern and rounds difficulty percentages to question counts using largest remainders. The returned total is exact. Generated questions include syllabus references in the paper preview and are automatically added to the selected subject and unit in the database.
-
-Uploads are held in memory by this app. Groq receives extracted syllabus text; Gemini mode sends the document to Google. Provider data policies also apply. Review questions and references before use. Model availability, quota and billing depend on your account. The app rejects incomplete, duplicate or wrong-count output and reports unreadable documents and generation failures.
-
-## API
-
-| Endpoint | Purpose |
-|---|---|
-| `GET /api/health` | Database health |
-| `GET /api/questions` | Filtered and paginated questions |
-| `POST /api/questions` | Add a question |
-| `POST /api/subjects` | Create a subject before adding questions (body: `{"name":"Computer Networks"}`) |
-| `GET /api/questions/:id` | Read a question |
-| `PUT /api/questions/:id` | Update a question |
-| `DELETE /api/questions/:id` | Soft delete |
-| `GET /api/questions/deleted` | Recycle bin |
-| `POST /api/questions/undo` | Undo latest deletion |
-| `POST /api/questions/:id/restore` | Restore a deleted question |
-| `GET /api/stats` | Question bank statistics |
-| `POST /api/generate/questions` | Random matching stored questions |
-| `POST /api/papers/generate` | Java selects a paper from the bank |
-| `POST /api/papers/from-syllabus` | Java plans slots; Gemini writes questions |
-
-Syllabus request JSON: registered `subject`, `fileName`, `mimeType` (`application/pdf` or `text/plain`), `data` (base64 file content), `totalMarks`, `count`, optional `markCounts`, and `split` (`easy`, `medium`, `hard`, summing to 100).
-
-## Checks
-
-Run all database-independent Java and provider tests from `backend`:
+**Backend — database-independent tests:**
 
 ```powershell
 node --test test/javaCore.test.js test/syllabus.test.js test/marks.test.js test/groq.test.js
 ```
 
-From `backend`, run `npm run test:core` for actual Java bridge and mocked Gemini tests. Run `npm test` for the full suite, using a dedicated PostgreSQL test database (`TEST_DATABASE_URL`); database tests clear their configured test table. From `frontend`, run `npm run lint` and `npm run build`.
+**Frontend:**
 
-Legacy requests without markCounts use the earlier algorithms. The standard marks workflow uses bounded exact selection; difficulty remains a target. Authentication and rate limits are needed before exposing the generation endpoint publicly.
-
-## Registered-subject workflow
-
-Create subjects in **Subjects → Add subject** before adding questions or generating papers. All other subject fields are dropdowns of registered subjects. New questions, edits and both paper-generation modes reject unregistered subjects at the API layer. Questions also have a subject foreign-key constraint. Existing subjects are migrated without deleting questions.
-
-After updating, run `npm run db:init` in `backend`, then restart both servers. Subject is required for question creation, bank paper generation, random selection and syllabus requests; implicit GENERAL/all-subject generation is removed. The bank filter retains All subjects for browsing registered collections.
-
-## Question counts by marks
-
-Both paper sources accept counts of 2-, 5-, 10- and 16-mark questions. All four counts at 0 selects automatic allocation; otherwise 0 skips a category. Custom counts must sum to the total marks and at most 50 questions. Number of questions is a read-only live total of the four mark counts and starts at 0. All-zero counts request automatic allocation. Java uses dynamic programming for automatic marks allocation and bounded selection from the bank. Impossible totals/counts or insufficient bank questions return a clear error. Difficulty remains a target, not a guarantee of the actual bank mix. Requests use `markCounts: {"2": 0, "5": 0, "10": 0, "16": 0}` and `count: 0`. Legacy requests without markCounts retain the earlier algorithm.
-
-UI labels use plain text or SVG icons to prevent corrupted symbols. Update frontend/src/App.jsx, frontend/src/SyllabusPaper.jsx, backend/src/validation.js, backend/src/syllabusGenerator.js, backend/src/javaCore.js, backend/src/routes/generate.js and core/src/PaperEngine.java together, then restart both servers. No database migration is needed for this marks update.
-
-### Example: a 50-mark paper
-
-| Section | Marks per question | Number of questions | Subtotal |
-|---|---:|---:|---:|
-| A | 2 | 2 | 4 |
-| B | 5 | 2 | 10 |
-| C | 10 | 2 | 20 |
-| D | 16 | 1 | 16 |
-| **Total** | | **7** | **50** |
-
-Number of questions updates live to 7 for these counts. With all four counts zero and no explicit count, automatic syllabus planning chooses the smallest feasible count using the standard mark values. Bank mode is additionally constrained by the stored question pool.
-
-## Sections and optional question count
-
-Number of questions starts at 0 and updates live from the 2-, 5-, 10- and 16-mark counts. It is read-only: entering 2 two-mark questions shows 2, then adding 2 five-mark questions shows 4. The marks tiles show Section A–D and each subtotal, with a live combined marks summary. All four counts at 0 request automatic allocation. Preview, Print/PDF and TXT group questions by marks and omit empty sections. Numbering continues across sections.
-
-## View your stored database
-
-In pgAdmin expand **Servers → your server → Databases → questionbank → Schemas → public → Tables**. Right-click `subjects` or `questions` and choose **View/Edit Data → All Rows**. Refresh Tables after initialising the database.
-
-Read-only Query Tool examples:
-
-```sql
-SELECT * FROM subjects ORDER BY name;
-SELECT * FROM questions WHERE NOT is_deleted ORDER BY id;
-SELECT * FROM questions WHERE is_deleted ORDER BY deleted_at DESC;
+```powershell
+npm.cmd run lint
+npm.cmd run build
 ```
 
-Question IDs start at 101. Deleted questions remain in the database for restoration. Subjects are linked to questions through a foreign key; indexes support filters and reject duplicate active text within a subject and unit.
+<details>
+<summary><strong>Full API tests with a dedicated PostgreSQL database</strong></summary>
+
+Create `questionbank_test`, set `TEST_DATABASE_URL` to that database in your environment, then run `npm.cmd test` inside `backend`.
+
+```sql
+CREATE DATABASE questionbank_test;
+```
+
+Database tests clear their configured tables. Never point `TEST_DATABASE_URL` at your working question bank. API tests include persistence, unit selection, duplicate skipping and generation tracking. A live provider check additionally requires a valid key and available quota.
+
+</details>
 
 ## Troubleshooting
 
@@ -318,34 +443,27 @@ Question IDs start at 101. Deleted questions remain in the database for restorat
 
 The startup message only confirms that the HTTP server started. `/api/health` checks PostgreSQL; it does not test Java or an AI provider.
 
-## Technology choices and limitations
 
-| Choice | Justification |
-|---|---|
-| React | Reusable components and state for forms, filters, modals and previews |
-| Vite | Fast development feedback and a straightforward production build |
-| Node.js | Asynchronous HTTP, database and subprocess integration |
-| Express | A small REST API with clear routes and middleware |
-| PostgreSQL | Persistent relational data, foreign keys, constraints and indexes |
-| Java | A dedicated, independently verifiable marks and selection engine |
-| External AI API | Question generation without training or hosting an ML model |
+## Updating your installation
 
-There is no authentication, user permissions or saved paper history. Generated questions need academic review. Groq mode does not perform OCR. AI availability, cost and quota are external dependencies.
+1. Pull the latest changes or replace the source files from this repository.
+2. Keep your local `.env` and its credentials.
+3. Run `npm.cmd ci` in a changed frontend/backend package when dependencies change.
+4. Run `npm.cmd run db:init` in `backend` when the schema changes.
+5. Restart both servers and refresh the browser.
 
-For an existing installation, keep your local `.env`, update backend source and package files together, run `npm.cmd ci`, and restart the backend. The Groq update does not require database changes. Do not upload `.env`, `node_modules` or `dist` to GitHub.
+The syllabus-saving update needs backend/frontend source changes but no additional database migration. Subject-generation counters require the schema migration included in `db:init`.
 
+## Current scope
 
-## Subject overview and generation activity
+The project has no authentication, user permissions or saved paper history. Groq mode does not perform OCR. AI availability, quota and cost are external dependencies. Review generated questions before academic use. Add authentication and request limits before exposing the generation endpoint publicly.
 
-Click a subject card to view total active stored questions, counts for 2-, 5-, 10- and 16-mark questions, and combined generated-question and paper totals. The separate Generation activity panel is hidden. Other mark values are reported separately. View question bank opens the subject-filtered library.
+---
 
-Generation counters persist in PostgreSQL: new syllabus questions, questions selected from the bank, and successful complete papers. The combined generated-question count counts question appearances across those papers; selecting the same bank question again counts again. Failed and incomplete generations do not increment counters. Historical activity before this update cannot be reconstructed and starts at zero. Syllabus-generated questions are automatically inserted into the question bank under the selected subject and unit.
+<div align="center">
 
-This update changes `frontend/src/App.jsx`, `frontend/src/App.css`, `backend/sql/schema.sql`, `backend/src/routes/subjects.js`, `backend/src/routes/generate.js`, `backend/src/routes/syllabus.js`, `backend/test/api.test.js` and this README. Run `npm.cmd run db:init` inside `backend` after updating, then restart the backend. Existing questions and subjects are preserved. The new read-only API is `GET /api/subjects/:name/overview`.
+**Organise by subject. Build a balanced paper. Review before sharing.**
 
+[Your repository](https://github.com/irfanshafi21/mini-project) · [Original repository](https://github.com/naveen7655/mini-project) · [Back to top](#-question-bank--paper-generator)
 
-## Automatic saving of syllabus questions
-
-Choose a registered subject and a destination unit (1–5) before uploading a syllabus. A successful generation saves the validated questions to PostgreSQL and returns the paper preview with a saved-question count. The question library and subject statistics refresh automatically. Existing active question text in the same subject and unit is skipped rather than duplicated. Saving questions and updating generation counters occur atomically in one database statement. Bank-generated papers reuse existing questions and do not insert copies.
-
-Previously generated papers are not backfilled. The original uploaded syllabus file is not stored. Syllabus references remain in the generated preview/TXT; bank entries store question text, topic, subtopic, marks, difficulty, subject and unit. Topic labels are normalised to the bank format and limited to 60 characters. API clients may send `unit` from 1 to 5; it defaults to 1 when omitted. No database migration or dependency installation is required for this update. Restart the backend after replacing its source files.
+</div>

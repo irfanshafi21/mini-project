@@ -207,21 +207,27 @@ test('subject overview excludes deleted questions and tracks only successful com
   process.env.AI_PROVIDER = 'groq'; process.env.GROQ_API_KEY = 'test';
   globalThis.fetch = (url, options) => String(url).startsWith('https://api.groq.com/') ? Promise.resolve({ok:true,json:async()=>({choices:[{finish_reason:'stop',message:{content:JSON.stringify({questions:[{topic:'CPU',subtopic:'Registers',text:'Define the program counter register.',syllabusReference:'CPU registers'}]})}}]})}) : originalFetch(url,options);
   try {
-    assert.equal((await call('POST','/api/papers/from-syllabus',{...pattern,fileName:'s.txt',mimeType:'text/plain',data:Buffer.from('Unit 1: CPU registers and instruction processing.').toString('base64')})).status,200);
+    const upload = {...pattern,unit:2,fileName:'s.txt',mimeType:'text/plain',data:Buffer.from('Unit 1: CPU registers and instruction processing.').toString('base64')};
+    const generated = await call('POST','/api/papers/from-syllabus',upload);
+    assert.equal(generated.status,200); assert.equal(generated.body.savedToBank,1);
+    const repeat = await call('POST','/api/papers/from-syllabus',upload);
+    assert.equal(repeat.status,200); assert.equal(repeat.body.savedToBank,0); assert.equal(repeat.body.alreadyInBank,1);
+    const stored = await call('GET',`/api/questions?subject=${subject}&unit=2`);
+    assert.equal(stored.body.total,1); assert.equal(stored.body.items[0].text,'Define the program counter register.');
   } finally {
     globalThis.fetch = originalFetch;
     if(originalProvider === undefined) delete process.env.AI_PROVIDER; else process.env.AI_PROVIDER = originalProvider;
     if(originalKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = originalKey;
   }
   overview = (await call('GET', `/api/subjects/${subject}/overview`)).body;
-  assert.equal(overview.generatedQuestions, 2);
-  assert.equal(overview.generatedPapers, 2);
+  assert.equal(overview.generatedQuestions, 3);
+  assert.equal(overview.generatedPapers, 3);
   assert.equal(overview.bankQuestions, 1);
-  assert.equal(overview.syllabusQuestions, 1);
-  assert.equal(overview.totalQuestions, 4);
+  assert.equal(overview.syllabusQuestions, 2);
+  assert.equal(overview.totalQuestions, 5);
   assert.equal((await call('GET','/api/subjects/UNKNOWN_SUBJECT/overview')).status,404);
   await call('DELETE', `/api/questions/${ids[0]}`);
-  assert.equal((await call('GET', `/api/subjects/${subject}/overview`)).body.byMarks[2],0);
+  assert.equal((await call('GET', `/api/subjects/${subject}/overview`)).body.byMarks[2],1);
 });
 
 test('unregistered subjects are rejected without creating records or invoking generation', async () => {

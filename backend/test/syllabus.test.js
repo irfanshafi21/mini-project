@@ -53,7 +53,7 @@ test('HTTP upload route validates JSON and returns generation results without a 
   const { app } = await import('../src/app.js');
   const { pool } = await import('../src/db.js');
   const originalQuery = pool.query;
-  pool.query = async () => ({ rows: [{ name: 'GENERAL' }] });
+  pool.query = async () => ({ rows: [{ name: 'GENERAL', saved: 5 }] });
   const originalFetch = globalThis.fetch;
   const originalProvider = process.env.AI_PROVIDER;
   process.env.AI_PROVIDER = 'gemini';

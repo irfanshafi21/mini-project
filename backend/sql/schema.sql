@@ -18,6 +18,11 @@ CREATE TABLE IF NOT EXISTS questions (
 -- fast topic-wise search (the HashMap of the Java version)
 -- Safe migration: existing questions keep their data under GENERAL.
 ALTER TABLE questions ADD COLUMN IF NOT EXISTS subject TEXT NOT NULL DEFAULT 'GENERAL';
+CREATE TABLE IF NOT EXISTS subjects (
+  name TEXT PRIMARY KEY,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+INSERT INTO subjects (name) SELECT DISTINCT subject FROM questions ON CONFLICT (name) DO NOTHING;
 CREATE INDEX IF NOT EXISTS idx_questions_subject ON questions (subject) WHERE NOT is_deleted;
 CREATE INDEX IF NOT EXISTS idx_questions_topic      ON questions (topic)            WHERE NOT is_deleted;
 CREATE INDEX IF NOT EXISTS idx_questions_unit_level ON questions (unit, difficulty) WHERE NOT is_deleted;

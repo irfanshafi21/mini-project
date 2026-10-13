@@ -168,3 +168,18 @@ test('subjects are stored, searchable, editable and isolate generated papers', a
   assert.equal(changed.body.subject, 'ALGORITHMS');
   assert.equal((await call('GET', '/api/questions?subject=data%20structures')).body.total, 0);
 });
+
+test('a subject can be created before questions and persists with a zero count', async () => {
+  const created = await call('POST', '/api/subjects', { name: 'Software Engineering' });
+  assert.equal(created.status, 201);
+  assert.equal(created.body.name, 'SOFTWARE_ENGINEERING');
+  assert.equal((await call('GET', '/api/stats')).body.bySubject.SOFTWARE_ENGINEERING, 0);
+  assert.equal((await call('GET', '/api/questions?subject=software%20engineering')).body.total, 0);
+  assert.equal((await call('POST', '/api/subjects', { name: 'software engineering' })).status, 409);
+  assert.equal((await call('POST', '/api/subjects', { name: '   ' })).status, 400);
+  const added = await call('POST', '/api/questions', { ...q(1, 'Testing', 'Unit Tests', 'EASY', 2, 'Define a unit test.'), subject: 'Software Engineering' });
+  assert.equal(added.status, 201);
+  assert.equal((await call('GET', '/api/stats')).body.bySubject.SOFTWARE_ENGINEERING, 1);
+  await call('DELETE', `/api/questions/${added.body.id}`);
+  assert.equal((await call('GET', '/api/stats')).body.bySubject.SOFTWARE_ENGINEERING, 0);
+});

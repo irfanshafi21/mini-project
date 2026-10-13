@@ -4,7 +4,7 @@ import { generateSyllabusPaper, planPaper, syllabusBody } from '../src/syllabusG
 
 const body = { subject: 'GENERAL', fileName: 'syllabus.txt', mimeType: 'text/plain', data: Buffer.from('Unit 1: Arrays, stacks and queues.').toString('base64'), totalMarks: 25, count: 5, split: { easy: 40, medium: 40, hard: 20 } };
 const questions = Array.from({ length: 5 }, (_, i) => ({ topic: 'Data structures', subtopic: 'Arrays', text: `Explain array operation number ${i + 1}.`, syllabusReference: 'Unit 1: Arrays' }));
-const options = (fetchImpl) => ({ apiKey: 'test-key', model: 'test-model', fetchImpl });
+const options = (fetchImpl) => ({ provider: 'gemini', apiKey: 'test-key', model: 'test-model', fetchImpl });
 test('Java plans exact marks and rounded counts, including small papers', async () => {
   for (const count of [1, 2, 5, 17, 50]) {
     const plan = await planPaper(count * 3 + 1, count, body.split);
@@ -55,6 +55,8 @@ test('HTTP upload route validates JSON and returns generation results without a 
   const originalQuery = pool.query;
   pool.query = async () => ({ rows: [{ name: 'GENERAL' }] });
   const originalFetch = globalThis.fetch;
+  const originalProvider = process.env.AI_PROVIDER;
+  process.env.AI_PROVIDER = 'gemini';
   const originalKey = process.env.GEMINI_API_KEY;
   process.env.GEMINI_API_KEY = 'test-key';
   globalThis.fetch = async () => ({ ok: true, json: async () => ({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify({ questions }) }] } }] }) });
@@ -68,6 +70,7 @@ test('HTTP upload route validates JSON and returns generation results without a 
     assert.equal((await response.json()).paper.totalMarks, 25);
   } finally {
     globalThis.fetch = originalFetch;
+    if (originalProvider === undefined) delete process.env.AI_PROVIDER; else process.env.AI_PROVIDER = originalProvider;
     pool.query = originalQuery;
     if (originalKey === undefined) delete process.env.GEMINI_API_KEY;
     else process.env.GEMINI_API_KEY = originalKey;

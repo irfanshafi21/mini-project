@@ -35,7 +35,7 @@ test('schemas reject inconsistent negative fractional and oversized custom count
 });
 test('syllabus output is validated against Java automatic slot count',async()=>{
   const body=syllabusBody.parse({subject:'GENERAL',fileName:'s.txt',mimeType:'text/plain',data:Buffer.from('CPU and memory syllabus').toString('base64'),totalMarks:10,count:0,markCounts:auto,split});
-  const result=await generateSyllabusPaper(body,{apiKey:'test',model:'test',fetchImpl:async(_url,request)=>{
+  const result=await generateSyllabusPaper(body,{provider:'gemini',apiKey:'test',model:'test',fetchImpl:async(_url,request)=>{
     const slots=JSON.parse(JSON.parse(request.body).contents[0].parts[1].text.split('slots: ')[1].split('. Return')[0]);
     return {ok:true,json:async()=>({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({questions:slots.map((_,i)=>({topic:'CPU',subtopic:'Memory',text:'Explain CPU operation '+i,syllabusReference:'CPU and memory'}))})}]}}]})};
   }});

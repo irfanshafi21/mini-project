@@ -13,7 +13,10 @@ router.get('/', async (_req, res) => {
     query('SELECT marks AS k, count(*)::int AS n FROM questions WHERE NOT is_deleted GROUP BY 1 ORDER BY 1'),
     query('SELECT unit AS k, count(*)::int AS n FROM questions WHERE NOT is_deleted GROUP BY 1 ORDER BY 1'),
     query('SELECT topic AS k, count(*)::int AS n FROM questions WHERE NOT is_deleted GROUP BY 1 ORDER BY 1'),
-    query('SELECT subject AS k, count(*)::int AS n FROM questions WHERE NOT is_deleted GROUP BY 1 ORDER BY 1'),
+    query(`SELECT s.name AS k, count(q.id)::int AS n
+      FROM (SELECT name FROM subjects UNION SELECT subject AS name FROM questions) s
+      LEFT JOIN questions q ON q.subject = s.name AND NOT q.is_deleted
+      GROUP BY s.name ORDER BY s.name`),
   ]);
   res.json({
     totalQuestions: totals.rows[0].n,

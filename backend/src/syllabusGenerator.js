@@ -1,10 +1,11 @@
 import { z } from 'zod';
 import { HttpError } from './errors.js';
+import { normalizeName } from './validation.js';
 import { planPaper } from './javaCore.js';
 export { planPaper } from './javaCore.js';
 
 export const syllabusBody = z.object({
-  subject: z.string().trim().min(1).max(60).default('GENERAL'),
+  subject: z.string().trim().min(1).max(60).transform(normalizeName),
   fileName: z.string().min(1).max(200),
   mimeType: z.enum(['application/pdf', 'text/plain']),
   data: z.string().min(1).max(7_000_000).regex(/^[A-Za-z0-9+/]+={0,2}$/),
@@ -14,7 +15,7 @@ export const syllabusBody = z.object({
 }).refine(b => Math.abs(b.split.easy + b.split.medium + b.split.hard - 100) < 0.001,
   { message: 'Difficulty percentages must add up to 100', path: ['split'] })
   .refine(b => b.totalMarks >= b.count && b.totalMarks <= b.count * 100,
-    { message: 'Total marks must allow 1–100 marks per question', path: ['totalMarks'] });
+    { message: 'Total marks must allow 1â€“100 marks per question', path: ['totalMarks'] });
 
 const questionSchema = z.object({
   topic: z.string().trim().min(1).max(200),

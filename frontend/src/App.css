@@ -2,6 +2,15 @@
   box-sizing: border-box;
 }
 
+.syllabus-section { text-align: left; }
+.syllabus-section fieldset { border: 0; padding: 0; margin: 18px 0; min-width: 0; }
+.syllabus-section .form-row { margin-top: 18px; }
+.syllabus-section p { margin-bottom: 12px; }
+.syllabus-result { margin-top: 24px; }
+.syllabus-result .question-list { margin-top: 18px; }
+.syllabus-reference { margin-top: 12px; color: #475569; font-size: 14px; }
+button:disabled { opacity: 0.6; cursor: wait; }
+
 body {
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;

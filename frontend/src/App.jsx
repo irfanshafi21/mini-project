@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import SyllabusPaper from './SyllabusPaper'
 
-const API_URL = 'http://localhost:4000/api'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
 function App() {
   const [questions, setQuestions] = useState([])
@@ -68,7 +69,16 @@ function App() {
   }
 
   useEffect(() => {
-    loadQuestions()
+    let active = true
+    fetch(`${API_URL}/questions`)
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to load questions')
+        return response.json()
+      })
+      .then(data => { if (active) setQuestions(data.items) })
+      .catch(err => { if (active) setError(err.message) })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
   }, [])
 
   const handleInputChange = (e) => {
@@ -218,6 +228,7 @@ function App() {
       </header>
 
       <main className="container">
+        <SyllabusPaper apiUrl={API_URL} />
 
         {showAddForm && (
           <section className="add-section">

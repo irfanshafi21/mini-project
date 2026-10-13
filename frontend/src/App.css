@@ -147,6 +147,30 @@ textarea { resize: vertical; }
 
 /* Light blue workspace with warm accents and a consistent spacing scale. */
 @media screen {
+  .back-subjects { padding-left: 0; margin-bottom: 16px; }
+  .subject-overview-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 25px 28px; border-radius: 16px; background: #e9f3fc; border: 1px solid #d4e5f3; }
+  .subject-overview-heading h2 { font-size: 26px; margin: 5px 0; overflow-wrap: anywhere; }
+  .subject-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin: 22px 0; }
+  .subject-marks-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .subject-mark-count { display: flex; flex-direction: column; gap: 6px; padding: 20px; border-radius: 12px; background: #f2f7fc; border: 1px solid #dce8f3; }
+  .subject-mark-count strong { font-size: 30px; color: #2b658e; }
+  .subject-mark-count>span:last-child { font-size: 12px; color: #58768c; }
+  .subject-activity { margin-top: 22px; }
+  .activity-row { display: flex; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid #e7edf2; color: #496a81; font-size: 14px; }
+  .activity-row strong { font-size: 18px; color: #2b658e; }
+  .subject-activity>p { margin-top: 18px; max-width: 660px; }
+}
+@media screen and (max-width: 650px) {
+  .subject-overview-heading { flex-direction: column; align-items: flex-start; padding: 22px; }
+  .subject-overview-heading h2 { font-size: 23px; }
+  .subject-totals { grid-template-columns: 1fr; gap: 12px; }
+  .subject-totals .metric { display: flex; padding: 20px; }
+  .subject-totals .metric-icon { margin-bottom: 0; }
+  .subject-totals .metric div>span { font-size: 12px; }
+  .subject-marks-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .subject-mark-count { padding: 16px; }
+}
+@media screen {
   .generation-panel .calculated-count { background: #edf5fc; border-color: #c9deed; color: #235f89; font-weight: 700; }
   .form-row.marks-grid { gap: 14px; }
   .mark-tile { background: #f5f9fe; border: 1px solid #dce8f3; border-radius: 12px; padding: 16px; gap: 12px; }

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { HttpError } from './errors.js';
-import { normalizeName } from './validation.js';
+import { normalizeName, markCountsSchema, validMarkPattern } from './validation.js';
 import { planPaper } from './javaCore.js';
 export { planPaper } from './javaCore.js';
 
@@ -10,12 +10,13 @@ export const syllabusBody = z.object({
   mimeType: z.enum(['application/pdf', 'text/plain']),
   data: z.string().min(1).max(7_000_000).regex(/^[A-Za-z0-9+/]+={0,2}$/),
   totalMarks: z.number().int().min(1).max(1000),
-  count: z.number().int().min(1).max(50),
+  count: z.number().int().min(0).max(50),
+  markCounts: markCountsSchema.optional(),
   split: z.object({ easy: z.number().min(0).max(100), medium: z.number().min(0).max(100), hard: z.number().min(0).max(100) }),
 }).refine(b => Math.abs(b.split.easy + b.split.medium + b.split.hard - 100) < 0.001,
   { message: 'Difficulty percentages must add up to 100', path: ['split'] })
-  .refine(b => b.totalMarks >= b.count && b.totalMarks <= b.count * 100,
-    { message: 'Total marks must allow 1â€“100 marks per question', path: ['totalMarks'] });
+  .refine(b => b.markCounts || (b.count > 0 && b.totalMarks >= b.count && b.totalMarks <= b.count * 100),
+    { message: 'Total marks must allow 1–100 marks per question', path: ['totalMarks'] }).refine(validMarkPattern, { message: 'Question counts must total the requested marks and match the question count (or use 0 for automatic).', path: ['markCounts'] });
 
 const questionSchema = z.object({
   topic: z.string().trim().min(1).max(200),
@@ -34,7 +35,7 @@ export async function generateSyllabusPaper(body, { fetchImpl = fetch, apiKey = 
   if (body.mimeType === 'application/pdf' && bytes.subarray(0, 5).toString() !== '%PDF-') {
     throw new HttpError(400, 'The uploaded file is not a PDF');
   }
-  const slots = await planPaper(body.totalMarks, body.count, body.split);
+  const slots = await planPaper(body.totalMarks, body.count, body.split, body.markCounts);
   const filePart = body.mimeType === 'application/pdf'
     ? { inlineData: { mimeType: 'application/pdf', data: body.data } }
     : { text: `SYLLABUS DOCUMENT:\n${bytes.toString('utf8')}` };
@@ -71,9 +72,9 @@ export async function generateSyllabusPaper(body, { fetchImpl = fetch, apiKey = 
     const payload = await response.json();
     const candidate = payload.candidates?.[0];
     if (candidate?.finishReason !== 'STOP') throw new Error('Incomplete generation');
-    result = z.object({ questions: z.array(questionSchema).length(body.count) })
+    result = z.object({ questions: z.array(questionSchema).length(slots.length) })
       .parse(JSON.parse(candidate.content.parts.map(p => p.text || '').join('')));
-    if (new Set(result.questions.map(q => q.text.toLowerCase().replace(/\s+/g, ' '))).size !== body.count) throw new Error('Duplicate questions');
+    if (new Set(result.questions.map(q => q.text.toLowerCase().replace(/\s+/g, ' '))).size !== slots.length) throw new Error('Duplicate questions');
   } catch {
     throw new HttpError(502, 'Gemini returned an incomplete paper or could not read the syllabus. Try a clearer syllabus or fewer questions.');
   }

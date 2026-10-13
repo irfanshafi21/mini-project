@@ -14,6 +14,13 @@ const difficulty = z.preprocess(
   z.enum(DIFFICULTIES, { error: 'difficulty must be EASY, MEDIUM or HARD' }),
 );
 
+export const markCountsSchema = z.object(Object.fromEntries([2, 5, 10, 16].map(m => [String(m), z.number().int().min(0).max(50)])));
+export function validMarkPattern(b) {
+  if (!b.markCounts) return true;
+  const entries = Object.entries(b.markCounts), count = entries.reduce((n, [, c]) => n + c, 0);
+  return count === 0 || (count <= 50 && entries.reduce((n, [m, c]) => n + Number(m) * c, 0) === b.totalMarks && (!b.count || b.count === count));
+}
+
 export const questionBody = z.object({
   subject: name,
   unit,
@@ -43,6 +50,8 @@ export const paperBody = z
     topic: name.optional(),
     subtopic: name.optional(),
     totalMarks: z.coerce.number().int().min(1).max(1000),
+    count: z.number().int().min(0).max(50).default(0),
+    markCounts: markCountsSchema.optional(),
     split: z
       .object({
         easy: z.coerce.number().min(0).max(100),
@@ -54,7 +63,7 @@ export const paperBody = z
   .refine((b) => Math.abs(b.split.easy + b.split.medium + b.split.hard - 100) < 0.001, {
     message: 'split percentages must add up to 100',
     path: ['split'],
-  });
+  }).refine(validMarkPattern, { message: 'Question counts must total the requested marks and match the question count (or use 0 for automatic).', path: ['markCounts'] });
 
 export const autoBody = z.object({
   subject: name,

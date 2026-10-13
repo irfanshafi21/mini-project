@@ -4,11 +4,11 @@ import { HttpError } from './errors.js';
 
 const source = fileURLToPath(new URL('../../core/src/PaperEngine.java', import.meta.url));
 
-function runCore(mode, total, count, split, pool = []) {
+function runCore(mode, total, count, split, pool = [], markCounts) {
   return new Promise((resolve, reject) => {
     // Source-file launch requires JDK 17+. No shell, server port or Java dependency is needed.
     const child = spawn(process.env.JAVA_COMMAND || 'java', [source], { windowsHide: true });
-    const input = [mode, [total, count, split.easy, split.medium, split.hard].join('\t'),
+    const input = [mode, [total, count, split.easy, split.medium, split.hard, ...(markCounts ? [2, 5, 10, 16].map(m => markCounts[m]) : [])].join('\t'),
       ...pool.map(q => [q.id, q.difficulty, q.marks].join('\t'))].join('\n') + '\n';
     let output = '';
     let finished = false;
@@ -33,6 +33,7 @@ function runCore(mode, total, count, split, pool = []) {
     });
     child.stderr.resume();
     child.on('close', code => {
+      if (code === 2) return finish(new HttpError(400, 'Cannot build this marks pattern. Use a total achievable with 2, 5, 10 or 16 marks, at most 50 questions, and check bank availability.'));
       if (code !== 0) return finish(new HttpError(503, 'Java core failed. Check your JDK installation and paper parameters.'));
       try { finish(null, JSON.parse(output)); }
       catch { finish(new HttpError(502, 'Java core returned an invalid result')); }
@@ -41,10 +42,10 @@ function runCore(mode, total, count, split, pool = []) {
   });
 }
 
-export const planPaper = (total, count, split) => runCore('PLAN', total, count, split);
+export const planPaper = (total, count, split, markCounts) => runCore(markCounts ? 'PLAN_FIXED' : 'PLAN', total, count, split, [], markCounts);
 
-export async function generatePaper(pool, total, split) {
-  const result = await runCore('SELECT', total, 0, split, pool);
+export async function generatePaper(pool, total, split, markCounts, count = 0) {
+  const result = await runCore(markCounts ? 'SELECT_FIXED' : 'SELECT', total, count, split, pool, markCounts);
   const byId = new Map(pool.map(q => [q.id, q]));
   return { questions: result.ids.map(id => byId.get(id)), totalMarks: result.totalMarks, targets: result.targets };
 }

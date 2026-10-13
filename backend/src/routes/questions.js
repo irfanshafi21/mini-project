@@ -22,6 +22,7 @@ router.get('/', async (req, res) => {
     where.push(sql.replace('$?', `$${params.length}`));
   };
   if (f.unit) add('unit = $?', f.unit);
+  if (f.subject) add('subject = $?', f.subject);
   if (f.topic) add('topic = $?', f.topic);
   if (f.subtopic) add('subtopic = $?', f.subtopic);
   if (f.difficulty) add('difficulty = $?', f.difficulty);
@@ -49,9 +50,9 @@ router.get('/deleted', async (_req, res) => {
 router.post('/', async (req, res) => {
   const b = questionBody.parse(req.body);
   const { rows } = await query(
-    `INSERT INTO questions (unit, topic, subtopic, difficulty, marks, text)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [b.unit, b.topic, b.subtopic, b.difficulty, b.marks, b.text],
+    `INSERT INTO questions (unit, topic, subtopic, difficulty, marks, text, subject)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [b.unit, b.topic, b.subtopic, b.difficulty, b.marks, b.text, b.subject],
   );
   res.status(201).json(toApi(rows[0]));
 });
@@ -78,9 +79,9 @@ router.put('/:id', async (req, res) => {
   const b = questionBody.parse(req.body);
   const { rows } = await query(
     `UPDATE questions
-     SET unit = $2, topic = $3, subtopic = $4, difficulty = $5, marks = $6, text = $7, updated_at = now()
+     SET unit = $2, topic = $3, subtopic = $4, difficulty = $5, marks = $6, text = $7, subject = $8, updated_at = now()
      WHERE id = $1 AND NOT is_deleted RETURNING *`,
-    [id, b.unit, b.topic, b.subtopic, b.difficulty, b.marks, b.text],
+    [id, b.unit, b.topic, b.subtopic, b.difficulty, b.marks, b.text, b.subject],
   );
   if (!rows.length) throw notFound();
   res.json(toApi(rows[0]));

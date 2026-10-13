@@ -21,6 +21,7 @@ router.post('/papers/generate', async (req, res) => {
     where.push(sql.replace('$?', `$${params.length}`));
   };
   if (b.unit) add('unit = $?', b.unit);
+  if (b.subject) add('subject = $?', b.subject);
   if (b.topic) add('topic = $?', b.topic);
   if (b.subtopic) add('subtopic = $?', b.subtopic);
 
@@ -31,6 +32,7 @@ router.post('/papers/generate', async (req, res) => {
   const complete = result.totalMarks === b.totalMarks;
   res.json({
     paper: {
+      subject: b.subject || 'ALL',
       unit: b.unit || 'ALL',
       topic: b.topic ?? 'ALL',
       subtopic: b.subtopic ?? null,
@@ -54,6 +56,10 @@ router.post('/generate/questions', async (req, res) => {
   const b = autoBody.parse(req.body);
   const where = ['NOT is_deleted', 'topic = $1', 'marks = $2', 'difficulty = $3'];
   const params = [b.topic, b.marks, b.difficulty];
+  if (b.subject) {
+    params.push(b.subject);
+    where.push(`subject = $${params.length}`);
+  }
   if (b.subtopic) {
     params.push(b.subtopic);
     where.push(`subtopic = $${params.length}`);

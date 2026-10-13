@@ -6,6 +6,15 @@ A simple three-part application: **React + Vite** renders the interface, **Node.
 
 The interface has a question bank, subject collections, and a Create a Paper workspace. Add and edit questions by subject, unit, topic, subtopic, difficulty and marks. Search/filter the bank, browse pages, and undo a soft deletion. Create a paper by choosing **Your question bank** or **Upload a syllabus**, then configure the paper and review it before downloading TXT or printing/saving PDF.
 
+### Adding subjects and questions
+
+1. Open **Subjects → Add subject**, enter a subject name, and select **Save subject**.
+2. The new subject appears immediately with **0 questions**, even before you add any questions. Subject names are case-insensitive, and duplicate names are rejected.
+3. Select a subject card to open its filtered question bank. Use **Add question** in the question bank and select/type that subject in the Subject field.
+4. Saved subjects are also available in filters and the question-paper Subject selector. Deleting the last question does not delete the subject.
+
+After pulling this update, run `npm run db:init` in `backend` once and restart the backend. This creates the `subjects` table and registers existing question subjects without deleting any question data.
+
 The interface uses light blue and warm cream colors. It has no login, registration or user profile. Unused starter images/icons were removed, and frontend styles are in one `App.css` file.
 
 After updating an existing installation, run `npm run db:init` in `backend` once. This adds the subject column and subject-aware duplicate index without deleting question rows. Existing questions are assigned to **General**; edit them to set their subjects. Generated syllabus questions are not automatically stored.
@@ -37,6 +46,7 @@ mini-project/
 │   │   ├── errors.js
 │   │   └── routes/
 │   │       ├── questions.js
+│   │       ├── subjects.js        # Create standalone subjects
 │   │       ├── stats.js
 │   │       ├── generate.js
 │   │       └── syllabus.js
@@ -168,6 +178,7 @@ Documents are sent to Google Gemini and held in memory by this app. Review the g
 | `GET /api/health` | Database health |
 | `GET /api/questions` | Filtered and paginated questions |
 | `POST /api/questions` | Add a question |
+| `POST /api/subjects` | Create a subject before adding questions (body: `{"name":"Computer Networks"}`) |
 | `GET /api/questions/:id` | Read a question |
 | `PUT /api/questions/:id` | Update a question |
 | `DELETE /api/questions/:id` | Soft delete |

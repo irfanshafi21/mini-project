@@ -263,7 +263,7 @@ After updating, run `npm run db:init` in `backend`, then restart both servers. S
 
 ## Question counts by marks
 
-Both paper sources accept counts of 2-, 5-, 10- and 16-mark questions. All four counts at 0 selects automatic allocation; otherwise 0 skips a category. Custom counts must sum to the total marks and at most 50 questions. Number of questions may be 0 for automatic, or an exact desired count. Java uses dynamic programming for automatic marks allocation and bounded selection from the bank. Impossible totals/counts or insufficient bank questions return a clear error. Difficulty remains a target, not a guarantee of the actual bank mix. Requests use `markCounts: {"2": 0, "5": 0, "10": 0, "16": 0}` and `count: 0`. Legacy requests without markCounts retain the earlier algorithm.
+Both paper sources accept counts of 2-, 5-, 10- and 16-mark questions. All four counts at 0 selects automatic allocation; otherwise 0 skips a category. Custom counts must sum to the total marks and at most 50 questions. Number of questions is a read-only live total of the four mark counts and starts at 0. All-zero counts request automatic allocation. Java uses dynamic programming for automatic marks allocation and bounded selection from the bank. Impossible totals/counts or insufficient bank questions return a clear error. Difficulty remains a target, not a guarantee of the actual bank mix. Requests use `markCounts: {"2": 0, "5": 0, "10": 0, "16": 0}` and `count: 0`. Legacy requests without markCounts retain the earlier algorithm.
 
 UI labels use plain text or SVG icons to prevent corrupted symbols. Update frontend/src/App.jsx, frontend/src/SyllabusPaper.jsx, backend/src/validation.js, backend/src/syllabusGenerator.js, backend/src/javaCore.js, backend/src/routes/generate.js and core/src/PaperEngine.java together, then restart both servers. No database migration is needed for this marks update.
 
@@ -277,11 +277,11 @@ UI labels use plain text or SVG icons to prevent corrupted symbols. Update front
 | D | 16 | 1 | 16 |
 | **Total** | | **7** | **50** |
 
-Leave Number of questions blank to derive 7 from these counts. With all four counts zero and no explicit count, automatic syllabus planning chooses the smallest feasible count using the standard mark values. Bank mode is additionally constrained by the stored question pool.
+Number of questions updates live to 7 for these counts. With all four counts zero and no explicit count, automatic syllabus planning chooses the smallest feasible count using the standard mark values. Bank mode is additionally constrained by the stored question pool.
 
 ## Sections and optional question count
 
-Leaving Number of questions blank (or 0) uses the sum of the four custom mark counts. With all four counts at 0, Java allocates the count automatically. Nonzero explicit question counts must still match a custom pattern. Preview, Print/PDF and TXT group questions by marks: Section A = 2 marks, B = 5, C = 10, D = 16. Empty sections are omitted and question numbering continues across sections. Count inputs use equal-width columns, with two columns on small screens. This update changes frontend/src/SyllabusPaper.jsx, frontend/src/App.css and README.md only. Restart the frontend; no database changes are required.
+Number of questions starts at 0 and updates live from the 2-, 5-, 10- and 16-mark counts. It is read-only: entering 2 two-mark questions shows 2, then adding 2 five-mark questions shows 4. The marks tiles show Section A–D and each subtotal, with a live combined marks summary. All four counts at 0 request automatic allocation. Preview, Print/PDF and TXT group questions by marks and omit empty sections. Numbering continues across sections.
 
 ## View your stored database
 

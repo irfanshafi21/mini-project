@@ -146,3 +146,25 @@ test('automatic selection by topic, marks and difficulty reports any shortfall',
   assert.equal(r.body.shortfall, 3);
   assert.ok(r.body.note);
 });
+
+test('subjects are stored, searchable, editable and isolate generated papers', async () => {
+  const first = await call('POST', '/api/questions', { ...q(1, 'Arrays', 'Searching', 'EASY', 5, 'Explain the process of linear search.'), subject: 'Data Structures' });
+  assert.equal(first.status, 201);
+  assert.equal(first.body.subject, 'DATA_STRUCTURES');
+  const other = await call('POST', '/api/questions', { ...q(1, 'Arrays', 'Searching', 'EASY', 5, 'Explain the process of linear search.'), subject: 'Programming' });
+  assert.equal(other.status, 201);
+  const duplicate = await call('POST', '/api/questions', { ...q(1, 'Arrays', 'Searching', 'EASY', 5, 'Explain the process of linear search.'), subject: 'Data Structures' });
+  assert.equal(duplicate.status, 409);
+  const list = await call('GET', '/api/questions?subject=data%20structures');
+  assert.equal(list.body.total, 1);
+  assert.equal(list.body.items[0].id, first.body.id);
+  const paper = await call('POST', '/api/papers/generate', { subject: 'Data Structures', totalMarks: 5 });
+  assert.equal(paper.body.paper.subject, 'DATA_STRUCTURES');
+  assert.deepEqual(paper.body.paper.questions.map(item => item.id), [first.body.id]);
+  const stats = await call('GET', '/api/stats');
+  assert.equal(stats.body.bySubject.DATA_STRUCTURES, 1);
+  assert.equal(stats.body.bySubject.PROGRAMMING, 1);
+  const changed = await call('PUT', `/api/questions/${first.body.id}`, { ...q(1, 'Arrays', 'Searching', 'EASY', 5, 'Explain linear search with an example.'), subject: 'Algorithms' });
+  assert.equal(changed.body.subject, 'ALGORITHMS');
+  assert.equal((await call('GET', '/api/questions?subject=data%20structures')).body.total, 0);
+});

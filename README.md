@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/images/banner.png" alt="Question Bank — syllabus to structured examination papers" width="100%" />
+
 # 📘 Question Bank & Paper Generator
 
 ### From a syllabus to a structured examination paper
@@ -15,7 +17,7 @@ Register subjects, build your question library, and create papers with a clear m
 
 **Light blue interface · Warm accents · Subject-based collections · PDF / TXT export**
 
-[Features](#features) · [Workflow](#workflow) · [Architecture](#architecture) · [Setup](#local-setup) · [Paper rules](#paper-rules) · [Troubleshooting](#troubleshooting)
+[Screenshots](#a-look-inside) · [Walkthrough](#visual-walkthrough) · [Features](#features) · [Workflow](#workflow) · [Architecture](#architecture) · [Setup](#local-setup) · [Paper rules](#paper-rules) · [Troubleshooting](#troubleshooting)
 
 </div>
 
@@ -23,6 +25,59 @@ Register subjects, build your question library, and create papers with a clear m
 
 > [!TIP]
 > **Already installed?** Keep PostgreSQL running. Start `npm.cmd start` in `backend` and `npm.cmd run dev` in `frontend`. Open the Local URL printed by Vite.
+
+## A look inside
+
+Real screenshots from the running application. The sample collection contains a Computer Organisation question generated from a syllabus.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<h3>📚 Question library</h3>
+<p>Search, filter and manage questions by subject, unit and difficulty.</p>
+<img src="docs/images/question-bank.jpg" alt="Question bank with a saved Computer Organisation question, statistics and filters" width="100%" />
+</td>
+<td width="50%" valign="top">
+<h3>🗂️ Subject overview</h3>
+<p>See your collection totals, marks breakdown and generated-paper count.</p>
+<img src="docs/images/subject-overview.jpg" alt="Subject overview with stored question totals and counts for each mark value" width="100%" />
+</td>
+</tr>
+</table>
+
+## Visual walkthrough
+
+<table>
+<tr>
+<td width="33%" align="center"><h3>01 · Organise</h3><p>Register a subject and build its question collection.</p></td>
+<td width="34%" align="center"><h3>02 · Configure</h3><p>Choose your source, marks pattern and difficulty mix.</p></td>
+<td width="33%" align="center"><h3>03 · Review</h3><p>Check the paper, then print or download it.</p></td>
+</tr>
+</table>
+
+### A marks pattern you can see
+
+The builder shows live question counts, Section A–D labels and subtotals. This screenshot uses **2 + 2 + 2 + 1 = 7 questions**, totalling **50 marks**.
+
+<details>
+<summary><strong>Open the paper-builder screenshot</strong></summary>
+
+<img src="docs/images/paper-builder.jpg" alt="Syllabus paper builder configured for seven questions totalling fifty marks" width="720" />
+
+</details>
+
+### From collection to examination paper
+
+The following is a real **2-mark bank paper** produced from the saved sample question. Larger papers use the same section layout.
+
+<p align="center">
+<img src="docs/images/paper-preview.jpg" alt="Real Computer Organisation paper preview with Section A and a two-mark question" width="520" />
+</p>
+
+> [!TIP]
+> **Try the full flow:** register a subject → upload a syllabus → choose the destination unit → generate → open the question bank. The new validated questions are saved automatically.
+
+---
 
 ## Features
 

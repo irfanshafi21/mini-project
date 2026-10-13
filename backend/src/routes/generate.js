@@ -31,7 +31,7 @@ router.post('/papers/generate', async (req, res) => {
   const { rows } = await query(`SELECT * FROM questions WHERE ${where.join(' AND ')}`, params);
   if (!rows.length) throw new HttpError(404, 'No questions available for this unit/topic');
 
-  const result = await generatePaper(rows.map(toApi), b.totalMarks, b.split);
+  const result = await generatePaper(rows.map(toApi), b.totalMarks, b.split, b.markCounts, b.count);
   const complete = result.totalMarks === b.totalMarks;
   res.json({
     paper: {

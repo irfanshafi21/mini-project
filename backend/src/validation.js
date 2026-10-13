@@ -15,6 +15,7 @@ const difficulty = z.preprocess(
 );
 
 export const questionBody = z.object({
+  subject: name.default('GENERAL'),
   unit,
   topic: name,
   subtopic: name,
@@ -24,6 +25,7 @@ export const questionBody = z.object({
 });
 
 export const listQuery = z.object({
+  subject: name.optional(),
   unit: unit.optional(),
   topic: name.optional(),
   subtopic: name.optional(),
@@ -36,6 +38,7 @@ export const listQuery = z.object({
 
 export const paperBody = z
   .object({
+    subject: name.optional(),
     unit: z.coerce.number().int().min(0).max(TOTAL_UNITS).default(0), // 0 = all units
     topic: name.optional(),
     subtopic: name.optional(),
@@ -54,6 +57,7 @@ export const paperBody = z
   });
 
 export const autoBody = z.object({
+  subject: name.optional(),
   unit: unit.optional(),
   topic: name,
   subtopic: name.optional(),

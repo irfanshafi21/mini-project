@@ -1,6 +1,7 @@
 export const toApi = (r) => ({
   id: r.id,
   code: `Q${r.id}`,
+  subject: r.subject || 'GENERAL',
   unit: r.unit,
   topic: r.topic,
   subtopic: r.subtopic,

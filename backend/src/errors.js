@@ -21,7 +21,7 @@ export function errorHandler(err, req, res, _next) {
   if (err instanceof HttpError) return res.status(err.status).json({ error: err.message });
   if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'Invalid JSON body' });
   if (err.code === '23505') {
-    return res.status(409).json({ error: 'A question with the same text already exists in this unit' });
+    return res.status(409).json({ error: 'A question with the same text already exists in this subject and unit' });
   }
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });

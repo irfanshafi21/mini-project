@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS subjects (
   name TEXT PRIMARY KEY,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE subjects ADD COLUMN IF NOT EXISTS syllabus_questions BIGINT NOT NULL DEFAULT 0 CHECK (syllabus_questions >= 0);
+ALTER TABLE subjects ADD COLUMN IF NOT EXISTS bank_questions BIGINT NOT NULL DEFAULT 0 CHECK (bank_questions >= 0);
+ALTER TABLE subjects ADD COLUMN IF NOT EXISTS generated_papers BIGINT NOT NULL DEFAULT 0 CHECK (generated_papers >= 0);
 INSERT INTO subjects (name) SELECT DISTINCT subject FROM questions ON CONFLICT (name) DO NOTHING;
 CREATE INDEX IF NOT EXISTS idx_questions_subject ON questions (subject) WHERE NOT is_deleted;
 CREATE INDEX IF NOT EXISTS idx_questions_topic      ON questions (topic)            WHERE NOT is_deleted;

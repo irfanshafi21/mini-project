@@ -51,7 +51,7 @@ After pulling this update, run `npm run db:init` in `backend` once and restart t
 
 The interface uses light blue and warm cream colors. It has no login, registration or user profile. Unused starter images/icons were removed, and frontend styles are in one `App.css` file.
 
-Generated syllabus questions are not automatically stored. Review them before using a paper for an examination.
+Generated syllabus questions are automatically saved to the selected registered subject and unit. Review them before using a paper for an examination.
 
 ## File structure
 
@@ -218,7 +218,7 @@ Unused starter assets and the extra stylesheet were removed to keep the structur
 
 ## Syllabus generation
 
-Upload a PDF or UTF-8 TXT file, maximum 5 MB. Choose total marks, question count and difficulty percentages. Java allocates the selected or automatic marks pattern and rounds difficulty percentages to question counts using largest remainders. The returned total is exact. Generated questions include syllabus references and are not automatically added to the database.
+Upload a PDF or UTF-8 TXT file, maximum 5 MB. Choose total marks, question count and difficulty percentages. Java allocates the selected or automatic marks pattern and rounds difficulty percentages to question counts using largest remainders. The returned total is exact. Generated questions include syllabus references in the paper preview and are automatically added to the selected subject and unit in the database.
 
 Uploads are held in memory by this app. Groq receives extracted syllabus text; Gemini mode sends the document to Google. Provider data policies also apply. Review questions and references before use. Model availability, quota and billing depend on your account. The app rejects incomplete, duplicate or wrong-count output and reports unreadable documents and generation failures.
 
@@ -339,6 +339,13 @@ For an existing installation, keep your local `.env`, update backend source and 
 
 Click a subject card to view total active stored questions, counts for 2-, 5-, 10- and 16-mark questions, and combined generated-question and paper totals. The separate Generation activity panel is hidden. Other mark values are reported separately. View question bank opens the subject-filtered library.
 
-Generation counters persist in PostgreSQL: new syllabus questions, questions selected from the bank, and successful complete papers. The combined generated-question count counts question appearances across those papers; selecting the same bank question again counts again. Failed and incomplete generations do not increment counters. Historical activity before this update cannot be reconstructed and starts at zero. Generated content is not automatically inserted into the question bank.
+Generation counters persist in PostgreSQL: new syllabus questions, questions selected from the bank, and successful complete papers. The combined generated-question count counts question appearances across those papers; selecting the same bank question again counts again. Failed and incomplete generations do not increment counters. Historical activity before this update cannot be reconstructed and starts at zero. Syllabus-generated questions are automatically inserted into the question bank under the selected subject and unit.
 
 This update changes `frontend/src/App.jsx`, `frontend/src/App.css`, `backend/sql/schema.sql`, `backend/src/routes/subjects.js`, `backend/src/routes/generate.js`, `backend/src/routes/syllabus.js`, `backend/test/api.test.js` and this README. Run `npm.cmd run db:init` inside `backend` after updating, then restart the backend. Existing questions and subjects are preserved. The new read-only API is `GET /api/subjects/:name/overview`.
+
+
+## Automatic saving of syllabus questions
+
+Choose a registered subject and a destination unit (1–5) before uploading a syllabus. A successful generation saves the validated questions to PostgreSQL and returns the paper preview with a saved-question count. The question library and subject statistics refresh automatically. Existing active question text in the same subject and unit is skipped rather than duplicated. Saving questions and updating generation counters occur atomically in one database statement. Bank-generated papers reuse existing questions and do not insert copies.
+
+Previously generated papers are not backfilled. The original uploaded syllabus file is not stored. Syllabus references remain in the generated preview/TXT; bank entries store question text, topic, subtopic, marks, difficulty, subject and unit. Topic labels are normalised to the bank format and limited to 60 characters. API clients may send `unit` from 1 to 5; it defaults to 1 when omitted. No database migration or dependency installation is required for this update. Restart the backend after replacing its source files.

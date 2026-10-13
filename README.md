@@ -8,7 +8,7 @@ The interface has a question bank, subject collections, and a Create a Paper wor
 
 ### Adding subjects and questions
 
-1. Open **Subjects → Add subject**, enter a subject name, and select **Save subject**.
+1. Open **Subjects â†’ Add subject**, enter a subject name, and select **Save subject**.
 2. The new subject appears immediately with **0 questions**, even before you add any questions. Subject names are case-insensitive, and duplicate names are rejected.
 3. Select a subject card to open its filtered question bank. Use **Add question** in the question bank and select/type that subject in the Subject field.
 4. Saved subjects are also available in filters and the question-paper Subject selector. Deleting the last question does not delete the subject.
@@ -23,56 +23,56 @@ After updating an existing installation, run `npm run db:init` in `backend` once
 
 ```text
 mini-project/
-├── README.md
-├── .gitignore
-├── core/
-│   └── src/
-│       └── PaperEngine.java       # Core marks, difficulty allocation and question selection
-├── backend/
-│   ├── .env.example
-│   ├── package.json
-│   ├── package-lock.json
-│   ├── requests.http             # API examples
-│   ├── scripts/init-db.js
-│   ├── sql/schema.sql
-│   ├── src/
-│   │   ├── app.js                 # Express application
-│   │   ├── server.js              # HTTP startup
-│   │   ├── db.js                  # PostgreSQL connection
-│   │   ├── javaCore.js            # Node → Java bridge
-│   │   ├── syllabusGenerator.js   # Syllabus validation and Gemini integration
-│   │   ├── validation.js
-│   │   ├── mapper.js
-│   │   ├── errors.js
-│   │   └── routes/
-│   │       ├── questions.js
-│   │       ├── subjects.js        # Create standalone subjects
-│   │       ├── stats.js
-│   │       ├── generate.js
-│   │       └── syllabus.js
-│   └── test/
-│       ├── api.test.js
-│       ├── javaCore.test.js
-│       └── syllabus.test.js
-└── frontend/
-    ├── .env.example
-    ├── package.json
-    ├── package-lock.json
-    ├── index.html
-    ├── vite.config.js
-    ├── eslint.config.js
-    ├── public/
-    └── src/
-        ├── main.jsx
-        ├── App.jsx                # Question bank and stored-paper interface
-        ├── SyllabusPaper.jsx      # Syllabus upload, generated preview and download
-        ├── App.css
+â”œâ”€â”€ README.md
+â”œâ”€â”€ .gitignore
+â”œâ”€â”€ core/
+â”‚   â””â”€â”€ src/
+â”‚       â””â”€â”€ PaperEngine.java       # Core marks, difficulty allocation and question selection
+â”œâ”€â”€ backend/
+â”‚   â”œâ”€â”€ .env.example
+â”‚   â”œâ”€â”€ package.json
+â”‚   â”œâ”€â”€ package-lock.json
+â”‚   â”œâ”€â”€ requests.http             # API examples
+â”‚   â”œâ”€â”€ scripts/init-db.js
+â”‚   â”œâ”€â”€ sql/schema.sql
+â”‚   â”œâ”€â”€ src/
+â”‚   â”‚   â”œâ”€â”€ app.js                 # Express application
+â”‚   â”‚   â”œâ”€â”€ server.js              # HTTP startup
+â”‚   â”‚   â”œâ”€â”€ db.js                  # PostgreSQL connection
+â”‚   â”‚   â”œâ”€â”€ javaCore.js            # Node â†’ Java bridge
+â”‚   â”‚   â”œâ”€â”€ syllabusGenerator.js   # Syllabus validation and Gemini integration
+â”‚   â”‚   â”œâ”€â”€ validation.js
+â”‚   â”‚   â”œâ”€â”€ mapper.js
+â”‚   â”‚   â”œâ”€â”€ errors.js
+â”‚   â”‚   â””â”€â”€ routes/
+â”‚   â”‚       â”œâ”€â”€ questions.js
+â”‚   â”‚       â”œâ”€â”€ subjects.js        # Create standalone subjects
+â”‚   â”‚       â”œâ”€â”€ stats.js
+â”‚   â”‚       â”œâ”€â”€ generate.js
+â”‚   â”‚       â””â”€â”€ syllabus.js
+â”‚   â””â”€â”€ test/
+â”‚       â”œâ”€â”€ api.test.js
+â”‚       â”œâ”€â”€ javaCore.test.js
+â”‚       â””â”€â”€ syllabus.test.js
+â””â”€â”€ frontend/
+    â”œâ”€â”€ .env.example
+    â”œâ”€â”€ package.json
+    â”œâ”€â”€ package-lock.json
+    â”œâ”€â”€ index.html
+    â”œâ”€â”€ vite.config.js
+    â”œâ”€â”€ eslint.config.js
+    â”œâ”€â”€ public/
+    â””â”€â”€ src/
+        â”œâ”€â”€ main.jsx
+        â”œâ”€â”€ App.jsx                # Question bank and stored-paper interface
+        â”œâ”€â”€ SyllabusPaper.jsx      # Syllabus upload, generated preview and download
+        â”œâ”€â”€ App.css
 ```
 
 ## How it works
 
-- **Stored question paper:** React → Express → PostgreSQL question pool → Java selection → React preview.
-- **Syllabus paper:** React uploads PDF/TXT → Express → Java calculates exact question slots → Gemini writes questions for those slots → Express validates the result → React preview/TXT download.
+- **Stored question paper:** React â†’ Express â†’ PostgreSQL question pool â†’ Java selection â†’ React preview.
+- **Syllabus paper:** React uploads PDF/TXT â†’ Express â†’ Java calculates exact question slots â†’ Gemini writes questions for those slots â†’ Express validates the result â†’ React preview/TXT download.
 - Java owns the total-marks and difficulty algorithms. Node owns HTTP, database access, input validation and external API integration. Gemini supplies question content; there is no locally trained ML model.
 - Java runs as a subprocess using JDK source-file launch. No Maven, Java server or extra port is needed. Keep `core/` next to `backend/` when deploying. Source-file launch recompiles on each request, which is appropriate for this small project.
 
@@ -80,8 +80,8 @@ mini-project/
 
 ### Open in VS Code on Windows
 
-1. Download/clone this repository, then use **File → Open Folder** in VS Code and open the **mini-project** folder (the folder containing `frontend`, `backend`, `core` and this README). You do not need to open every file separately.
-2. Install Node.js 22.12 or newer, JDK 17 or newer, and PostgreSQL. Open **Terminal → New Terminal** and check:
+1. Download/clone this repository, then use **File â†’ Open Folder** in VS Code and open the **mini-project** folder (the folder containing `frontend`, `backend`, `core` and this README). You do not need to open every file separately.
+2. Install Node.js 22.12 or newer, JDK 17 or newer, and PostgreSQL. Open **Terminal â†’ New Terminal** and check:
    ```powershell
    node --version
    npm --version
@@ -106,7 +106,7 @@ mini-project/
    GEMINI_MODEL=gemini-3.8-flash
    ```
    Replace the password and API key placeholders with your own values. URL-encode special characters in the database password. The key stays in this local ignored file. A Gemini key is needed only for syllabus generation.
-5. **Terminal 1 — backend:**
+5. **Terminal 1 â€” backend:**
    ```powershell
    cd backend
    npm ci
@@ -197,3 +197,9 @@ Syllabus request JSON: `fileName`, `mimeType` (`application/pdf` or `text/plain`
 From `backend`, run `npm run test:core` for actual Java bridge and mocked Gemini tests. Run `npm test` for the full suite, using a dedicated PostgreSQL test database (`TEST_DATABASE_URL`); database tests clear their configured test table. From `frontend`, run `npm run lint` and `npm run build`.
 
 The stored-question algorithm is greedy and may miss an achievable marks total or deviate from the difficulty target. Authentication and rate limits are needed before exposing the paid Gemini endpoint publicly.
+
+## Registered-subject workflow
+
+Create subjects in **Subjects → Add subject** before adding questions or generating papers. All other subject fields are dropdowns of registered subjects. New questions, edits and both paper-generation modes reject unregistered subjects at the API layer. Questions also have a subject foreign-key constraint. Existing subjects are migrated without deleting questions.
+
+After updating, run `npm run db:init` in `backend`, then restart both servers. Subject is required for question creation, bank paper generation, random selection and syllabus requests; implicit GENERAL/all-subject generation is removed. The bank filter retains All subjects for browsing registered collections.

@@ -31,3 +31,11 @@ CREATE INDEX IF NOT EXISTS idx_questions_unit_level ON questions (unit, difficul
 DROP INDEX IF EXISTS uq_questions_unit_text;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_questions_subject_unit_text
   ON questions (subject, unit, lower(text)) WHERE text <> '' AND NOT is_deleted;
+
+-- Preserve existing subjects, then enforce registration at the database layer.
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'questions_subject_fk' AND conrelid = 'questions'::regclass) THEN
+    ALTER TABLE questions ADD CONSTRAINT questions_subject_fk
+      FOREIGN KEY (subject) REFERENCES subjects(name);
+  END IF;
+END $$;

@@ -5,7 +5,7 @@ import { toApi } from '../mapper.js';
 import { generatePaper } from '../javaCore.js';
 import { autoBody, paperBody } from '../validation.js';
 
-import { requireRegisteredSubject } from './subjects.js';
+import { requireRegisteredSubject, recordGeneratedPaper } from './subjects.js';
 
 const router = Router();
 
@@ -33,6 +33,7 @@ router.post('/papers/generate', async (req, res) => {
 
   const result = await generatePaper(rows.map(toApi), b.totalMarks, b.split, b.markCounts, b.count);
   const complete = result.totalMarks === b.totalMarks;
+  if (complete) await recordGeneratedPaper(b.subject, result.questions.length, 'bank');
   res.json({
     paper: {
       subject: b.subject || 'ALL',

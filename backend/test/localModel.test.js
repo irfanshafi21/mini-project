@@ -21,3 +21,20 @@ test('local generation changes questions and reports finite-capacity exhaustion 
   assert.equal(new Set(all.map(q=>q.text)).size,16);
   assert.throws(()=>generateLocalQuestions(text,slots,all.map(q=>questionHash(q.text))),e=>e.status===409);
 });
+
+
+test('Q103 regression: marks constrain scope independently of difficulty', () => {
+  const syllabus='Unit 4: Virtual memory concepts: pages, frames, page tables, translation lookaside buffer and page faults.';
+  for (const difficulty of ['EASY','MEDIUM','HARD']) {
+    const [short]=generateLocalQuestions(syllabus,[{marks:2,difficulty}]);
+    assert.equal(short.topic,'Virtual memory');
+    assert.ok(!/pages|frames|page tables|lookaside|and|diagram|analyse/i.test(short.text));
+    assert.ok(short.text.split(/\s+/).length<=10);
+  }
+  for(const marks of [10,16]) {
+    const [long]=generateLocalQuestions(syllabus,[{marks,difficulty:'EASY'}]);
+    const allocated=[...long.text.matchAll(/\((\d+) marks\)/g)].reduce((n,m)=>n+Number(m[1]),0);
+    assert.equal(allocated,marks);
+    assert.match(long.text,/\(a\).*\n\(b\).*\n\(c\)/);
+  }
+});

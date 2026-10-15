@@ -326,3 +326,7 @@ textarea { resize: vertical; }
 }
 
 @media print { .saved-notice { display: none; } }
+
+.unit-picker { display:flex;flex-wrap:wrap;gap:8px; }
+.unit-picker label { display:flex;align-items:center;gap:7px;padding:9px 12px;background:#f1f7fc;border:1px solid #d6e5f0;border-radius:9px;font-size:12px;cursor:pointer; }
+.unit-picker input { width:16px!important;min-height:16px!important;accent-color:#2c77ad; }

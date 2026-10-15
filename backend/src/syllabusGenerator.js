@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { HttpError } from './errors.js';
 import { normalizeName, markCountsSchema, validMarkPattern } from './validation.js';
 import { planPaper } from './javaCore.js';
+import { extractSyllabusText, generateLocalQuestions } from './localModel.js';
 export { planPaper } from './javaCore.js';
 
 export const syllabusBody = z.object({
@@ -27,11 +28,11 @@ const questionSchema = z.object({
 });
 
 export async function generateSyllabusPaper(body, { fetchImpl = fetch,
-  provider = process.env.AI_PROVIDER || 'gemini',
+  provider = process.env.AI_PROVIDER || 'local',
   apiKey = provider === 'groq' ? process.env.GROQ_API_KEY : process.env.GEMINI_API_KEY,
   model = provider === 'groq' ? (process.env.GROQ_MODEL || 'openai/gpt-oss-20b') : (process.env.GEMINI_MODEL || 'gemini-3.8-flash') } = {}) {
-  if (!['groq', 'gemini'].includes(provider)) throw new HttpError(503, 'Unsupported AI_PROVIDER configuration');
-  if (!apiKey) throw new HttpError(503, 'Configure the generation API key in the backend .env file');
+  if (!['local', 'groq', 'gemini'].includes(provider)) throw new HttpError(503, 'Unsupported AI_PROVIDER configuration');
+  if (provider !== 'local' && !apiKey) throw new HttpError(503, 'Configure the generation API key in the backend .env file');
   const bytes = Buffer.from(body.data, 'base64');
   if (!bytes.length || bytes.length > 5 * 1024 * 1024 || bytes.toString('base64') !== body.data) {
     throw new HttpError(400, 'Upload a valid syllabus file no larger than 5 MB');
@@ -40,6 +41,12 @@ export async function generateSyllabusPaper(body, { fetchImpl = fetch,
     throw new HttpError(400, 'The uploaded file is not a PDF');
   }
   const slots = await planPaper(body.totalMarks, body.count, body.split, body.markCounts);
+  if (provider === 'local') {
+    const text = body.preparedText || await extractSyllabusText(body);
+    return { paper: { source:'syllabus',fileName:body.fileName,model:'local-topic-naive-bayes-v1',subject:body.subject,
+      requestedMarks:body.totalMarks,totalMarks:body.totalMarks,complete:true,requestedSplit:body.split,
+      questions:generateLocalQuestions(text,slots,body.previousQuestionHashes || []) } };
+  }
   if (provider === 'groq') return generateGroqPaper(body, bytes, slots, { fetchImpl, apiKey, model });
   const filePart = body.mimeType === 'application/pdf'
     ? { inlineData: { mimeType: 'application/pdf', data: body.data } }

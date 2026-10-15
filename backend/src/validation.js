@@ -47,6 +47,7 @@ export const paperBody = z
   .object({
     subject: name,
     unit: z.coerce.number().int().min(0).max(TOTAL_UNITS).default(0), // 0 = all units
+    units: z.array(z.number().int().min(1).max(TOTAL_UNITS)).min(1).max(5).transform(values => [...new Set(values)]).optional(),
     topic: name.optional(),
     subtopic: name.optional(),
     totalMarks: z.coerce.number().int().min(1).max(1000),

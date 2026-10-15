@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { storePaper } from './savedPapers.js';
 import { generateSyllabusPaper, syllabusBody } from '../syllabusGenerator.js';
 
 import { z } from 'zod';
@@ -26,7 +27,8 @@ router.post('/papers/from-syllabus', async (req, res) => {
     if(reserved.rows.length!==hashes.length) return res.status(409).json({error:'Another request used these variations. Generate again to select unused questions.'});
   }
   await recordGeneratedPaper(body.subject, result.paper.questions.length, 'syllabus');
-  res.json({ ...result, savedUnit: body.unit });
+  const saved = await storePaper(body.subject, `${body.subject.replaceAll('_',' ')} - Syllabus paper`, result.paper.questions, {...result.paper,source:'syllabus'});
+  res.json({ ...result, ...saved, savedUnit: body.unit });
 });
 
 const saveBody = z.object({

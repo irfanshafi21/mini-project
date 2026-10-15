@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { storePaper } from './savedPapers.js';
 import { query } from '../db.js';
 import { HttpError } from '../errors.js';
 import { toApi } from '../mapper.js';
@@ -35,8 +36,7 @@ router.post('/papers/generate', async (req, res) => {
   const result = await generatePaper(rows.map(toApi), b.totalMarks, b.split, b.markCounts, b.count);
   const complete = result.totalMarks === b.totalMarks;
   if (complete) await recordGeneratedPaper(b.subject, result.questions.length, 'bank');
-  res.json({
-    paper: {
+  const paper = {
       subject: b.subject || 'ALL',
       unit: b.unit || 'ALL',
       units: b.units || (b.unit ? [b.unit] : [1,2,3,4,5]),
@@ -47,7 +47,9 @@ router.post('/papers/generate', async (req, res) => {
       complete,
       targets: result.targets,
       questions: result.questions,
-    },
+    };
+  const saved = complete ? await storePaper(b.subject, `${b.subject.replaceAll('_',' ')} - Question paper`, result.questions, {...paper,source:'bank'}) : null;
+  res.json({ ...(saved || {paper}),
     ...(complete ? {} : { warning: `Only ${result.totalMarks} of ${b.totalMarks} marks could be reached. Add more questions to the bank.` }),
   });
 });

@@ -18,10 +18,10 @@ const snapshotQuestion = z.object({
   syllabusReference: z.string().max(500).optional(),
 });
 const snapshot = z.object({ subject, title, questions: z.array(snapshotQuestion).min(1).max(50) });
-async function store(subjectName, paperTitle, questions) {
+export async function storePaper(subjectName, paperTitle, questions, metadata = {}) {
   const totalMarks = questions.reduce((sum,q) => sum + q.marks,0);
   if (totalMarks > 1000) throw new HttpError(400,'A paper may contain at most 1,000 marks.');
-  const paper = { subject: subjectName, title: paperTitle, questions, totalMarks, requestedMarks: totalMarks, complete: true };
+  const paper = { ...metadata, subject: subjectName, title: paperTitle, questions, totalMarks, requestedMarks: totalMarks, complete: true };
   const { rows } = await query('INSERT INTO saved_papers(subject,title,paper) VALUES($1,$2,$3::jsonb) RETURNING id,created_at', [subjectName,paperTitle,JSON.stringify(paper)]);
   return { id: rows[0].id, createdAt: rows[0].created_at, paper };
 }
@@ -32,22 +32,27 @@ router.post('/manual', async (req,res) => {
   const { rows } = await query('SELECT * FROM questions WHERE subject=$1 AND NOT is_deleted AND id=ANY($2::int[])',[b.subject,b.questionIds]);
   if(rows.length !== b.questionIds.length) throw new HttpError(400,'Some selected questions were removed or belong to another subject. Refresh your selection.');
   const byId = new Map(rows.map(q=>[q.id,toApi(q)]));
-  res.status(201).json(await store(b.subject,b.title,b.questionIds.map(id=>byId.get(id))));
+  res.status(201).json(await storePaper(b.subject,b.title,b.questionIds.map(id=>byId.get(id)), {source:'manual'}));
 });
 router.post('/saved', async (req,res) => {
   const b = snapshot.parse(req.body);
   await requireRegisteredSubject(b.subject);
-  res.status(201).json(await store(b.subject,b.title,b.questions));
+  res.status(201).json(await storePaper(b.subject,b.title,b.questions));
 });
 router.get('/saved', async (req,res) => {
-  const b = z.object({ subject, page:z.coerce.number().int().min(1).default(1) }).parse(req.query);
-  await requireRegisteredSubject(b.subject);
-  const { rows } = await query('SELECT id,title,created_at,paper FROM saved_papers WHERE subject=$1 ORDER BY id DESC LIMIT 20 OFFSET $2',[b.subject,(b.page-1)*20]);
-  res.json({ items: rows.map(r=>({id:r.id,title:r.title,createdAt:r.created_at,totalMarks:r.paper.totalMarks,count:r.paper.questions.length})), page:b.page });
+  const b = z.object({ subject:subject.optional(), q:z.string().trim().max(120).optional(), page:z.coerce.number().int().min(1).default(1) }).parse(req.query);
+  if(b.subject) await requireRegisteredSubject(b.subject);
+  const params=[],where=['NOT is_deleted'];
+  if(b.subject) {params.push(b.subject);where.push(`subject=$${params.length}`);}
+  if(b.q) {params.push('%'+b.q+'%');where.push(`title ILIKE $${params.length}`);}
+  const filter=where.join(' AND ');
+  const total=Number((await query(`SELECT count(*) AS n FROM saved_papers WHERE ${filter}`,params)).rows[0].n);
+  const { rows } = await query(`SELECT id,subject,title,created_at,paper FROM saved_papers WHERE ${filter} ORDER BY id DESC LIMIT 20 OFFSET $${params.length+1}`,[...params,(b.page-1)*20]);
+  res.json({ items: rows.map(r=>({id:r.id,subject:r.subject,title:r.title,createdAt:r.created_at,totalMarks:r.paper.totalMarks,count:r.paper.questions.length,source:r.paper.source})), page:b.page,total });
 });
 router.get('/saved/:id', async (req,res) => {
   const id=z.coerce.number().int().positive().parse(req.params.id);
-  const { rows } = await query('SELECT * FROM saved_papers WHERE id=$1',[id]);
+  const { rows } = await query('SELECT * FROM saved_papers WHERE id=$1 AND NOT is_deleted',[id]);
   if(!rows.length) throw new HttpError(404,'Saved paper not found.');
   const r=rows[0];res.json({id:r.id,createdAt:r.created_at,paper:r.paper});
 });

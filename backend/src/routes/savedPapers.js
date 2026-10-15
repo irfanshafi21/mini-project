@@ -39,6 +39,18 @@ router.post('/saved', async (req,res) => {
   await requireRegisteredSubject(b.subject);
   res.status(201).json(await storePaper(b.subject,b.title,b.questions));
 });
+router.put('/saved/:id', async (req,res) => {
+  const id=z.coerce.number().int().positive().parse(req.params.id), b=snapshot.parse(req.body);
+  const previous=(await query('SELECT * FROM saved_papers WHERE id=$1 AND NOT is_deleted',[id])).rows[0];
+  if(!previous) throw new HttpError(404,'Stored paper not found.');
+  if(previous.subject!==b.subject) throw new HttpError(400,'A stored paper must keep its original subject.');
+  const totalMarks=b.questions.reduce((n,q)=>n+q.marks,0);
+  if(totalMarks>1000) throw new HttpError(400,'A paper may contain at most 1,000 marks.');
+  const paper={...previous.paper,title:b.title,questions:b.questions,totalMarks,requestedMarks:totalMarks,complete:true};
+  const {rows}=await query('UPDATE saved_papers SET title=$2,paper=$3::jsonb WHERE id=$1 AND NOT is_deleted RETURNING id,created_at',[id,b.title,JSON.stringify(paper)]);
+  if(!rows.length) throw new HttpError(404,'Stored paper not found.');
+  res.json({id:rows[0].id,createdAt:rows[0].created_at,paper});
+});
 router.get('/saved', async (req,res) => {
   const b = z.object({ subject:subject.optional(), q:z.string().trim().max(120).optional(), page:z.coerce.number().int().min(1).default(1) }).parse(req.query);
   if(b.subject) await requireRegisteredSubject(b.subject);

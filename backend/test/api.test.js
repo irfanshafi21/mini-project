@@ -209,8 +209,15 @@ test('subject overview excludes deleted questions and tracks only successful com
   try {
     const upload = {...pattern,unit:2,fileName:'s.txt',mimeType:'text/plain',data:Buffer.from('Unit 1: CPU registers and instruction processing.').toString('base64')};
     const generated = await call('POST','/api/papers/from-syllabus',upload);
-    assert.equal(generated.status,200); assert.equal(generated.body.savedToBank,1);
-    const repeat = await call('POST','/api/papers/from-syllabus',upload);
+    assert.equal(generated.status,200);
+    // Generating (and declining the popup) never inserts questions.
+    assert.equal((await call('GET',`/api/questions?subject=${subject}&unit=2`)).body.total,0);
+    const save = {subject, unit:2, questions:generated.body.paper.questions};
+    assert.equal((await call('POST','/api/papers/save-syllabus',{...save,subject:'UNKNOWN'})).status,400);
+    assert.equal((await call('POST','/api/papers/save-syllabus',{...save,unit:8})).status,400);
+    const added = await call('POST','/api/papers/save-syllabus',save);
+    assert.equal(added.status,200); assert.equal(added.body.savedToBank,1);
+    const repeat = await call('POST','/api/papers/save-syllabus',save);
     assert.equal(repeat.status,200); assert.equal(repeat.body.savedToBank,0); assert.equal(repeat.body.alreadyInBank,1);
     const stored = await call('GET',`/api/questions?subject=${subject}&unit=2`);
     assert.equal(stored.body.total,1); assert.equal(stored.body.items[0].text,'Define the program counter register.');
@@ -220,10 +227,10 @@ test('subject overview excludes deleted questions and tracks only successful com
     if(originalKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = originalKey;
   }
   overview = (await call('GET', `/api/subjects/${subject}/overview`)).body;
-  assert.equal(overview.generatedQuestions, 3);
-  assert.equal(overview.generatedPapers, 3);
+  assert.equal(overview.generatedQuestions, 2);
+  assert.equal(overview.generatedPapers, 2);
   assert.equal(overview.bankQuestions, 1);
-  assert.equal(overview.syllabusQuestions, 2);
+  assert.equal(overview.syllabusQuestions, 1);
   assert.equal(overview.totalQuestions, 5);
   assert.equal((await call('GET','/api/subjects/UNKNOWN_SUBJECT/overview')).status,404);
   await call('DELETE', `/api/questions/${ids[0]}`);

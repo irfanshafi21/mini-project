@@ -8,7 +8,7 @@ function runCore(mode, total, count, split, pool = [], markCounts) {
   return new Promise((resolve, reject) => {
     // Source-file launch requires JDK 17+. No shell, server port or Java dependency is needed.
     const child = spawn(process.env.JAVA_COMMAND || 'java', [source], { windowsHide: true });
-    const input = [mode, [total, count, split.easy, split.medium, split.hard, ...(markCounts ? [2, 5, 10, 16].map(m => markCounts[m]) : [])].join('\t'),
+    const input = [mode, [total, count, split.easy, split.medium, split.hard, ...(markCounts ? [1, 2, 5, 10, 16].map(m => markCounts[m] || 0) : [])].join('\t'),
       ...pool.map(q => [q.id, q.difficulty, q.marks].join('\t'))].join('\n') + '\n';
     let output = '';
     let finished = false;
@@ -33,7 +33,7 @@ function runCore(mode, total, count, split, pool = [], markCounts) {
     });
     child.stderr.resume();
     child.on('close', code => {
-      if (code === 2) return finish(new HttpError(400, 'Cannot build this marks pattern. Use a total achievable with 2, 5, 10 or 16 marks, at most 50 questions, and check bank availability.'));
+      if (code === 2) return finish(new HttpError(400, 'Cannot build this marks pattern. Use a total achievable with 1, 2, 5, 10 or 16 marks, at most 50 questions, and check bank availability.'));
       if (code !== 0) return finish(new HttpError(503, 'Java core failed. Check your JDK installation and paper parameters.'));
       try { finish(null, JSON.parse(output)); }
       catch { finish(new HttpError(502, 'Java core returned an invalid result')); }

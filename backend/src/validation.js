@@ -14,7 +14,21 @@ const difficulty = z.preprocess(
   z.enum(DIFFICULTIES, { error: 'difficulty must be EASY, MEDIUM or HARD' }),
 );
 
-export const markCountsSchema = z.object(Object.fromEntries([2, 5, 10, 16].map(m => [String(m), z.number().int().min(0).max(50)])));
+export const objectiveFields = {
+  questionType: z.enum(['SHORT','MCQ','FILL_BLANK']).default('SHORT'),
+  options: z.array(z.string().trim().min(1).max(300)).max(4).default([]),
+  answer: z.string().trim().max(300).default(''),
+};
+export function validateObjective(q,ctx) {
+  const issue=message=>ctx.addIssue({code:'custom',message,path:['questionType']});
+  if(q.questionType==='SHORT')return;
+  if(q.marks!==1)issue('Multiple choice and fill-in-the-blank questions must carry 1 mark.');
+  if(!q.answer)issue('Provide the correct answer.');
+  if(!q.text || q.text.trim().length<5)issue('Provide a clear question stem.');
+  if(q.questionType==='MCQ' && (q.options.length!==4 || new Set(q.options.map(o=>o.toLowerCase())).size!==4 || q.options.filter(o=>o===q.answer).length!==1))issue('An MCQ requires four distinct options and exactly one matching correct answer.');
+  if(q.questionType==='FILL_BLANK' && (!q.text.includes('____') || q.options.length))issue('A fill-in-the-blank question requires a blank and no options.');
+}
+export const markCountsSchema = z.object(Object.fromEntries([1, 2, 5, 10, 16].map(m => [String(m), z.number().int().min(0).max(50).default(0)])));
 export function validMarkPattern(b) {
   if (!b.markCounts) return true;
   const entries = Object.entries(b.markCounts), count = entries.reduce((n, [, c]) => n + c, 0);
@@ -22,6 +36,7 @@ export function validMarkPattern(b) {
 }
 
 export const questionBody = z.object({
+  ...objectiveFields,
   subject: name,
   unit,
   topic: name,
@@ -29,7 +44,7 @@ export const questionBody = z.object({
   difficulty,
   marks,
   text: z.string().trim().max(2000).default(''),
-});
+}).superRefine(validateObjective);
 
 export const listQuery = z.object({
   subject: name.optional(),
@@ -53,6 +68,7 @@ export const paperBody = z
     totalMarks: z.coerce.number().int().min(1).max(1000),
     count: z.number().int().min(0).max(50).default(0),
     markCounts: markCountsSchema.optional(),
+    oneMarkType: z.enum(['MCQ','FILL_BLANK']).default('MCQ'),
     split: z
       .object({
         easy: z.coerce.number().min(0).max(100),

@@ -7,6 +7,7 @@ export { planPaper } from './javaCore.js';
 
 export const syllabusBody = z.object({
   subject: z.string().trim().max(60).optional().transform(v => normalizeName(v || 'GENERAL') || 'GENERAL'),
+  oneMarkType:z.enum(['MCQ','FILL_BLANK']).default('MCQ'),
   unit: z.number().int().min(1).max(5).default(1),
   fileName: z.string().min(1).max(200),
   mimeType: z.enum(['application/pdf', 'text/plain']),
@@ -45,7 +46,16 @@ export async function generateSyllabusPaper(body, { fetchImpl = fetch,
     const text = body.preparedText || await extractSyllabusText(body);
     return { paper: { source:'syllabus',fileName:body.fileName,model:'local-topic-naive-bayes-v1',subject:body.subject,
       requestedMarks:body.totalMarks,totalMarks:body.totalMarks,complete:true,requestedSplit:body.split,
-      questions:generateLocalQuestions(text,slots,body.previousQuestionHashes || []) } };
+      questions:generateLocalQuestions(text,slots,body.previousQuestionHashes || [], body.oneMarkType) } };
+  }
+  if (slots.some(s=>s.marks===1)) {
+    const text=body.preparedText || await extractSyllabusText(body);
+    const objective=generateLocalQuestions(text,slots.filter(s=>s.marks===1),body.previousQuestionHashes || [],body.oneMarkType);
+    const remaining=slots.filter(s=>s.marks!==1);
+    if(!remaining.length)return {paper:{source:'syllabus',subject:body.subject,model:'checked-objective-facts',totalMarks:body.totalMarks,requestedMarks:body.totalMarks,questions:objective,complete:true}};
+    const markCounts=Object.fromEntries([1,2,5,10,16].map(m=>[m,remaining.filter(s=>s.marks===m).length]));
+    const longer=await generateSyllabusPaper({...body,totalMarks:remaining.reduce((n,s)=>n+s.marks,0),count:remaining.length,markCounts},{fetchImpl,provider,apiKey,model});
+    return {...longer,paper:{...longer.paper,totalMarks:body.totalMarks,requestedMarks:body.totalMarks,questions:[...objective,...longer.paper.questions]}};
   }
   if (provider === 'groq') return generateGroqPaper(body, bytes, slots, { fetchImpl, apiKey, model });
   const filePart = body.mimeType === 'application/pdf'

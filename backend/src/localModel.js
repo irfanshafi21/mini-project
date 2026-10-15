@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { objectiveCandidates } from './objectiveQuestions.js';
 import { createHash, randomInt } from 'node:crypto';
 import { HttpError } from './errors.js';
 
@@ -93,18 +94,19 @@ function markedText(topic, family, marks, index) {
     `(b) Explain its operation using a labelled diagram or a worked example, as appropriate. (${b} marks)\n` +
     `(c) Analyse its benefits and limitations in a practical computer system. (${c} marks)`;
 }
-export function generateLocalQuestions(text, slots, previousHashes=[]) {
+export function generateLocalQuestions(text, slots, previousHashes=[], oneMarkType='MCQ') {
   const topics=syllabusTopics(text), used=new Set(previousHashes), questions=[];
   const family=topic=>{const predicted=classifyTopic(topic);return predicted==='numerical'&&!/arithmetic|conversion|ratio|calculation|time|speedup|throughput|addition|subtraction|multiplication|division|performance|number system/i.test(topic)?'concept':predicted;};
-  const candidates=[...new Set(slots.map(s=>s.marks))].flatMap(marks=>topics.flatMap(({topic,unit})=>patterns[family(topic)].map((_,index)=>({
+  const candidates=[...new Set(slots.map(s=>s.marks))].filter(m=>m!==1).flatMap(marks=>topics.flatMap(({topic,unit})=>patterns[family(topic)].map((_,index)=>({
     topic:(marks<=5?focusedTopic(topic):topic).slice(0,200),subtopic:classifyTopic(topic),unit,syllabusReference:topic.slice(0,500),
     text:markedText(topic,family(topic),marks,index),pattern:index,marks,
   }))));
+  if(slots.some(s=>s.marks===1)) candidates.push(...objectiveCandidates(topics,oneMarkType));
   for(let i=candidates.length-1;i>0;i--){const j=randomInt(i+1);[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}
   const topicUse=new Map();
   for(const slot of slots){
     const available=candidates.filter(q=>q.marks===slot.marks&&!used.has(questionHash(q.text)));
-    if(!available.length) throw new HttpError(409,`No unused ${slot.marks}-mark question variations remain for this syllabus. Add syllabus topics or expand the local model patterns.`);
+    if(!available.length) throw new HttpError(409,slot.marks===1 ? 'Not enough unused checked one-mark facts match this syllabus. Add more detailed supported topics, or request fewer one-mark questions.' : `No unused ${slot.marks}-mark question variations remain for this syllabus. Add syllabus topics or expand the local model patterns.`);
     const desired=slot.difficulty==='EASY'?0:slot.difficulty==='MEDIUM'?3:6;
     available.sort((a,b)=>(topicUse.get(a.topic)||0)-(topicUse.get(b.topic)||0) || Math.abs(a.pattern-desired)-Math.abs(b.pattern-desired));
     const chosen=available[0]; used.add(questionHash(chosen.text));topicUse.set(chosen.topic,(topicUse.get(chosen.topic)||0)+1);

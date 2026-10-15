@@ -8,6 +8,7 @@ export const toApi = (r) => ({
   difficulty: r.difficulty,
   marks: r.marks,
   text: r.text,
+  questionType:r.question_type || 'SHORT', options:r.options || [], answer:r.answer || '',
   createdAt: r.created_at,
   updatedAt: r.updated_at,
   ...(r.is_deleted ? { deletedAt: r.deleted_at } : {}),

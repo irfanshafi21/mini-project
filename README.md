@@ -557,3 +557,31 @@ The project has no authentication, user permissions or saved paper history. Groq
 [Your repository](https://github.com/irfanshafi21/mini-project) · [Original repository](https://github.com/naveen7655/mini-project) · [Back to top](#-question-bank--paper-generator)
 
 </div>
+
+
+## Manual selection, subject tables and retrieval
+
+In **Create a paper > Choose questions yourself**, select a registered subject and tick the exact bank questions you want. Search, unit and marks filters work across pages; your selection stays selected. The live summary shows the question count and total marks. Choose up to 50 questions and 1,000 marks, then click **Create and save paper**. Review the paper in sections by marks, print to PDF or download TXT.
+
+Automatic bank and syllabus previews also offer **Save this paper**. Saving a paper is separate from adding syllabus questions to the question bank: the Yes/No popup still controls bank insertion. In **Saved papers**, use **Retrieve paper** to reopen the original question text and marks, even after bank questions are edited or soft-deleted. Papers generated before this feature cannot be recovered unless exported; only explicitly saved papers appear in the archive.
+
+Each newly registered subject automatically gets a **physical PostgreSQL table**, implemented as a LIST partition of `questions`. The parent table continues to support existing searches and APIs. Rows are stored in the subject partition without a second duplicate copy. Names contain a readable subject prefix and a hash to avoid unsafe names and collisions. The database primary key is `(id, subject)`; the shared identity sequence continues assigning question numbers. PostgreSQL also routes a question moved between subjects.
+
+The subject overview includes its physical table name, searchable stored questions, and saved papers. To locate subject tables in pgAdmin, refresh **Schemas > public > Tables**, or expand partitions under `questions`, depending on your pgAdmin version. You can also run:
+
+```sql
+SELECT * FROM subject_storage ORDER BY subject;
+SELECT id, subject, tableoid::regclass AS physical_table, text, marks FROM questions;
+SELECT id, subject, title, created_at FROM saved_papers ORDER BY id DESC;
+```
+
+After updating an older local copy, stop the backend, run `npm run db:init` inside `backend`, then restart it. The migration converts existing questions to subject partitions atomically, preserving IDs, text and soft-delete history. Back up important databases before migration. The database role must own the tables and be able to create tables and triggers. No new frontend packages are required.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /api/papers/manual` | Validate selected bank IDs for one subject and save the paper |
+| `POST /api/papers/saved` | Save a reviewed paper snapshot |
+| `GET /api/papers/saved?subject=SUBJECT&page=1` | List a subject's saved papers, 20 per page |
+| `GET /api/papers/saved/:id` | Retrieve a saved paper |
+
+Manual selection checks live records on the server and rejects duplicate, deleted, missing and cross-subject IDs. It does not replace your chosen questions or impose an automatic difficulty distribution. Saved-paper snapshots stay independent from the editable question bank.

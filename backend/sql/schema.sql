@@ -97,3 +97,7 @@ DROP TRIGGER IF EXISTS subject_question_table ON subjects;
 CREATE TRIGGER subject_question_table AFTER INSERT ON subjects FOR EACH ROW EXECUTE FUNCTION create_subject_question_table();
 CREATE OR REPLACE VIEW subject_storage AS SELECT name AS subject,
   'questions_' || left(regexp_replace(lower(name),'[^a-z0-9]+','_','g'),24) || '_' || substr(md5(name),1,12) AS table_name FROM subjects;
+
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS question_type TEXT NOT NULL DEFAULT 'SHORT' CHECK(question_type IN ('SHORT','MCQ','FILL_BLANK'));
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS options JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS answer TEXT NOT NULL DEFAULT '';

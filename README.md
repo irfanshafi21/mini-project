@@ -75,7 +75,7 @@ The following is a real **2-mark bank paper** produced from the saved sample que
 </p>
 
 > [!TIP]
-> **Try the full flow:** register a subject → upload a syllabus → choose the destination unit → generate → open the question bank. The new validated questions are saved automatically.
+> **Try the full flow:** register a subject → upload a syllabus → choose the destination unit → generate → choose Yes in the save popup → open the question bank. Choose No to keep a preview without saving questions.
 
 ---
 
@@ -88,7 +88,7 @@ The following is a real **2-mark bank paper** produced from the saved sample que
 | **Paper sources** | Select existing questions or upload a syllabus to generate new questions |
 | **Marks pattern** | Set counts for 2-, 5-, 10- and 16-mark questions, with a live question total and marks subtotal |
 | **Difficulty mix** | Configure easy, medium and hard percentages |
-| **Automatic saving** | Save validated syllabus-generated questions to the selected subject and unit |
+| **Save confirmation** | Choose Yes or No after syllabus generation before adding questions to the bank |
 | **Paper preview** | Group questions into Sections A–D and review the final paper |
 | **Exports** | Download TXT or use the browser's Print / PDF option |
 
@@ -121,14 +121,14 @@ Click a subject to see its overview. **View question bank** opens that subject's
 | Select a registered subject | Select a registered subject and destination unit |
 | Optionally filter by unit and topic | Upload a PDF or UTF-8 TXT syllabus |
 | Java selects eligible stored questions | Java plans the slots; an AI provider writes the questions |
-| Existing entries are reused | New validated questions are saved automatically |
+| Existing entries are reused | New questions are saved only after confirmation |
 
 ### 3. Configure, review and export
 
 Enter total marks, set question counts by marks, and choose the difficulty mix. Generate the paper, review its content, then select **Download TXT** or **Print / PDF**.
 
 > [!NOTE]
-> Syllabus questions are saved to the selected subject and unit. Existing active text in that same subject and unit is skipped. The original uploaded file is not stored. Review the saved questions for academic correctness.
+> After generating a syllabus paper, a popup asks whether to add its questions to the bank. Yes saves to the selected subject and unit; No keeps the preview without inserting questions. Existing active text in that same subject and unit is skipped. The original uploaded file is not stored. Review the saved questions for academic correctness.
 
 ## Architecture
 
@@ -141,7 +141,9 @@ flowchart TD
     FILE --> PROVIDER[Groq extracted text / Gemini document]
     JAVA --> VALIDATE[Validate generated count and content]
     PROVIDER --> VALIDATE
-    VALIDATE -->|Save questions and counters atomically| DB
+    VALIDATE --> CHOICE{Save questions?}
+    CHOICE -->|Yes - insert questions| DB
+    CHOICE -->|No - preview only| PREVIEW
     JAVA --> PREVIEW[Sectioned paper preview]
     VALIDATE --> PREVIEW
     PREVIEW --> EXPORT[Print / PDF and TXT]
@@ -321,11 +323,11 @@ Legacy API requests omitting `markCounts` retain the earlier algorithms. Existin
 
 Easy, medium and hard percentages must sum to **100**. Syllabus planning applies them to question counts, rounded using largest remainders. Bank selection treats difficulty as a target constrained by available questions and marks.
 
-### Uploads and automatic saving
+### Uploads and save confirmation
 
 PDF or UTF-8 TXT uploads must be non-empty and no larger than **5 MB**. Groq extracts PDF text locally, limits the text to 100,000 characters, and rejects unreadable or scanned image-only PDFs. Apply OCR first or upload TXT. Extracted text is sent to Groq; Gemini mode sends the document to Google. Provider data policies also apply.
 
-Validated syllabus questions are saved under the selected subject and unit (1–5). The API defaults the unit to 1 if omitted. Topic labels are normalised and limited to 60 characters. Exact active text duplicates in the same subject and unit are skipped. Saving the paper's questions and updating generation counters occur atomically in one database statement.
+After generating a syllabus paper, choose **Yes, add to question bank** or **No, preview only** in the popup. Generation itself does not insert questions. Yes sends the validated questions to the separate save API and inserts them under the selected subject and unit (1–5). No sends no save request. The API defaults the generation destination unit to 1 when omitted. Topic labels are normalised and limited to 60 characters. Existing active text in the same subject and unit is skipped, so retrying a save does not create duplicates. The batch insert is atomic. Generation counters count successful papers regardless of the save choice and are separate from actual stored-question totals.
 
 The save notice reports new entries and existing duplicates. The bank and subject totals refresh automatically. Syllabus references remain in the paper preview/TXT; the bank stores text, subject, unit, topic, subtopic, difficulty and marks. The uploaded file and full generated paper are not stored. Previous generations are not backfilled.
 
@@ -427,7 +429,8 @@ Base address: `http://localhost:4000/api`.
 | POST | `/questions/:id/restore` | Restore a question |
 | POST | `/generate/questions` | Select matching stored questions |
 | POST | `/papers/generate` | Generate a bank paper through Java |
-| POST | `/papers/from-syllabus` | Generate, validate and save syllabus questions |
+| POST | `/papers/from-syllabus` | Generate and validate a syllabus preview |
+| POST | `/papers/save-syllabus` | Insert generated questions after confirmation |
 
 <details>
 <summary><strong>Example paper pattern</strong></summary>
@@ -443,7 +446,7 @@ Base address: `http://localhost:4000/api`.
 }
 ```
 
-For syllabus requests also send `fileName`, `mimeType` (`application/pdf` or `text/plain`) and base64 `data`. `count: 0` lets Java derive the count. Successful syllabus responses include `savedToBank`, `alreadyInBank` and `savedUnit`. See `backend/requests.http` for other examples.
+For syllabus requests also send `fileName`, `mimeType` (`application/pdf` or `text/plain`) and base64 `data`. `count: 0` lets Java derive the count. Generation returns `savedUnit`. To save after confirmation, POST `subject`, `unit` and the generated `questions` array to `/papers/save-syllabus`; its response includes `savedToBank`, `alreadyInBank` and `savedUnit`. See `backend/requests.http` for other examples.
 
 </details>
 
@@ -507,7 +510,7 @@ The startup message only confirms that the HTTP server started. `/api/health` ch
 4. Run `npm.cmd run db:init` in `backend` when the schema changes.
 5. Restart both servers and refresh the browser.
 
-The syllabus-saving update needs backend/frontend source changes but no additional database migration. Subject-generation counters require the schema migration included in `db:init`.
+The save-confirmation update needs backend/frontend source changes but no additional database migration. Subject-generation counters require the schema migration included in `db:init`.
 
 ## Current scope
 

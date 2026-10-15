@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS saved_papers (
   paper JSONB NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE saved_papers ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE INDEX IF NOT EXISTS idx_saved_papers_subject ON saved_papers(subject, id DESC);
 
 -- LIST partitions are physical subject tables behind the shared questions API.

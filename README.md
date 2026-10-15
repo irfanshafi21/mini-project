@@ -592,3 +592,10 @@ Manual selection checks live records on the server and rejects duplicate, delete
 All three creation workflows offer **Edit paper** above the preview. Edit the title, question wording and marks, then use **Save changes**. Totals and sections update from the edited marks, and the stored paper is updated under its original ID. Cancelling discards the draft. These edits do not change existing bank questions. The retrieval page also supports editing.
 
 Syllabus generation no longer opens a save popup. Use **Add to question bank** after reviewing the generated paper; questions are not inserted until that button is clicked. Stored papers remain available in the dedicated navigation page without an extra storage banner in the creation workflow. Markdown heading markers, bold wrappers and inline code wrappers are removed from paper display and exports. Unit titles are used only as a fallback when no detailed topics were supplied for that unit.
+
+
+### Direct PDF downloads and optional subjects
+
+Use **Download PDF** in manual, automatic bank, syllabus and stored-paper previews for a direct A4 PDF download. Sections, question numbering, marks, long-question page breaks and page numbers are included. An embedded open-source Noto Sans font supports Unicode text. **Print** remains a separate action.
+
+Creation subject fields accept typed names with existing-subject suggestions and are optional. A blank syllabus subject uses **General**, and a typed new syllabus subject is registered automatically. Blank bank/manual filters browse all subjects. A paper containing questions from one subject is stored under that subject; a mixed-subject paper is stored under General, while original bank entries keep their own subjects.

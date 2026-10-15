@@ -6,7 +6,7 @@ import { extractSyllabusText, generateLocalQuestions } from './localModel.js';
 export { planPaper } from './javaCore.js';
 
 export const syllabusBody = z.object({
-  subject: z.string().trim().min(1).max(60).transform(normalizeName),
+  subject: z.string().trim().max(60).optional().transform(v => normalizeName(v || 'GENERAL') || 'GENERAL'),
   unit: z.number().int().min(1).max(5).default(1),
   fileName: z.string().min(1).max(200),
   mimeType: z.enum(['application/pdf', 'text/plain']),

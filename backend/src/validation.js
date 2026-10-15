@@ -45,7 +45,7 @@ export const listQuery = z.object({
 
 export const paperBody = z
   .object({
-    subject: name,
+    subject: z.preprocess(v => typeof v === "string" && !v.trim() ? undefined : v, name.optional()),
     unit: z.coerce.number().int().min(0).max(TOTAL_UNITS).default(0), // 0 = all units
     units: z.array(z.number().int().min(1).max(TOTAL_UNITS)).min(1).max(5).transform(values => [...new Set(values)]).optional(),
     topic: name.optional(),

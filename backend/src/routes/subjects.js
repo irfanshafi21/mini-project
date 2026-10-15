@@ -34,7 +34,8 @@ router.get('/:name/overview', async (req, res) => {
   if (!rows.length) throw new HttpError(404, 'Subject not found');
   const row = rows[0];
   const syllabusQuestions = Number(row.syllabus_questions), bankQuestions = Number(row.bank_questions);
-  res.json({ subject: row.name, totalQuestions: row.total_questions,
+  const storage = await query('SELECT table_name FROM subject_storage WHERE subject=$1',[name]);
+  res.json({ subject: row.name, storageTable: storage.rows[0]?.table_name, totalQuestions: row.total_questions,
     byMarks: { 2: row.marks_2, 5: row.marks_5, 10: row.marks_10, 16: row.marks_16 }, otherMarks: row.other_marks,
     generatedQuestions: syllabusQuestions + bankQuestions, syllabusQuestions, bankQuestions,
     generatedPapers: Number(row.generated_papers) });

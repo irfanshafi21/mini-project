@@ -54,3 +54,16 @@ test('PDF bullet headings and page numbers do not become question topics', () =>
   const extracted=syllabusTopics('Probability and Statistics • Bayes theorem • Conditional expectation and variance. Artificial Intelligence • Search. Cross-validation (LOO; k-fold). Singular value decomposition (SVD) 3');
   assert.deepEqual(extracted.map(t=>t.topic),['Bayes theorem','Conditional expectation and variance','Search','Cross-validation (LOO; k-fold)','Singular value decomposition (SVD)']);
 });
+
+
+test('checked objective facts produce one correct option and blanks without revealing answers', () => {
+  const text='Unit 1: Data structures\nStacks. Queues. Binary search. Linear search.';
+  const mcq=generateLocalQuestions(text,[{marks:1,difficulty:'EASY'}],[],'MCQ')[0];
+  assert.equal(mcq.questionType,'MCQ');assert.equal(mcq.options.length,4);
+  assert.equal(mcq.options.filter(o=>o===mcq.answer).length,1);
+  assert.ok(mcq.options.every(o=>['Stack','Queue','Binary search','Linear search','Merge sort','Hash table'].includes(o)));
+  const blank=generateLocalQuestions(text,[{marks:1,difficulty:'EASY'}],[],'FILL_BLANK')[0];
+  assert.equal(blank.options.length,0);assert.match(blank.text,/____/);
+  assert.ok(!blank.text.toLowerCase().includes(blank.answer.toLowerCase()));
+  assert.throws(()=>generateLocalQuestions('Unit 1: Unsupported advanced topic',[{marks:1,difficulty:'EASY'}]),e=>e.status===409);
+});

@@ -11,10 +11,10 @@ test('Java plans exact manual marks and automatic standard denominations', async
   for (const [total,count] of [[50,0],[50,10],[37,0]]) {
     const slots = await planPaper(total,count,split,auto);
     assert.equal(slots.reduce((n,q)=>n+q.marks,0),total);
-    assert.ok(slots.every(q=>[2,5,10,16].includes(q.marks)));
+    assert.ok(slots.every(q=>[1,2,5,10,16].includes(q.marks)));
     if (count) assert.equal(slots.length,count);
   }
-  await assert.rejects(planPaper(1,0,split,auto), e=>e.status===400);
+  assert.equal((await planPaper(1,0,split,auto))[0].marks,1);
   await assert.rejects(planPaper(50,1,split,auto), e=>e.status===400);
 });
 test('bank patterns honor counts and bounded automatic selection never reuses ids', async () => {
@@ -41,4 +41,10 @@ test('syllabus output is validated against Java automatic slot count',async()=>{
   }});
   assert.equal(result.paper.totalMarks,10);
   assert.equal(result.paper.questions.length,1);
+});
+
+
+test('Java plans mixed one-mark patterns exactly',async()=>{
+  const slots=await planPaper(10,0,split,{1:3,2:1,5:1,10:0,16:0});
+  assert.deepEqual(slots.map(q=>q.marks),[1,1,1,2,5]);
 });

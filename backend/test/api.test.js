@@ -197,7 +197,7 @@ test('subject overview excludes deleted questions and tracks only successful com
   await call('DELETE', `/api/questions/${ids[4]}`);
   let overview = (await call('GET', `/api/subjects/${subject}/overview`)).body;
   assert.equal(overview.totalQuestions, 4);
-  assert.deepEqual(overview.byMarks, {2:1,5:1,10:1,16:1});
+  assert.deepEqual(overview.byMarks, {1:0,2:1,5:1,10:1,16:1});
   assert.equal(overview.otherMarks, 0);
   assert.equal(overview.generatedQuestions, 0);
   const pattern = {subject,totalMarks:2,count:1,markCounts:{2:1,5:0,10:0,16:0},split:{easy:100,medium:0,hard:0}};
@@ -373,5 +373,34 @@ test('creation permits blank subjects and registers typed syllabus subjects', as
     const typed=await call('POST','/api/papers/from-syllabus',{...body,subject:'Typed new subject'});
     assert.equal(typed.status,200);assert.equal(typed.body.paper.subject,'TYPED_NEW_SUBJECT');
     assert.equal((await call('GET','/api/subjects/TYPED_NEW_SUBJECT/overview')).status,200);
+  } finally {if(previous===undefined)delete process.env.AI_PROVIDER;else process.env.AI_PROVIDER=previous;}
+});
+
+
+test('one-mark MCQs and blanks survive generation, bank storage, selection and paper editing', async () => {
+  const previous=process.env.AI_PROVIDER;process.env.AI_PROVIDER='local';
+  try {
+    const body={subject:'OBJECTIVE_TEST',fileName:'topics.txt',mimeType:'text/plain',data:Buffer.from('Unit 1: Data structures\nStacks. Queues. Binary search. Linear search.').toString('base64'),totalMarks:3,count:3,markCounts:{1:3,2:0,5:0,10:0,16:0},split:{easy:100,medium:0,hard:0},oneMarkType:'MCQ'};
+    const mcq=await call('POST','/api/papers/from-syllabus',body);
+    assert.equal(mcq.status,200);
+    for(const item of mcq.body.paper.questions) {
+      assert.equal(item.marks,1);assert.equal(item.questionType,'MCQ');
+      assert.equal(item.options.length,4);assert.equal(new Set(item.options).size,4);
+      assert.equal(item.options.filter(o=>o===item.answer).length,1);
+    }
+    const saved=await call('POST','/api/papers/save-syllabus',{subject:body.subject,questions:mcq.body.paper.questions});
+    assert.equal(saved.status,200);assert.equal(saved.body.savedToBank,3);
+    const bank=await call('POST','/api/papers/generate',{subject:body.subject,totalMarks:1,count:1,markCounts:{1:1,2:0,5:0,10:0,16:0},oneMarkType:'MCQ',split:{easy:100,medium:0,hard:0}});
+    assert.equal(bank.status,200);assert.equal(bank.body.paper.questions[0].questionType,'MCQ');
+    const loaded=await call('GET',`/api/papers/saved/${bank.body.id}`);
+    assert.deepEqual(loaded.body.paper.questions[0].options,bank.body.paper.questions[0].options);
+    const changed={...loaded.body.paper.questions[0],options:['One','Two','Three','Four'],answer:'Two'};
+    assert.equal((await call('PUT',`/api/papers/saved/${bank.body.id}`,{subject:body.subject,title:'Edited MCQ',questions:[changed]})).status,200);
+    const blanks=await call('POST','/api/papers/from-syllabus',{...body,oneMarkType:'FILL_BLANK'});
+    assert.equal(blanks.status,200);
+    assert.ok(blanks.body.paper.questions.every(q=>q.questionType==='FILL_BLANK' && q.text.includes('____') && q.answer && !q.options.length));
+    const invalid={...mcq.body.paper.questions[0],subject:body.subject};
+    for(const options of [['Same','Same','Two','Three'],['One','Two','Three']])assert.equal((await call('POST','/api/questions',{...invalid,options})).status,400);
+    assert.equal((await call('POST','/api/questions',{...invalid,answer:'Not an option'})).status,400);
   } finally {if(previous===undefined)delete process.env.AI_PROVIDER;else process.env.AI_PROVIDER=previous;}
 });

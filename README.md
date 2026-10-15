@@ -563,7 +563,7 @@ The project has no authentication, user permissions or saved paper history. Groq
 
 In **Create a paper > Choose questions yourself**, select a registered subject and tick the exact bank questions you want. Search, unit and marks filters work across pages; your selection stays selected. The live summary shows the question count and total marks. Choose up to 50 questions and 1,000 marks, then click **Create and save paper**. Review the paper in sections by marks, print to PDF or download TXT.
 
-Completed automatic bank papers, syllabus papers and manually selected papers are saved automatically. Open the separate **Stored papers** navigation page to browse all subjects, filter by subject or search paper titles. Click **Open paper** to visit its retrieval page (`#stored-papers/ID`), review the original questions, print to PDF or download TXT. Reloading a paper URL retrieves it from PostgreSQL. Saving a paper is separate from adding syllabus questions to the question bank: the Yes/No popup still controls bank insertion. Incomplete bank previews are not automatically stored. Historical papers generated before storage was introduced cannot be reconstructed unless previously saved or exported.
+Completed automatic bank papers, syllabus papers and manually selected papers are saved automatically. Open the separate **Stored papers** navigation page to browse all subjects, filter by subject or search paper titles. Click **Open paper** to visit its retrieval page (`#stored-papers/ID`), review the original questions, print to PDF or download TXT. Reloading a paper URL retrieves it from PostgreSQL. Saving a paper is separate from adding syllabus questions to the question bank: the **Add to question bank** button appears after syllabus generation and controls bank insertion. Incomplete bank previews are not automatically stored. Historical papers generated before storage was introduced cannot be reconstructed unless previously saved or exported.
 
 Each newly registered subject automatically gets a **physical PostgreSQL table**, implemented as a LIST partition of `questions`. The parent table continues to support existing searches and APIs. Rows are stored in the subject partition without a second duplicate copy. Names contain a readable subject prefix and a hash to avoid unsafe names and collisions. The database primary key is `(id, subject)`; the shared identity sequence continues assigning question numbers. PostgreSQL also routes a question moved between subjects.
 
@@ -585,3 +585,10 @@ After updating an older local copy, stop the backend, run `npm run db:init` insi
 | `GET /api/papers/saved/:id` | Retrieve a saved paper |
 
 Manual selection checks live records on the server and rejects duplicate, deleted, missing and cross-subject IDs. It does not replace your chosen questions or impose an automatic difficulty distribution. Saved-paper snapshots stay independent from the editable question bank.
+
+
+### Review and edit a paper
+
+All three creation workflows offer **Edit paper** above the preview. Edit the title, question wording and marks, then use **Save changes**. Totals and sections update from the edited marks, and the stored paper is updated under its original ID. Cancelling discards the draft. These edits do not change existing bank questions. The retrieval page also supports editing.
+
+Syllabus generation no longer opens a save popup. Use **Add to question bank** after reviewing the generated paper; questions are not inserted until that button is clicked. Stored papers remain available in the dedicated navigation page without an extra storage banner in the creation workflow. Markdown heading markers, bold wrappers and inline code wrappers are removed from paper display and exports. Unit titles are used only as a fallback when no detailed topics were supplied for that unit.

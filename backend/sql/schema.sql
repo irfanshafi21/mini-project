@@ -49,3 +49,50 @@ DO $$ BEGIN
       FOREIGN KEY (subject) REFERENCES subjects(name);
   END IF;
 END $$;
+
+-- Stable snapshots let a paper be retrieved even after bank questions are edited.
+CREATE TABLE IF NOT EXISTS saved_papers (
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  subject TEXT NOT NULL REFERENCES subjects(name),
+  title TEXT NOT NULL,
+  paper JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_saved_papers_subject ON saved_papers(subject, id DESC);
+
+-- LIST partitions are physical subject tables behind the shared questions API.
+-- Existing rows and IDs are copied atomically before the old table is removed.
+DO $$
+DECLARE entry RECORD; partition_name TEXT; next_id BIGINT;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_partitioned_table WHERE partrelid='questions'::regclass) THEN
+    ALTER TABLE questions RENAME TO questions_before_partition;
+    CREATE TABLE questions (LIKE questions_before_partition INCLUDING DEFAULTS INCLUDING IDENTITY INCLUDING CONSTRAINTS)
+      PARTITION BY LIST(subject);
+    ALTER TABLE questions ADD PRIMARY KEY(id,subject);
+    FOR entry IN SELECT name FROM subjects LOOP
+      partition_name := 'questions_' || left(regexp_replace(lower(entry.name),'[^a-z0-9]+','_','g'),24) || '_' || substr(md5(entry.name),1,12);
+      EXECUTE format('CREATE TABLE %I PARTITION OF questions FOR VALUES IN (%L)', partition_name,entry.name);
+    END LOOP;
+    INSERT INTO questions OVERRIDING SYSTEM VALUE SELECT * FROM questions_before_partition;
+    SELECT greatest(coalesce(max(id),100)::bigint+1,101) INTO next_id FROM questions;
+    PERFORM setval(pg_get_serial_sequence('questions','id'),next_id,false);
+    DROP TABLE questions_before_partition;
+    ALTER TABLE questions ADD CONSTRAINT questions_subject_fk FOREIGN KEY(subject) REFERENCES subjects(name);
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_questions_subject ON questions(subject) WHERE NOT is_deleted;
+CREATE INDEX IF NOT EXISTS idx_questions_topic ON questions(topic) WHERE NOT is_deleted;
+CREATE INDEX IF NOT EXISTS idx_questions_unit_level ON questions(unit,difficulty) WHERE NOT is_deleted;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_questions_subject_unit_text ON questions(subject,unit,lower(text)) WHERE text<>'' AND NOT is_deleted;
+CREATE OR REPLACE FUNCTION create_subject_question_table() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE partition_name TEXT;
+BEGIN
+  partition_name := 'questions_' || left(regexp_replace(lower(NEW.name),'[^a-z0-9]+','_','g'),24) || '_' || substr(md5(NEW.name),1,12);
+  EXECUTE format('CREATE TABLE IF NOT EXISTS %I PARTITION OF questions FOR VALUES IN (%L)', partition_name,NEW.name);
+  RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS subject_question_table ON subjects;
+CREATE TRIGGER subject_question_table AFTER INSERT ON subjects FOR EACH ROW EXECUTE FUNCTION create_subject_question_table();
+CREATE OR REPLACE VIEW subject_storage AS SELECT name AS subject,
+  'questions_' || left(regexp_replace(lower(name),'[^a-z0-9]+','_','g'),24) || '_' || substr(md5(name),1,12) AS table_name FROM subjects;

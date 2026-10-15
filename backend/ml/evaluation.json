@@ -1,0 +1,117 @@
+{
+  "seed": 21,
+  "trainingExamples": 48,
+  "testExamples": 16,
+  "topicOverlap": 0,
+  "accuracy": 0.8125,
+  "macroF1": 0.8025793650793651,
+  "confusionMatrix": {
+    "comparison": {
+      "comparison": 4,
+      "concept": 0,
+      "numerical": 0,
+      "process": 0
+    },
+    "concept": {
+      "comparison": 0,
+      "concept": 2,
+      "numerical": 1,
+      "process": 1
+    },
+    "numerical": {
+      "comparison": 0,
+      "concept": 1,
+      "numerical": 3,
+      "process": 0
+    },
+    "process": {
+      "comparison": 0,
+      "concept": 0,
+      "numerical": 0,
+      "process": 4
+    }
+  },
+  "predictions": [
+    {
+      "topic": "relational database concepts",
+      "label": "concept",
+      "predicted": "concept"
+    },
+    {
+      "topic": "cache memory",
+      "label": "concept",
+      "predicted": "numerical"
+    },
+    {
+      "topic": "memory hierarchy concepts",
+      "label": "concept",
+      "predicted": "concept"
+    },
+    {
+      "topic": "instruction set concepts",
+      "label": "concept",
+      "predicted": "process"
+    },
+    {
+      "topic": "database transaction processing",
+      "label": "process",
+      "predicted": "process"
+    },
+    {
+      "topic": "address translation process",
+      "label": "process",
+      "predicted": "process"
+    },
+    {
+      "topic": "deadlock detection algorithm",
+      "label": "process",
+      "predicted": "process"
+    },
+    {
+      "topic": "input output transfer process",
+      "label": "process",
+      "predicted": "process"
+    },
+    {
+      "topic": "paging versus segmentation",
+      "label": "comparison",
+      "predicted": "comparison"
+    },
+    {
+      "topic": "RAM versus ROM memory",
+      "label": "comparison",
+      "predicted": "comparison"
+    },
+    {
+      "topic": "compiler versus interpreter",
+      "label": "comparison",
+      "predicted": "comparison"
+    },
+    {
+      "topic": "multiplexer versus decoder",
+      "label": "comparison",
+      "predicted": "comparison"
+    },
+    {
+      "topic": "number base conversion",
+      "label": "numerical",
+      "predicted": "numerical"
+    },
+    {
+      "topic": "cache hit ratio calculation",
+      "label": "numerical",
+      "predicted": "numerical"
+    },
+    {
+      "topic": "two complement subtraction",
+      "label": "numerical",
+      "predicted": "concept"
+    },
+    {
+      "topic": "disk access time calculation",
+      "label": "numerical",
+      "predicted": "numerical"
+    }
+  ],
+  "limitations": "Small synthetic held-out topic classification benchmark, NOT question correctness or educational quality. No neural language model was trained. Faculty review and a larger real dataset are required."
+}

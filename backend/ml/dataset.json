@@ -1,0 +1,262 @@
+{
+  "train": [
+    {
+      "topic": "object oriented principles",
+      "label": "concept"
+    },
+    {
+      "topic": "operating system concepts",
+      "label": "concept"
+    },
+    {
+      "topic": "data representation",
+      "label": "concept"
+    },
+    {
+      "topic": "computer architecture fundamentals",
+      "label": "concept"
+    },
+    {
+      "topic": "binary number representation",
+      "label": "concept"
+    },
+    {
+      "topic": "network protocols",
+      "label": "concept"
+    },
+    {
+      "topic": "virtual memory",
+      "label": "concept"
+    },
+    {
+      "topic": "digital logic fundamentals",
+      "label": "concept"
+    },
+    {
+      "topic": "database fundamentals",
+      "label": "concept"
+    },
+    {
+      "topic": "data abstraction",
+      "label": "concept"
+    },
+    {
+      "topic": "computer network basics",
+      "label": "concept"
+    },
+    {
+      "topic": "processor registers",
+      "label": "concept"
+    },
+    {
+      "topic": "instruction decoding stages",
+      "label": "process"
+    },
+    {
+      "topic": "program compilation stages",
+      "label": "process"
+    },
+    {
+      "topic": "network routing procedure",
+      "label": "process"
+    },
+    {
+      "topic": "pipeline execution stages",
+      "label": "process"
+    },
+    {
+      "topic": "sorting algorithm steps",
+      "label": "process"
+    },
+    {
+      "topic": "data transfer procedure",
+      "label": "process"
+    },
+    {
+      "topic": "cache replacement algorithms",
+      "label": "process"
+    },
+    {
+      "topic": "instruction execution cycle",
+      "label": "process"
+    },
+    {
+      "topic": "packet transmission procedure",
+      "label": "process"
+    },
+    {
+      "topic": "process scheduling algorithms",
+      "label": "process"
+    },
+    {
+      "topic": "memory allocation procedure",
+      "label": "process"
+    },
+    {
+      "topic": "interrupt handling process",
+      "label": "process"
+    },
+    {
+      "topic": "static versus dynamic allocation",
+      "label": "comparison"
+    },
+    {
+      "topic": "hardwired versus microprogrammed control",
+      "label": "comparison"
+    },
+    {
+      "topic": "TCP versus UDP protocols",
+      "label": "comparison"
+    },
+    {
+      "topic": "serial versus parallel communication",
+      "label": "comparison"
+    },
+    {
+      "topic": "Harvard versus Von Neumann architecture",
+      "label": "comparison"
+    },
+    {
+      "topic": "stack versus queue differences",
+      "label": "comparison"
+    },
+    {
+      "topic": "polling versus interrupts",
+      "label": "comparison"
+    },
+    {
+      "topic": "direct versus associative mapping",
+      "label": "comparison"
+    },
+    {
+      "topic": "primary versus secondary memory",
+      "label": "comparison"
+    },
+    {
+      "topic": "SRAM and DRAM differences",
+      "label": "comparison"
+    },
+    {
+      "topic": "RISC versus CISC processors",
+      "label": "comparison"
+    },
+    {
+      "topic": "synchronous versus asynchronous transfer",
+      "label": "comparison"
+    },
+    {
+      "topic": "processor performance calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "pipeline speedup calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "binary to hexadecimal conversion",
+      "label": "numerical"
+    },
+    {
+      "topic": "binary multiplication arithmetic",
+      "label": "numerical"
+    },
+    {
+      "topic": "memory address calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "effective memory access time calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "floating point arithmetic",
+      "label": "numerical"
+    },
+    {
+      "topic": "decimal to binary conversion",
+      "label": "numerical"
+    },
+    {
+      "topic": "CPU execution time calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "cache miss penalty calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "binary addition arithmetic",
+      "label": "numerical"
+    },
+    {
+      "topic": "instruction throughput calculation",
+      "label": "numerical"
+    }
+  ],
+  "test": [
+    {
+      "topic": "relational database concepts",
+      "label": "concept"
+    },
+    {
+      "topic": "cache memory",
+      "label": "concept"
+    },
+    {
+      "topic": "memory hierarchy concepts",
+      "label": "concept"
+    },
+    {
+      "topic": "instruction set concepts",
+      "label": "concept"
+    },
+    {
+      "topic": "database transaction processing",
+      "label": "process"
+    },
+    {
+      "topic": "address translation process",
+      "label": "process"
+    },
+    {
+      "topic": "deadlock detection algorithm",
+      "label": "process"
+    },
+    {
+      "topic": "input output transfer process",
+      "label": "process"
+    },
+    {
+      "topic": "paging versus segmentation",
+      "label": "comparison"
+    },
+    {
+      "topic": "RAM versus ROM memory",
+      "label": "comparison"
+    },
+    {
+      "topic": "compiler versus interpreter",
+      "label": "comparison"
+    },
+    {
+      "topic": "multiplexer versus decoder",
+      "label": "comparison"
+    },
+    {
+      "topic": "number base conversion",
+      "label": "numerical"
+    },
+    {
+      "topic": "cache hit ratio calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "two complement subtraction",
+      "label": "numerical"
+    },
+    {
+      "topic": "disk access time calculation",
+      "label": "numerical"
+    }
+  ]
+}

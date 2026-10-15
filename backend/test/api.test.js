@@ -338,3 +338,21 @@ test('stored papers list all subjects, search titles, and exclude removed papers
   assert.equal(saved.body.paper.questions.length,archived.count);
   assert.equal((await call('GET','/api/papers/saved?page=0')).status,400);
 });
+
+
+test('editing a stored paper updates its snapshot and totals without changing bank entries', async () => {
+  const existing=await call('GET','/api/papers/saved?subject=MANUAL_TEST');
+  const id=existing.body.items[0].id;
+  const original=(await call('GET',`/api/papers/saved/${id}`)).body;
+  const bankBefore=(await query('SELECT id,text,marks FROM questions ORDER BY id')).rows;
+  const questions=original.paper.questions.map((q,i)=>({...q,text:i===0?'Define cache memory.':q.text,marks:i===0?2:q.marks}));
+  const updated=await call('PUT',`/api/papers/saved/${id}`,{subject:'MANUAL_TEST',title:'Reviewed question paper',questions});
+  assert.equal(updated.status,200);
+  assert.equal(updated.body.paper.title,'Reviewed question paper');
+  assert.equal(updated.body.paper.totalMarks,questions.reduce((n,q)=>n+q.marks,0));
+  assert.equal((await call('GET',`/api/papers/saved/${id}`)).body.paper.questions[0].text,'Define cache memory.');
+  assert.deepEqual((await query('SELECT id,text,marks FROM questions ORDER BY id')).rows,bankBefore);
+  assert.equal((await call('PUT',`/api/papers/saved/${id}`,{subject:'GENERAL',title:'Wrong subject',questions})).status,400);
+  assert.equal((await call('PUT',`/api/papers/saved/${id}`,{subject:'MANUAL_TEST',title:'Invalid marks',questions:[{...questions[0],marks:0}]})).status,400);
+  assert.equal((await call('PUT','/api/papers/saved/999999',{subject:'MANUAL_TEST',title:'Missing',questions})).status,404);
+});

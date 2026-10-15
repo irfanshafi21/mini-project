@@ -38,3 +38,19 @@ test('Q103 regression: marks constrain scope independently of difficulty', () =>
     assert.match(long.text,/\(a\).*\n\(b\).*\n\(c\)/);
   }
 });
+
+
+test('syllabus formatting is removed and unit headings do not replace actual topics', () => {
+  const text='# GATE Data Science syllabus\n## Unit 1: Probability and Statistics\n- **Conditional probability**\n- Bayes theorem\n## Unit 2: Linear Algebra\nEigenvalues and eigenvectors.';
+  const topics=syllabusTopics(text);
+  assert.deepEqual(topics.map(t=>t.topic),['Conditional probability','Bayes theorem','Eigenvalues and eigenvectors']);
+  assert.deepEqual(topics.map(t=>t.unit),[1,1,2]);
+  const questions=generateLocalQuestions(text,[{marks:2,difficulty:'EASY'}]);
+  assert.ok(questions.every(q=>!/[#*`]/.test(q.text)));
+});
+
+
+test('PDF bullet headings and page numbers do not become question topics', () => {
+  const extracted=syllabusTopics('Probability and Statistics • Bayes theorem • Conditional expectation and variance. Artificial Intelligence • Search. Cross-validation (LOO; k-fold). Singular value decomposition (SVD) 3');
+  assert.deepEqual(extracted.map(t=>t.topic),['Bayes theorem','Conditional expectation and variance','Search','Cross-validation (LOO; k-fold)','Singular value decomposition (SVD)']);
+});

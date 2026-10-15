@@ -352,3 +352,12 @@ textarea { resize: vertical; }
 @media print { .manual-panel,.archive-panel { display:none!important; } }
 
 @media screen and (min-width:1000px) { .source-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+
+.stored-paper-controls { margin-bottom:24px; }
+.stored-paper-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:20px;margin-top:16px; }
+.stored-paper-card { display:flex;flex-direction:column;gap:12px; }
+.stored-paper-card h2 { font-size:20px;overflow-wrap:anywhere; }
+.stored-paper-card .primary { margin-top:auto; }
+.paper-summary { display:flex;justify-content:space-between;gap:12px;padding:14px;background:#eff7fd;border-radius:10px; }
+@media print { .stored-paper-controls,.stored-paper-grid { display:none!important; } }
+@media(max-width:650px) { nav { flex-wrap:wrap; } .nav-item { flex:1 1 40%; } }

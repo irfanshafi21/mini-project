@@ -6,36 +6,15 @@ async function call(apiUrl, path, body, signal) {
   if (!response.ok) throw new Error(data.error || 'Could not complete this request.')
   return data
 }
-export function SavedPaperTools({ apiUrl, subject, result, onLoaded }) {
-  const [items, setItems] = useState([]), [page, setPage] = useState(1), [refresh, setRefresh] = useState(0)
-  const [title, setTitle] = useState('Question paper'), [busy, setBusy] = useState(false), [error, setError] = useState(''), [loading, setLoading] = useState(false)
-  useEffect(() => {
-    if (!subject) return
-    const controller = new AbortController()
-    Promise.resolve().then(() => { if (!controller.signal.aborted) setLoading(true) })
-    call(apiUrl, `/papers/saved?${new URLSearchParams({ subject, page })}`, null, controller.signal)
-      .then(data => { setItems(data.items); setError('') })
-      .catch(err => { if (err.name !== 'AbortError') setError(err.message) })
-      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
-    return () => controller.abort()
-  }, [apiUrl, subject, page, refresh, result?.id])
+export function SavedPaperTools({ apiUrl, result, onLoaded }) {
+  const [title,setTitle]=useState('Question paper'), [busy,setBusy]=useState(false), [error,setError]=useState('')
   async function save() {
-    setBusy(true); setError('')
-    try { const saved = await call(apiUrl, '/papers/saved', { subject: result.paper.subject, title, questions: result.paper.questions }); onLoaded(saved); setRefresh(n => n + 1) }
-    catch (err) { setError(err.message) } finally { setBusy(false) }
+    setBusy(true);setError('')
+    try {onLoaded(await call(apiUrl,'/papers/saved',{subject:result.paper.subject,title,questions:result.paper.questions}))}
+    catch(err) {setError(err.message)} finally {setBusy(false)}
   }
-  async function open(id) {
-    setBusy(true); setError('')
-    try { onLoaded(await call(apiUrl, `/papers/saved/${id}`)) }
-    catch (err) { setError(err.message) } finally { setBusy(false) }
-  }
-  return <section className="panel archive-panel" aria-label="Saved papers"><h2>Saved papers</h2>
-    {result && !result.id && <div className="archive-save"><label className="field"><span>Paper title</span><input maxLength="120" value={title} onChange={e => setTitle(e.target.value)} /></label><button className="primary" disabled={busy || !title.trim()} onClick={save}>Save this paper</button></div>}
-    {result?.id && <p className="saved-notice" role="status">Saved as paper #{result.id}. You can retrieve it here later.</p>}
-    {!subject ? <p className="muted">Choose a subject to retrieve its papers.</p> : loading ? <p role="status">Loading saved papers...</p> : items.length ? <div className="saved-paper-list">{items.map(p => <div className="saved-paper-row" key={p.id}><div><strong>{p.title}</strong><p className="muted small">#{p.id} | {p.count} questions | {p.totalMarks} marks | {new Date(p.createdAt).toLocaleDateString()}</p></div><button className="secondary" disabled={busy} onClick={() => open(p.id)}>Retrieve paper</button></div>)}</div> : <p className="muted">No papers saved for this subject yet.</p>}
-    {error && <p className="error" role="alert">{error}</p>}
-    {subject && <div className="pagination"><button className="secondary" disabled={busy || loading || page === 1} onClick={() => setPage(p => p - 1)}>Previous papers</button><span>Page {page}</span><button className="secondary" disabled={busy || loading || items.length < 20} onClick={() => setPage(p => p + 1)}>Next papers</button><button className="text-button" disabled={loading} onClick={() => setRefresh(n => n + 1)}>Refresh</button></div>}
-  </section>
+  if(!result) return null
+  return <section className="panel archive-panel" aria-label="Paper storage">{result.id ? <p className="saved-notice" role="status">Paper #{result.id} is stored. <a href={`#stored-papers/${result.id}`}>Open stored paper</a></p> : <div className="archive-save"><label className="field"><span>Paper title</span><input maxLength="120" value={title} onChange={e=>setTitle(e.target.value)} /></label><button className="primary" disabled={busy || !title.trim()} onClick={save}>{busy?'Saving...':'Save this paper'}</button></div>}{error && <p className="error" role="alert">{error}</p>}<a href="#stored-papers">View all stored papers</a></section>
 }
 export function SubjectQuestions({ apiUrl, subject }) {
   return <QuestionPicker key={subject} apiUrl={apiUrl} subject={subject} />

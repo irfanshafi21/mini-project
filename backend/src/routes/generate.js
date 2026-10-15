@@ -23,7 +23,8 @@ router.post('/papers/generate', async (req, res) => {
     params.push(v);
     where.push(sql.replace('$?', `$${params.length}`));
   };
-  if (b.unit) add('unit = $?', b.unit);
+  if (b.units) add('unit = ANY($?::smallint[])', b.units);
+  else if (b.unit) add('unit = $?', b.unit);
   if (b.subject) add('subject = $?', b.subject);
   if (b.topic) add('topic = $?', b.topic);
   if (b.subtopic) add('subtopic = $?', b.subtopic);
@@ -38,6 +39,7 @@ router.post('/papers/generate', async (req, res) => {
     paper: {
       subject: b.subject || 'ALL',
       unit: b.unit || 'ALL',
+      units: b.units || (b.unit ? [b.unit] : [1,2,3,4,5]),
       topic: b.topic ?? 'ALL',
       subtopic: b.subtopic ?? null,
       requestedMarks: b.totalMarks,

@@ -4,12 +4,12 @@ import { query } from '../db.js';
 import { HttpError } from '../errors.js';
 import { normalizeName } from '../validation.js';
 import { toApi } from '../mapper.js';
-import { requireRegisteredSubject } from './subjects.js';
+import { requireRegisteredSubject, ensureSubject } from './subjects.js';
 
 const router = Router();
 const subject = z.string().trim().min(1).max(60).transform(normalizeName);
 const title = z.string().trim().min(1).max(120);
-const manual = z.object({ subject, title, questionIds: z.array(z.number().int().positive()).min(1).max(50) })
+const manual = z.object({ subject:z.preprocess(v=>typeof v==='string' && !v.trim()?undefined:v,subject.optional()), title, questionIds: z.array(z.number().int().positive()).min(1).max(50) })
   .refine(b => new Set(b.questionIds).size === b.questionIds.length, { message: 'Select each question only once.' });
 const snapshotQuestion = z.object({
   text: z.string().trim().min(1).max(2000), marks: z.number().int().min(1).max(100),
@@ -27,12 +27,14 @@ export async function storePaper(subjectName, paperTitle, questions, metadata = 
 }
 router.post('/manual', async (req,res) => {
   const b = manual.parse(req.body);
-  await requireRegisteredSubject(b.subject);
+  if(b.subject) await requireRegisteredSubject(b.subject);
   // Only fetch live questions belonging to this subject; never trust client-supplied text/marks.
-  const { rows } = await query('SELECT * FROM questions WHERE subject=$1 AND NOT is_deleted AND id=ANY($2::int[])',[b.subject,b.questionIds]);
+  const { rows } = await query('SELECT * FROM questions WHERE NOT is_deleted AND id=ANY($1::int[])' + (b.subject?' AND subject=$2':''),b.subject?[b.questionIds,b.subject]:[b.questionIds]);
   if(rows.length !== b.questionIds.length) throw new HttpError(400,'Some selected questions were removed or belong to another subject. Refresh your selection.');
   const byId = new Map(rows.map(q=>[q.id,toApi(q)]));
-  res.status(201).json(await storePaper(b.subject,b.title,b.questionIds.map(id=>byId.get(id)), {source:'manual'}));
+  const subjects=[...new Set(rows.map(q=>q.subject))], paperSubject=b.subject || (subjects.length===1?subjects[0]:'GENERAL');
+  await ensureSubject(paperSubject);
+  res.status(201).json(await storePaper(paperSubject,b.title,b.questionIds.map(id=>byId.get(id)), {source:'manual'}));
 });
 router.post('/saved', async (req,res) => {
   const b = snapshot.parse(req.body);

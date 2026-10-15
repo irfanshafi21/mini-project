@@ -3,7 +3,7 @@ import { storePaper } from './savedPapers.js';
 import { generateSyllabusPaper, syllabusBody } from '../syllabusGenerator.js';
 
 import { z } from 'zod';
-import { requireRegisteredSubject, recordGeneratedPaper } from './subjects.js';
+import { requireRegisteredSubject, recordGeneratedPaper, ensureSubject } from './subjects.js';
 import { query } from '../db.js';
 import { normalizeName } from '../validation.js';
 import { extractSyllabusText, questionHash } from '../localModel.js';
@@ -11,7 +11,6 @@ import { extractSyllabusText, questionHash } from '../localModel.js';
 const router = Router();
 router.post('/papers/from-syllabus', async (req, res) => {
   const body = syllabusBody.parse(req.body);
-  await requireRegisteredSubject(body.subject);
   const local = (process.env.AI_PROVIDER || 'local') === 'local';
   let syllabusHash;
   if(local) {
@@ -20,6 +19,7 @@ router.post('/papers/from-syllabus', async (req, res) => {
     body.previousQuestionHashes = (await query('SELECT question_hash FROM syllabus_history WHERE subject=$1 AND syllabus_hash=$2',[body.subject,syllabusHash])).rows.map(row=>row.question_hash);
   }
   const result = await generateSyllabusPaper(body);
+  await ensureSubject(body.subject);
   if(local) {
     const hashes=result.paper.questions.map(q=>questionHash(q.text));
     const reserved=await query(`INSERT INTO syllabus_history(subject,syllabus_hash,question_hash)

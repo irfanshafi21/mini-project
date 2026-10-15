@@ -6,7 +6,7 @@ import { toApi } from '../mapper.js';
 import { generatePaper } from '../javaCore.js';
 import { autoBody, paperBody } from '../validation.js';
 
-import { requireRegisteredSubject, recordGeneratedPaper } from './subjects.js';
+import { requireRegisteredSubject, recordGeneratedPaper, ensureSubject } from './subjects.js';
 
 const router = Router();
 
@@ -17,7 +17,7 @@ const router = Router();
  */
 router.post('/papers/generate', async (req, res) => {
   const b = paperBody.parse(req.body);
-  await requireRegisteredSubject(b.subject);
+  if (b.subject) await requireRegisteredSubject(b.subject);
   const where = ['NOT is_deleted'];
   const params = [];
   const add = (sql, v) => {
@@ -35,9 +35,12 @@ router.post('/papers/generate', async (req, res) => {
 
   const result = await generatePaper(rows.map(toApi), b.totalMarks, b.split, b.markCounts, b.count);
   const complete = result.totalMarks === b.totalMarks;
-  if (complete) await recordGeneratedPaper(b.subject, result.questions.length, 'bank');
+  const selectedSubjects=[...new Set(result.questions.map(q=>q.subject))];
+  const paperSubject=b.subject || (selectedSubjects.length===1?selectedSubjects[0]:'GENERAL');
+  await ensureSubject(paperSubject);
+  if (complete) await recordGeneratedPaper(paperSubject, result.questions.length, 'bank');
   const paper = {
-      subject: b.subject || 'ALL',
+      subject: paperSubject,
       unit: b.unit || 'ALL',
       units: b.units || (b.unit ? [b.unit] : [1,2,3,4,5]),
       topic: b.topic ?? 'ALL',
@@ -48,7 +51,7 @@ router.post('/papers/generate', async (req, res) => {
       targets: result.targets,
       questions: result.questions,
     };
-  const saved = complete ? await storePaper(b.subject, `${b.subject.replaceAll('_',' ')} - Question paper`, result.questions, {...paper,source:'bank'}) : null;
+  const saved = complete ? await storePaper(paperSubject, `${paperSubject.replaceAll('_',' ')} - Question paper`, result.questions, {...paper,source:'bank'}) : null;
   res.json({ ...(saved || {paper}),
     ...(complete ? {} : { warning: `Only ${result.totalMarks} of ${b.totalMarks} marks could be reached. Add more questions to the bank.` }),
   });

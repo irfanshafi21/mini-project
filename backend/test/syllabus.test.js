@@ -31,7 +31,7 @@ test('sends syllabus to Gemini and maps validated questions to exact slots', asy
   assert.equal(result.paper.questions[0].marks, 5);
 });
 test('missing key and invalid PDFs fail before calling Gemini', async () => {
-  await assert.rejects(generateSyllabusPaper(body, { apiKey: '' }), e => e.status === 503);
+  await assert.rejects(generateSyllabusPaper(body, { provider: 'gemini', apiKey: '' }), e => e.status === 503);
   await assert.rejects(generateSyllabusPaper({ ...body, mimeType: 'application/pdf' }, options(() => assert.fail('Must not call Gemini'))), e => e.status === 400);
 });
 test('Gemini quota and network failures produce useful errors', async () => {

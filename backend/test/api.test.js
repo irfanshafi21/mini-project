@@ -14,7 +14,7 @@ let base;
 
 before(async () => {
   await query(fs.readFileSync(new URL('../sql/schema.sql', import.meta.url), 'utf8'));
-  await query('TRUNCATE questions RESTART IDENTITY');
+  await query('TRUNCATE questions, syllabus_history RESTART IDENTITY');
   await query('DELETE FROM subjects');
   for (const name of ['GENERAL','DATA_STRUCTURES','PROGRAMMING','ALGORITHMS']) await query('INSERT INTO subjects(name) VALUES($1)', [name]);
   server = app.listen(0);
@@ -250,4 +250,32 @@ test('unregistered subjects are rejected without creating records or invoking ge
   const missing = { ...question }; delete missing.subject;
   assert.equal((await call('POST', '/api/questions', missing)).status, 400);
   await assert.rejects(query("INSERT INTO questions(subject,unit,topic,subtopic,difficulty,marks) VALUES($1,1,'T','S','EASY',5)", [unknown]), e => e.code === '23503');
+});
+
+test('bank paper selects two or three units and never selects an excluded unit', async () => {
+  const subject='MULTI_UNIT';await call('POST','/api/subjects',{name:subject});
+  for(const [unit,marks] of [[1,2],[3,5],[5,10],[2,16]]) await call('POST','/api/questions',{...q(unit,'CPU','Registers','EASY',marks,`Unit ${unit} CPU question.`),subject});
+  const pattern={subject,totalMarks:7,count:2,units:[1,3],markCounts:{2:1,5:1,10:0,16:0},split:{easy:100,medium:0,hard:0}};
+  const two=await call('POST','/api/papers/generate',pattern);
+  assert.equal(two.status,200);assert.deepEqual(two.body.paper.questions.map(q=>q.unit).sort(),[1,3]);
+  const three=await call('POST','/api/papers/generate',{...pattern,totalMarks:17,count:3,units:[1,3,5],markCounts:{2:1,5:1,10:1,16:0}});
+  assert.equal(three.status,200);assert.deepEqual(three.body.paper.questions.map(q=>q.unit).sort(),[1,3,5]);
+  assert.equal((await call('POST','/api/papers/generate',{...pattern,units:[0]})).status,400);
+});
+
+test('local syllabus repeats do not reuse text, and saving follows detected units without a unit selector', async () => {
+  const original=process.env.AI_PROVIDER;process.env.AI_PROVIDER='local';
+  const subject='LOCAL_REPEAT';await call('POST','/api/subjects',{name:subject});
+  const body={subject,fileName:'local.txt',mimeType:'text/plain',data:Buffer.from('Unit 1: CPU registers\nUnit 3: Cache memory hierarchy').toString('base64'),totalMarks:4,count:2,markCounts:{2:2,5:0,10:0,16:0},split:{easy:100,medium:0,hard:0}};
+  try {
+    const first=await call('POST','/api/papers/from-syllabus',body);
+    const second=await call('POST','/api/papers/from-syllabus',body);
+    assert.equal(first.status,200);assert.equal(second.status,200);
+    assert.ok(second.body.paper.questions.every(q=>!first.body.paper.questions.some(p=>p.text===q.text)));
+    assert.equal((await call('GET',`/api/questions?subject=${subject}`)).body.total,0);
+    const saved=await call('POST','/api/papers/save-syllabus',{subject,questions:first.body.paper.questions});
+    assert.equal(saved.status,200);assert.equal(saved.body.savedToBank,2);
+    const stored=(await call('GET',`/api/questions?subject=${subject}`)).body.items;
+    assert.deepEqual(stored.map(q=>q.unit).sort(),[1,3]);
+  } finally {if(original===undefined)delete process.env.AI_PROVIDER;else process.env.AI_PROVIDER=original;}
 });

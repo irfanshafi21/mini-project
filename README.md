@@ -75,7 +75,7 @@ The following is a real **2-mark bank paper** produced from the saved sample que
 </p>
 
 > [!TIP]
-> **Try the full flow:** register a subject → upload a syllabus → choose the destination unit → generate → choose Yes in the save popup → open the question bank. Choose No to keep a preview without saving questions.
+> **Try the full flow:** register a subject → upload a syllabus → generate → choose Yes in the save popup → open the question bank. Choose No to keep a preview without saving questions.
 
 ---
 
@@ -92,7 +92,7 @@ The following is a real **2-mark bank paper** produced from the saved sample que
 | **Paper preview** | Group questions into Sections A–D and review the final paper |
 | **Exports** | Download TXT or use the browser's Print / PDF option |
 
-The website has no login or user profile. Subject registration means adding an academic subject, not creating a user account. AI generation uses an external API; this project does not train a local ML model.
+The website has no login or user profile. Subject registration means adding an academic subject, not creating a user account. The default syllabus engine is now a trained local topic classifier with authored question patterns. Groq/Gemini remain optional alternatives. See the model card for the distinction from a neural language model.
 
 ## Workflow
 
@@ -118,9 +118,9 @@ Click a subject to see its overview. **View question bank** opens that subject's
 
 | Your question bank | Upload a syllabus |
 | :--- | :--- |
-| Select a registered subject | Select a registered subject and destination unit |
+| Select a registered subject | Select a registered subject; units are inferred from headings |
 | Optionally filter by unit and topic | Upload a PDF or UTF-8 TXT syllabus |
-| Java selects eligible stored questions | Java plans the slots; an AI provider writes the questions |
+| Java selects eligible stored questions | Java plans slots; the local ML-assisted generator constructs questions |
 | Existing entries are reused | New questions are saved only after confirmation |
 
 ### 3. Configure, review and export
@@ -128,7 +128,7 @@ Click a subject to see its overview. **View question bank** opens that subject's
 Enter total marks, set question counts by marks, and choose the difficulty mix. Generate the paper, review its content, then select **Download TXT** or **Print / PDF**.
 
 > [!NOTE]
-> After generating a syllabus paper, a popup asks whether to add its questions to the bank. Yes saves to the selected subject and unit; No keeps the preview without inserting questions. Existing active text in that same subject and unit is skipped. The original uploaded file is not stored. Review the saved questions for academic correctness.
+> After generating a syllabus paper, a popup asks whether to add its questions to the bank. Yes saves to the selected subject and inferred units; No keeps the preview without inserting questions. Existing active text in that same subject and unit is skipped. The original uploaded file is not stored. Review the saved questions for academic correctness.
 
 ## Architecture
 
@@ -151,7 +151,7 @@ flowchart TD
 
 **Bank paper:** React → Express → PostgreSQL pool → Java selection → preview.
 
-**Syllabus paper:** React → registered-subject check → Java slots → upload processing → provider generation → output validation → database save → preview.
+**Syllabus paper:** React → registered-subject check → Java slots → upload processing → local generation → repeat-history check → preview → optional confirmed save.
 
 The frontend calls `VITE_API_URL`, normally `http://localhost:4000/api`. Express owns HTTP, database access, validation and provider integration. Java owns marks planning and question selection, using JDK source-file launch as a subprocess. Keep `core` beside `backend`; there is no separate Java server or Maven requirement.
 
@@ -165,7 +165,8 @@ The frontend calls `VITE_API_URL`, normally `http://localhost:4000/api`. Express
 | Express | A small REST API with clear routes and middleware |
 | PostgreSQL | Persistent relational data, foreign keys, constraints and indexes |
 | Java | A dedicated, independently verifiable marks and selection engine |
-| External AI API | Question generation without training or hosting an ML model |
+| Local ML | CPU inference using learned topic-type probabilities and authored question patterns; no API key |
+| Optional external AI | Groq/Gemini can still be selected in backend configuration |
 
 ---
 
@@ -223,14 +224,14 @@ Edit **backend/.env**:
 ```dotenv
 DATABASE_URL=postgresql://postgres:YOUR_POSTGRES_PASSWORD@localhost:5432/questionbank
 PORT=4000
-AI_PROVIDER=groq
+AI_PROVIDER=local
 GROQ_API_KEY=YOUR_GROQ_API_KEY
 GROQ_MODEL=openai/gpt-oss-20b
 ```
 
 Replace both placeholders with your own credentials. URL-encode special characters in the database password. The exact filename is `.env`, directly inside `backend`.
 
-Get your key from the [Groq Console](https://console.groq.com/keys). Select an account-available model supporting [strict structured outputs](https://console.groq.com/docs/structured-outputs). The documented model is configurable; provider availability and quota depend on your account.
+Local mode requires no API key; the key/model lines above are optional. For Groq mode, get your key from the [Groq Console](https://console.groq.com/keys). Select an account-available model supporting [strict structured outputs](https://console.groq.com/docs/structured-outputs). The documented model is configurable; provider availability and quota depend on your account.
 
 > [!IMPORTANT]
 > Keep the actual API key and database password in local `.env` only. Never upload `.env` to GitHub or put API keys in frontend variables.
@@ -238,7 +239,7 @@ Get your key from the [Groq Console](https://console.groq.com/keys). Select an a
 <details>
 <summary><strong>Optional: use Gemini instead of Groq</strong></summary>
 
-Set `AI_PROVIDER=gemini`, `GEMINI_API_KEY` and `GEMINI_MODEL` in the backend configuration. Choose a model available to your account. Gemini can receive the PDF directly; Groq receives extracted text. Keys are not interchangeable and there is no automatic provider fallback.
+Set `AI_PROVIDER=groq` with `GROQ_API_KEY` and `GROQ_MODEL`, or set `AI_PROVIDER=gemini`, `GEMINI_API_KEY` and `GEMINI_MODEL` in the backend configuration. Choose a model available to your account. Gemini can receive the PDF directly; Groq receives extracted text. Keys are not interchangeable and there is no automatic provider fallback.
 
 </details>
 
@@ -296,7 +297,36 @@ Keep PostgreSQL running. Start these in separate terminals:
 
 Press **Ctrl+C** to stop each server. Run `npm.cmd ci` after dependency changes and `npm.cmd run db:init` after schema updates.
 
+## Local model training and test report
+
+The default engine runs entirely on the CPU and makes no provider request. It is a **trained multinomial Naive Bayes topic classifier plus template-based question generation**, not a newly trained neural LLM. A learned topic family selects authored patterns; Java supplies marks and target difficulty. This practical prototype can produce generic questions and still requires faculty review.
+
+| Evaluation item | Result |
+|---|---:|
+| Hand-authored synthetic topic examples | 64 |
+| Training / held-out test | 48 / 16 |
+| Topic overlap | 0 |
+| Correct classifications | 13 / 16 |
+| Held-out topic classification accuracy | 81.25% |
+| Macro F1 | 0.8026 |
+
+These results do not measure academic correctness, question-generation accuracy, or difficulty accuracy. No faculty-reviewed quality score is claimed. [Model card](backend/ml/MODEL_CARD.md), [dataset](backend/ml/dataset.json), [learned weights](backend/ml/model.json), and [evaluation details](backend/ml/evaluation.json) are included.
+
+Train reproducibly from the project root with Python 3 (standard library only):
+
+```powershell
+python backend/ml/train.py
+```
+
+For real faculty-labelled topic examples, use `python backend/ml/train.py --dataset faculty-topics.json`; see the model card for format and limits. Restart the backend after retraining. Python is not needed for inference.
+
+Repeated local uploads exclude previously returned question text using PostgreSQL hash history. There are eight candidate patterns per extracted topic. When no unused variations remain, the app returns a clear error instead of pretending unlimited unique generation is possible. Choosing No consumes the generation variations but leaves the question bank unchanged. The original file and question text are not stored in the history table. Bloom-level modelling is intentionally deferred.
+
 ## Paper rules
+
+### Choose any combination of units
+
+In bank mode, use the unit checkboxes to select one, two, three or more units. All units clears the specific selection. The API accepts `units: [1, 3, 5]` and excludes questions from other units. Legacy singular `unit` requests are still supported.
 
 ### Live question counts
 
@@ -327,7 +357,7 @@ Easy, medium and hard percentages must sum to **100**. Syllabus planning applies
 
 PDF or UTF-8 TXT uploads must be non-empty and no larger than **5 MB**. Groq extracts PDF text locally, limits the text to 100,000 characters, and rejects unreadable or scanned image-only PDFs. Apply OCR first or upload TXT. Extracted text is sent to Groq; Gemini mode sends the document to Google. Provider data policies also apply.
 
-After generating a syllabus paper, choose **Yes, add to question bank** or **No, preview only** in the popup. Generation itself does not insert questions. Yes sends the validated questions to the separate save API and inserts them under the selected subject and unit (1–5). No sends no save request. The API defaults the generation destination unit to 1 when omitted. Topic labels are normalised and limited to 60 characters. Existing active text in the same subject and unit is skipped, so retrying a save does not create duplicates. The batch insert is atomic. Generation counters count successful papers regardless of the save choice and are separate from actual stored-question totals.
+After generating a syllabus paper, choose **Yes, add to question bank** or **No, preview only** in the popup. Generation itself does not insert questions. Yes sends the validated questions to the separate save API and inserts them under the selected subject and unit (1–5). No sends no save request. Local generation reads Unit 1–5 or I–V headings and saves each question to its inferred unit. Unlabelled content uses Unit 1. There is no destination-unit dropdown. Topic labels are normalised and limited to 60 characters. Existing active text in the same subject and unit is skipped, so retrying a save does not create duplicates. The batch insert is atomic. Generation counters count successful papers regardless of the save choice and are separate from actual stored-question totals.
 
 The save notice reports new entries and existing duplicates. The bank and subject totals refresh automatically. Syllabus references remain in the paper preview/TXT; the bank stores text, subject, unit, topic, subtopic, difficulty and marks. The uploaded file and full generated paper are not stored. Previous generations are not backfilled.
 
@@ -446,7 +476,7 @@ Base address: `http://localhost:4000/api`.
 }
 ```
 
-For syllabus requests also send `fileName`, `mimeType` (`application/pdf` or `text/plain`) and base64 `data`. `count: 0` lets Java derive the count. Generation returns `savedUnit`. To save after confirmation, POST `subject`, `unit` and the generated `questions` array to `/papers/save-syllabus`; its response includes `savedToBank`, `alreadyInBank` and `savedUnit`. See `backend/requests.http` for other examples.
+For syllabus requests also send `fileName`, `mimeType` (`application/pdf` or `text/plain`) and base64 `data`. `count: 0` lets Java derive the count. Local generation includes `unit` on each question. To save after confirmation, POST `subject` and the generated `questions` array (including per-question `unit`) to `/papers/save-syllabus`; its response includes `savedToBank` and `alreadyInBank`. See `backend/requests.http` for other examples.
 
 </details>
 
@@ -457,7 +487,7 @@ The project validates requests, registered subjects, file metadata, marks patter
 **Backend — database-independent tests:**
 
 ```powershell
-node --test test/javaCore.test.js test/syllabus.test.js test/marks.test.js test/groq.test.js
+node --test test/javaCore.test.js test/syllabus.test.js test/marks.test.js test/groq.test.js test/localModel.test.js
 ```
 
 **Frontend:**
@@ -510,7 +540,9 @@ The startup message only confirms that the HTTP server started. `/api/health` ch
 4. Run `npm.cmd run db:init` in `backend` when the schema changes.
 5. Restart both servers and refresh the browser.
 
-The save-confirmation update needs backend/frontend source changes but no additional database migration. Subject-generation counters require the schema migration included in `db:init`.
+The local-model and repeat-history update requires running `npm.cmd run db:init` once. Existing subjects and bank questions are preserved. Select `AI_PROVIDER=local` in backend/.env and restart.
+
+The earlier save-confirmation update needs backend/frontend source changes but no additional database migration. Subject-generation counters require the schema migration included in `db:init`.
 
 ## Current scope
 

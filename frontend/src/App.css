@@ -372,3 +372,15 @@ textarea { resize: vertical; }
 
 .preview-actions:has(.paper-edit-form) { width:100%;flex-wrap:wrap; }
 .section-heading:has(.paper-edit-form) { flex-wrap:wrap; }
+
+/* Compact paper layout, including direct print output. */
+.paper-questions li { border:0!important;padding:8px 0!important;gap:12px; }
+.paper-questions p { margin:0;line-height:1.45!important;white-space:pre-line; }
+.paper-section { margin-top:16px; }
+.paper-section-heading { margin-bottom:6px; }
+.paper-sheet { padding:28px; }
+.marks-grid { grid-template-columns:repeat(auto-fit,minmax(115px,1fr)); }
+.subject-marks-grid { grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); }
+.question-card h3 { white-space:pre-line; }
+.objective-editor { grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px; }
+@media print { .paper-questions li { padding:6px 0!important;border:0!important; } .paper-sheet { padding:12px; } }

@@ -1,4 +1,4 @@
-import { plainText } from './paperText.js'
+import { plainText, formatQuestion } from './paperText.js'
 
 let fontPromise
 async function fontData() {
@@ -31,16 +31,16 @@ export async function createPaperPdf(paper, fontBase64) {
   marks.forEach((mark,index)=>{
     const questions=paper.questions.filter(q=>q.marks===mark)
     space(50);doc.setFillColor(234,244,252);doc.rect(18,y-5,174,10,'F');doc.setTextColor(35,92,134);doc.setFontSize(11)
-    doc.text(`Section ${String.fromCharCode(65+index)} - ${mark} marks`,21,y+1);y+=14
+    doc.text(`Section ${String.fromCharCode(65+index)} - ${mark} ${mark===1?'mark':'marks'}`,21,y+1);y+=14
     for(const q of questions) {
       doc.setFontSize(11)
-      const wrapped=doc.splitTextToSize(plainText(q.text || `${q.topic} - ${q.subtopic || ''}`),142)
+      const wrapped=doc.splitTextToSize(formatQuestion(q),142)
       space(Math.min(wrapped.length*6+6,35));doc.setTextColor(30,46,60)
-      doc.text(`${++number}.`,20,y);doc.setFontSize(9);doc.text(`${mark} marks`,190,y,{align:'right'});doc.setFontSize(11)
-      for(const line of wrapped) {space(6);doc.text(line,29,y);y+=6}
-      y+=5
+      doc.text(`${++number}.`,20,y);doc.setFontSize(9);doc.text(`${mark} ${mark===1?'mark':'marks'}`,190,y,{align:'right'});doc.setFontSize(11)
+      for(const line of wrapped) {space(5.2);doc.text(line,29,y);y+=5.2}
+      y+=2
     }
-    y+=4
+    y+=2
   })
   space(12);doc.setFontSize(9);doc.setTextColor(90,110,130);doc.text('END OF QUESTION PAPER',105,y+3,{align:'center'})
   const count=doc.getNumberOfPages()

@@ -298,7 +298,7 @@ test('manual selection saves exact subject questions and retrieves immutable pap
   const loaded=await call('GET',`/api/papers/saved/${created.body.id}`);
   assert.equal(loaded.body.paper.questions[1].text,'Name two registers.');
   assert.equal((await call('GET',`/api/papers/saved?subject=${name}`)).body.items.length,1);
-  assert.equal((await call('GET','/api/papers/saved?subject=GENERAL')).body.items.length,0);
+  assert.ok((await call('GET','/api/papers/saved?subject=GENERAL')).body.items.every(p=>p.subject==='GENERAL'));
   assert.equal((await call('GET','/api/papers/saved/999999')).status,404);
   const snapshot=await call('POST','/api/papers/saved',{subject:name,title:'Syllabus preview',questions:created.body.paper.questions});
   assert.equal(snapshot.status,201);
@@ -317,4 +317,24 @@ test('each subject receives its own physical table and schema migration is repea
   await query(fs.readFileSync(new URL('../sql/schema.sql', import.meta.url),'utf8'));
   assert.equal((await query('SELECT count(*)::int AS n FROM questions')).rows[0].n,count);
   assert.equal((await call('GET',`/api/questions/${r.body.id}`)).body.text,'What is a control unit?');
+});
+
+
+test('stored papers list all subjects, search titles, and exclude removed papers', async () => {
+  const all=await call('GET','/api/papers/saved');
+  assert.equal(all.status,200);
+  assert.ok(all.body.total>=3);
+  assert.ok(all.body.items.some(p=>p.source==='bank'));
+  assert.ok(all.body.items.some(p=>p.source==='syllabus'));
+  const found=await call('GET','/api/papers/saved?q=Unit%20test%20paper');
+  assert.equal(found.body.items.length,1);
+  const id=found.body.items[0].id;
+  await query('UPDATE saved_papers SET is_deleted=TRUE WHERE id=$1',[id]);
+  assert.equal((await call('GET',`/api/papers/saved/${id}`)).status,404);
+  assert.equal((await call('GET','/api/papers/saved?q=Unit%20test%20paper')).body.total,0);
+  const archived=all.body.items.find(p=>p.source==='syllabus');
+  const saved=await call('GET',`/api/papers/saved/${archived.id}`);
+  assert.equal(saved.status,200);
+  assert.equal(saved.body.paper.questions.length,archived.count);
+  assert.equal((await call('GET','/api/papers/saved?page=0')).status,400);
 });

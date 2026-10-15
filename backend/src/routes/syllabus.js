@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { generateSyllabusPaper, syllabusBody } from '../syllabusGenerator.js';
 
-import { requireRegisteredSubject } from './subjects.js';
+import { z } from 'zod';
+import { requireRegisteredSubject, recordGeneratedPaper } from './subjects.js';
 import { query } from '../db.js';
 import { normalizeName } from '../validation.js';
 
@@ -10,19 +11,32 @@ router.post('/papers/from-syllabus', async (req, res) => {
   const body = syllabusBody.parse(req.body);
   await requireRegisteredSubject(body.subject);
   const result = await generateSyllabusPaper(body);
-  const questions = result.paper.questions.map(q => ({ topic: normalizeName(q.topic).slice(0, 60),
-    subtopic: normalizeName(q.subtopic).slice(0, 60), text: q.text, marks: q.marks, difficulty: q.difficulty }));
-  // One statement keeps saving the full paper and updating its activity atomic.
+  await recordGeneratedPaper(body.subject, result.paper.questions.length, 'syllabus');
+  res.json({ ...result, savedUnit: body.unit });
+});
+
+const saveBody = z.object({
+  subject: z.string().trim().min(1).max(60).transform(normalizeName),
+  unit: z.number().int().min(1).max(5),
+  questions: z.array(z.object({
+    topic: z.string().trim().min(1).max(200), subtopic: z.string().trim().min(1).max(200),
+    text: z.string().trim().min(10).max(2000), marks: z.number().int().min(1).max(100),
+    difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']),
+  })).min(1).max(50),
+});
+
+router.post('/papers/save-syllabus', async (req, res) => {
+  const body = saveBody.parse(req.body);
+  await requireRegisteredSubject(body.subject);
+  const questions = body.questions.map(q => ({ ...q, topic: normalizeName(q.topic).slice(0, 60),
+    subtopic: normalizeName(q.subtopic).slice(0, 60) }));
   const { rows } = await query(`WITH inserted AS (
     INSERT INTO questions(subject, unit, topic, subtopic, text, marks, difficulty)
     SELECT $1, $2, q.topic, q.subtopic, q.text, q.marks, q.difficulty
     FROM jsonb_to_recordset($3::jsonb) AS q(topic text, subtopic text, text text, marks smallint, difficulty text)
     ON CONFLICT DO NOTHING RETURNING id
-  ), activity AS (
-    UPDATE subjects SET syllabus_questions = syllabus_questions + $4,
-      generated_papers = generated_papers + 1 WHERE name = $1 RETURNING name
-  ) SELECT count(*)::int AS saved FROM inserted`, [body.subject, body.unit, JSON.stringify(questions), questions.length]);
+  ) SELECT count(*)::int AS saved FROM inserted`, [body.subject, body.unit, JSON.stringify(questions)]);
   const saved = rows[0].saved;
-  res.json({ ...result, savedToBank: saved, alreadyInBank: questions.length - saved, savedUnit: body.unit });
+  res.json({ savedToBank: saved, alreadyInBank: questions.length - saved, savedUnit: body.unit });
 });
 export default router;

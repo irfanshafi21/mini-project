@@ -17,7 +17,7 @@ public class PaperEngine {
             double[] split = { Double.parseDouble(fields[2]), Double.parseDouble(fields[3]), Double.parseDouble(fields[4]) };
             if (total < 1 || total > 1000 || Arrays.stream(split).anyMatch(n -> !Double.isFinite(n) || n < 0 || n > 100)
                     || Math.abs(Arrays.stream(split).sum() - 100) >= 0.001) throw new IllegalArgumentException("Invalid paper parameters");
-            int[] pattern = fields.length == 9 ? new int[] { Integer.parseInt(fields[5]), Integer.parseInt(fields[6]), Integer.parseInt(fields[7]), Integer.parseInt(fields[8]) } : null;
+            int[] pattern = fields.length == 10 ? new int[] { Integer.parseInt(fields[5]), Integer.parseInt(fields[6]), Integer.parseInt(fields[7]), Integer.parseInt(fields[8]), Integer.parseInt(fields[9]) } : null;
             if (pattern != null && Arrays.stream(pattern).anyMatch(n -> n < 0 || n > 50)) throw new IllegalArgumentException("Invalid marks counts");
             if ("PLAN_FIXED".equals(mode)) {
                 List<Integer> marks = marksPlan(total, count, pattern);
@@ -45,11 +45,11 @@ public class PaperEngine {
         }
     }
 
-    private static final int[] MARKS = { 2, 5, 10, 16 };
+    private static final int[] MARKS = { 1, 2, 5, 10, 16 };
     static List<Integer> marksPlan(int total, int count, int[] pattern) {
         if (count < 0 || count > 50 || pattern == null) return null;
         List<Integer> manual = new ArrayList<>();
-        for (int i = 0; i < 4; i++) for (int j = 0; j < pattern[i]; j++) manual.add(MARKS[i]);
+        for (int i = 0; i < MARKS.length; i++) for (int j = 0; j < pattern[i]; j++) manual.add(MARKS[i]);
         if (!manual.isEmpty()) return manual.size() <= 50 && (count == 0 || count == manual.size()) && manual.stream().mapToInt(Integer::intValue).sum() == total ? manual : null;
         int[][] prev = new int[51][total + 1];
         for (int[] row : prev) Arrays.fill(row, -1);
@@ -81,7 +81,7 @@ public class PaperEngine {
         if (Arrays.stream(pattern).sum() > 0) {
             if (marksPlan(total, count, pattern) == null) return null;
             int[] actual = new int[3];
-            for (int i = 0; i < 4; i++) for (int j = 0; j < pattern[i]; j++) {
+            for (int i = 0; i < MARKS.length; i++) for (int j = 0; j < pattern[i]; j++) {
                 final int mark = MARKS[i];
                 Question best = pool.stream().filter(q -> q.marks == mark && !chosen.contains(q))
                     .max(Comparator.comparingDouble(q -> { int level = List.of(LEVELS).indexOf(q.difficulty); return total * split[level] / 100 - actual[level]; })).orElse(null);

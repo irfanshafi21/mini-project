@@ -361,3 +361,14 @@ textarea { resize: vertical; }
 .paper-summary { display:flex;justify-content:space-between;gap:12px;padding:14px;background:#eff7fd;border-radius:10px; }
 @media print { .stored-paper-controls,.stored-paper-grid { display:none!important; } }
 @media(max-width:650px) { nav { flex-wrap:wrap; } .nav-item { flex:1 1 40%; } }
+
+.paper-edit-actions { display:contents; }
+.paper-edit-form { flex:1 0 100%;padding:24px;background:#f8fbfe;border:1px solid #c7dfee;border-radius:14px;text-align:left; }
+.paper-edit-form .field { margin-top:16px; }
+.paper-edit-question { display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:16px;padding:16px 0;border-bottom:1px solid #dce8f1; }
+.paper-edit-question textarea { white-space:pre-wrap; }
+@media(max-width:650px) { .paper-edit-question { grid-template-columns:1fr; } .paper-edit-form { padding:18px; } }
+@media print { .paper-edit-actions { display:none!important; } }
+
+.preview-actions:has(.paper-edit-form) { width:100%;flex-wrap:wrap; }
+.section-heading:has(.paper-edit-form) { flex-wrap:wrap; }

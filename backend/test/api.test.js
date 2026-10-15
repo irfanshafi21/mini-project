@@ -356,3 +356,22 @@ test('editing a stored paper updates its snapshot and totals without changing ba
   assert.equal((await call('PUT',`/api/papers/saved/${id}`,{subject:'MANUAL_TEST',title:'Invalid marks',questions:[{...questions[0],marks:0}]})).status,400);
   assert.equal((await call('PUT','/api/papers/saved/999999',{subject:'MANUAL_TEST',title:'Missing',questions})).status,404);
 });
+
+
+test('creation permits blank subjects and registers typed syllabus subjects', async () => {
+  const first=(await call('POST','/api/questions',q(1,'PDF','Export','EASY',2,'Define a PDF document.'))).body;
+  const manual=await call('POST','/api/papers/manual',{title:'No subject selected',questionIds:[first.id]});
+  assert.equal(manual.status,201);
+  assert.equal(manual.body.paper.subject,'GENERAL');
+  const bank=await call('POST','/api/papers/generate',{totalMarks:2,split:{easy:100,medium:0,hard:0}});
+  assert.equal(bank.status,200);assert.ok(bank.body.id);
+  const previous=process.env.AI_PROVIDER;process.env.AI_PROVIDER='local';
+  try {
+    const body={fileName:'topics.txt',mimeType:'text/plain',data:Buffer.from('Unit 1: Memory\nCache memory. CPU registers.').toString('base64'),totalMarks:2,count:1,split:{easy:100,medium:0,hard:0}};
+    const general=await call('POST','/api/papers/from-syllabus',body);
+    assert.equal(general.status,200);assert.equal(general.body.paper.subject,'GENERAL');
+    const typed=await call('POST','/api/papers/from-syllabus',{...body,subject:'Typed new subject'});
+    assert.equal(typed.status,200);assert.equal(typed.body.paper.subject,'TYPED_NEW_SUBJECT');
+    assert.equal((await call('GET','/api/subjects/TYPED_NEW_SUBJECT/overview')).status,200);
+  } finally {if(previous===undefined)delete process.env.AI_PROVIDER;else process.env.AI_PROVIDER=previous;}
+});

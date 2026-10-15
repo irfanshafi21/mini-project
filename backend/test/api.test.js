@@ -14,7 +14,7 @@ let base;
 
 before(async () => {
   await query(fs.readFileSync(new URL('../sql/schema.sql', import.meta.url), 'utf8'));
-  await query('TRUNCATE questions, syllabus_history RESTART IDENTITY');
+  await query('TRUNCATE questions, syllabus_history, saved_papers RESTART IDENTITY');
   await query('DELETE FROM subjects');
   for (const name of ['GENERAL','DATA_STRUCTURES','PROGRAMMING','ALGORITHMS']) await query('INSERT INTO subjects(name) VALUES($1)', [name]);
   server = app.listen(0);
@@ -249,7 +249,7 @@ test('unregistered subjects are rejected without creating records or invoking ge
   assert.equal((await call('GET', '/api/stats')).body.bySubject[unknown], undefined);
   const missing = { ...question }; delete missing.subject;
   assert.equal((await call('POST', '/api/questions', missing)).status, 400);
-  await assert.rejects(query("INSERT INTO questions(subject,unit,topic,subtopic,difficulty,marks) VALUES($1,1,'T','S','EASY',5)", [unknown]), e => e.code === '23503');
+  await assert.rejects(query("INSERT INTO questions(subject,unit,topic,subtopic,difficulty,marks) VALUES($1,1,'T','S','EASY',5)", [unknown]), e => ['23503','23514'].includes(e.code));
 });
 
 test('bank paper selects two or three units and never selects an excluded unit', async () => {
@@ -278,4 +278,43 @@ test('local syllabus repeats do not reuse text, and saving follows detected unit
     const stored=(await call('GET',`/api/questions?subject=${subject}`)).body.items;
     assert.deepEqual(stored.map(q=>q.unit).sort(),[1,3]);
   } finally {if(original===undefined)delete process.env.AI_PROVIDER;else process.env.AI_PROVIDER=original;}
+});
+
+
+test('manual selection saves exact subject questions and retrieves immutable paper snapshots', async () => {
+  const name='MANUAL_TEST';
+  await call('POST','/api/subjects',{name});
+  const a=(await call('POST','/api/questions',{...q(1,'CPU','Registers','EASY',2,'Name two registers.'),subject:name})).body;
+  const b=(await call('POST','/api/questions',{...q(3,'Memory','Cache','MEDIUM',5,'Explain cache mapping.'),subject:name})).body;
+  const c=(await call('POST','/api/questions',q(2,'CPU','Other','EASY',2,'Other subject question.'))).body;
+  const created=await call('POST','/api/papers/manual',{subject:name,title:'Unit test paper',questionIds:[b.id,a.id]});
+  assert.equal(created.status,201);
+  assert.equal(created.body.paper.totalMarks,7);
+  assert.deepEqual(created.body.paper.questions.map(q=>q.id),[b.id,a.id]);
+  for(const ids of [[a.id,a.id],[a.id,c.id],[999999],[]]) assert.equal((await call('POST','/api/papers/manual',{subject:name,title:'Invalid',questionIds:ids})).status,400);
+  await call('PUT',`/api/questions/${a.id}`,{...a,text:'Changed bank text.'});
+  await call('DELETE',`/api/questions/${b.id}`);
+  assert.equal((await call('POST','/api/papers/manual',{subject:name,title:'Deleted',questionIds:[b.id]})).status,400);
+  const loaded=await call('GET',`/api/papers/saved/${created.body.id}`);
+  assert.equal(loaded.body.paper.questions[1].text,'Name two registers.');
+  assert.equal((await call('GET',`/api/papers/saved?subject=${name}`)).body.items.length,1);
+  assert.equal((await call('GET','/api/papers/saved?subject=GENERAL')).body.items.length,0);
+  assert.equal((await call('GET','/api/papers/saved/999999')).status,404);
+  const snapshot=await call('POST','/api/papers/saved',{subject:name,title:'Syllabus preview',questions:created.body.paper.questions});
+  assert.equal(snapshot.status,201);
+  assert.equal(snapshot.body.paper.totalMarks,7);
+});
+
+
+test('each subject receives its own physical table and schema migration is repeatable', async () => {
+  await call('POST','/api/subjects',{name:'Partition check'});
+  const r=await call('POST','/api/questions',{...q(1,'CPU','Control','EASY',2,'What is a control unit?'),subject:'PARTITION_CHECK'});
+  assert.equal(r.status,201);
+  const table=(await query('SELECT table_name FROM subject_storage WHERE subject=$1',['PARTITION_CHECK'])).rows[0].table_name;
+  const physical=await query('SELECT tableoid::regclass::text AS storage FROM questions WHERE id=$1',[r.body.id]);
+  assert.equal(physical.rows[0].storage,table);
+  const count=(await query('SELECT count(*)::int AS n FROM questions')).rows[0].n;
+  await query(fs.readFileSync(new URL('../sql/schema.sql', import.meta.url),'utf8'));
+  assert.equal((await query('SELECT count(*)::int AS n FROM questions')).rows[0].n,count);
+  assert.equal((await call('GET',`/api/questions/${r.body.id}`)).body.text,'What is a control unit?');
 });

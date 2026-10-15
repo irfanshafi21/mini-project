@@ -24,28 +24,41 @@ export async function extractSyllabusText(body) {
   if(text.trim().length<30 || text.length>100000) throw new HttpError(400,'Upload readable syllabus text between 30 and 100,000 characters.');
   return text;
 }
+function splitTopics(paragraph) {
+  const parts=[];let start=0,depth=0;
+  for(let i=0;i<paragraph.length;i++) {
+    if(paragraph[i]==='(')depth++;
+    if(paragraph[i]===')')depth=Math.max(0,depth-1);
+    if(!depth && /[;.•]/.test(paragraph[i]) && !(paragraph[i]==='.' && /\d/.test(paragraph[i-1]||'') && /\d/.test(paragraph[i+1]||''))) {parts.push(paragraph.slice(start,i));start=i+1;}
+  }
+  parts.push(paragraph.slice(start));return parts;
+}
+const sectionTitle=/^(probability and statistics|linear algebra|calculus and optimi[sz]ation|programming,? data structures and algorithms|database management and warehousing|machine learning|artificial intelligence|general aptitude(?:\s*\(\d+\s*marks\))?)$/i;
 export function syllabusTopics(text) {
   let unit=1, active=!/\bunit\s*[-:]?\s*(\d|IV|III|II|V|I)\b/i.test(text), skip=false;
-  const topics=[],seen=new Set();let buffer=[];
+  const topics=[],seen=new Set(),titles=[];let buffer=[];
   const flush=()=>{
     const paragraph=buffer.join(' ').replace(/\s+/g,' ').trim();buffer=[];
-    for(let topic of paragraph.split(/[;.]\s*/)){
-      topic=topic.replace(/\s*[-–—]\s*\d+\s*(hours?|hrs?)\b/ig,'').replace(/^\s*[-•\d.)]+\s*/,'').trim();
+    for(let topic of splitTopics(paragraph)){
+      topic=topic.replace(/\s*[-–—]\s*\d+\s*(hours?|hrs?)\b/ig,'').replace(/^\s*[-•\d.)]+\s*/,'').replace(/\s+\d{1,3}$/, '').trim();
+      if(sectionTitle.test(topic))continue;
       if(topic.length<5 || topic.length>220 || !/[a-z]/i.test(topic))continue;
       if(/^(learning|course|sample|assessment|this is|questions may|overall|illustrative|suggested)/i.test(topic))continue;
       const key=topic.toLowerCase();if(!seen.has(key)){seen.add(key);topics.push({topic,unit});}
     }
   };
   for(const raw of text.split(/\r?\n/)){
-    const line=raw.trim();
+    const line=raw.trim().replace(/^#{1,6}\s*/, '').replace(/\*\*([^*]+)\*\*/g,'$1').replace(/`([^`]+)`/g,'$1').replace(/^[-*•]\s+/, '');
     const heading=line.match(/^unit\s*[-:]?\s*(\d|IV|III|II|V|I)\b\s*[:.\-–—]*/i);
-    if(heading){flush();unit=Number(heading[1])||({I:1,II:2,III:3,IV:4,V:5}[heading[1].toUpperCase()]);if(!unit||unit>5)unit=1;active=true;skip=false;const title=line.slice(heading[0].length).replace(/\s*[-–—]\s*\d+\s*(hours?|hrs?)\b/ig,'');if(title)buffer.push(title+'.');continue;}
+    if(heading){flush();unit=Number(heading[1])||({I:1,II:2,III:3,IV:4,V:5}[heading[1].toUpperCase()]);if(!unit||unit>5)unit=1;active=true;skip=false;const title=line.slice(heading[0].length).replace(/\s*[-–—]\s*\d+\s*(hours?|hrs?)\b/ig,'');if(title)titles.push({topic:title.replace(/[.]+$/, '').trim(),unit});continue;}
     if(/^(learning outcomes?|course objectives?|assessment scope|illustrative difficulty|suggested practical|overall course)/i.test(line)){flush();skip=true;continue;}
     if(!line){if(!skip)flush();continue;}
     if(!active||skip||/^--|sample syllabus|^page\b/i.test(line))continue;
+    if(/^\s*[-*•]\s+/.test(raw))flush();
     buffer.push(line);
   }
   flush();
+  for(const title of titles) if(!topics.some(t=>t.unit===title.unit) && title.topic.length>=5) topics.push(title);
   if(!topics.length)throw new HttpError(400,'No syllabus topics found. Include topic lines and optional Unit 1–5 headings.');
   return topics;
 }

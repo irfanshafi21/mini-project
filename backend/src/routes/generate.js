@@ -24,6 +24,7 @@ router.post('/papers/generate', async (req, res) => {
     params.push(v);
     where.push(sql.replace('$?', `$${params.length}`));
   };
+  add('(marks <> 1 OR question_type = $?)',b.oneMarkType);
   if (b.units) add('unit = ANY($?::smallint[])', b.units);
   else if (b.unit) add('unit = $?', b.unit);
   if (b.subject) add('subject = $?', b.subject);

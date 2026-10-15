@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { query } from '../db.js';
 import { HttpError } from '../errors.js';
-import { normalizeName } from '../validation.js';
+import { normalizeName, objectiveFields, validateObjective } from '../validation.js';
 import { toApi } from '../mapper.js';
 import { requireRegisteredSubject, ensureSubject } from './subjects.js';
 
@@ -12,11 +12,12 @@ const title = z.string().trim().min(1).max(120);
 const manual = z.object({ subject:z.preprocess(v=>typeof v==='string' && !v.trim()?undefined:v,subject.optional()), title, questionIds: z.array(z.number().int().positive()).min(1).max(50) })
   .refine(b => new Set(b.questionIds).size === b.questionIds.length, { message: 'Select each question only once.' });
 const snapshotQuestion = z.object({
+  ...objectiveFields,
   text: z.string().trim().min(1).max(2000), marks: z.number().int().min(1).max(100),
   unit: z.number().int().min(1).max(5), difficulty: z.enum(['EASY','MEDIUM','HARD']),
   topic: z.string().max(200), subtopic: z.string().max(200).optional(),
   syllabusReference: z.string().max(500).optional(),
-});
+}).superRefine(validateObjective);
 const snapshot = z.object({ subject, title, questions: z.array(snapshotQuestion).min(1).max(50) });
 export async function storePaper(subjectName, paperTitle, questions, metadata = {}) {
   const totalMarks = questions.reduce((sum,q) => sum + q.marks,0);

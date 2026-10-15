@@ -28,11 +28,12 @@ router.get('/:name/overview', async (req, res) => {
   const name = subjectBody.parse({ name: req.params.name }).name;
   const { rows } = await query(`SELECT s.name, s.syllabus_questions, s.bank_questions, s.generated_papers,
     count(q.id)::int AS total_questions,
+    count(q.id) FILTER (WHERE q.marks = 1)::int AS marks_1,
     count(q.id) FILTER (WHERE q.marks = 2)::int AS marks_2,
     count(q.id) FILTER (WHERE q.marks = 5)::int AS marks_5,
     count(q.id) FILTER (WHERE q.marks = 10)::int AS marks_10,
     count(q.id) FILTER (WHERE q.marks = 16)::int AS marks_16,
-    count(q.id) FILTER (WHERE q.marks NOT IN (2,5,10,16))::int AS other_marks
+    count(q.id) FILTER (WHERE q.marks NOT IN (1,2,5,10,16))::int AS other_marks
     FROM subjects s LEFT JOIN questions q ON q.subject = s.name AND NOT q.is_deleted
     WHERE s.name = $1 GROUP BY s.name`, [name]);
   if (!rows.length) throw new HttpError(404, 'Subject not found');
@@ -40,7 +41,7 @@ router.get('/:name/overview', async (req, res) => {
   const syllabusQuestions = Number(row.syllabus_questions), bankQuestions = Number(row.bank_questions);
   const storage = await query('SELECT table_name FROM subject_storage WHERE subject=$1',[name]);
   res.json({ subject: row.name, storageTable: storage.rows[0]?.table_name, totalQuestions: row.total_questions,
-    byMarks: { 2: row.marks_2, 5: row.marks_5, 10: row.marks_10, 16: row.marks_16 }, otherMarks: row.other_marks,
+    byMarks: { 1:row.marks_1, 2: row.marks_2, 5: row.marks_5, 10: row.marks_10, 16: row.marks_16 }, otherMarks: row.other_marks,
     generatedQuestions: syllabusQuestions + bankQuestions, syllabusQuestions, bankQuestions,
     generatedPapers: Number(row.generated_papers) });
 });

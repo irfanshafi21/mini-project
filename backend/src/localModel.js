@@ -56,19 +56,42 @@ const patterns={
  comparison:['Compare the alternatives covered by {t}.','Explain the key differences in {t} using a table.','Discuss the advantages and limitations of the approaches in {t}.','Illustrate the differences in {t} with examples.','Explain when each approach in {t} would be suitable.','Analyse the trade-offs involved in {t}.','Describe the similarities and differences in {t}.','Evaluate the approaches covered by {t} for a practical application.'],
  numerical:['Demonstrate {t} using a worked example and state your input values.','Explain the method used for {t}, with a numerical example.','Show the steps required for {t} using clearly stated assumptions.','Illustrate {t} with a calculation and verify the result.','Discuss the parameters needed for {t} and demonstrate their use.','Derive and apply a suitable expression for {t}.','Analyse how changing an input affects {t}, using sample values.','Explain how to check the accuracy of a calculation involving {t}.'],
 };
+// Marks control answer scope independently of the learned topic family and difficulty.
+const shortPatterns = [
+  'Define {t}.', 'State the purpose of {t}.', 'List two characteristics of {t}.',
+  'Give one example of {t}.', 'State one advantage of {t}.',
+  'State one limitation of {t}.', 'What is meant by {t}?', 'State one application of {t}.',
+];
+function focusedTopic(topic) {
+  // A syllabus heading followed by a list is an umbrella, not one short question.
+  return topic.split(':')[0].replace(/\s+concepts?$/i, '').split(/[,;]/)[0].trim();
+}
+function markedText(topic, family, marks, index) {
+  if (marks === 2) return shortPatterns[index].replace('{t}', focusedTopic(topic));
+  if (marks === 5) return patterns[family][index].replace('{t}', focusedTopic(topic));
+  const [a,b,c] = marks === 10 ? [2,4,4] : [4,6,6];
+  const introductions = [
+    'Explain the fundamental principles of', 'Describe the main components of',
+    'Explain the purpose and terminology of', 'Describe the underlying organisation of',
+    'Explain the key features of', 'Describe the basic operation of',
+    'Explain the central ideas of', 'Describe the architecture associated with',
+  ];
+  return `(a) ${introductions[index]} ${topic}. (${a} marks)\n` +
+    `(b) Explain its operation using a labelled diagram or a worked example, as appropriate. (${b} marks)\n` +
+    `(c) Analyse its benefits and limitations in a practical computer system. (${c} marks)`;
+}
 export function generateLocalQuestions(text, slots, previousHashes=[]) {
   const topics=syllabusTopics(text), used=new Set(previousHashes), questions=[];
   const family=topic=>{const predicted=classifyTopic(topic);return predicted==='numerical'&&!/arithmetic|conversion|ratio|calculation|time|speedup|throughput|addition|subtraction|multiplication|division|performance|number system/i.test(topic)?'concept':predicted;};
-  const candidates=topics.flatMap(({topic,unit})=>patterns[family(topic)].map((pattern,index)=>({
-    topic:topic.slice(0,200),subtopic:classifyTopic(topic),unit,syllabusReference:topic.slice(0,500),
-    text:pattern.replace('{t}',topic),pattern:index,
-  })));
-  // Randomise available candidates, then use the learned family and requested complexity.
+  const candidates=[...new Set(slots.map(s=>s.marks))].flatMap(marks=>topics.flatMap(({topic,unit})=>patterns[family(topic)].map((_,index)=>({
+    topic:(marks<=5?focusedTopic(topic):topic).slice(0,200),subtopic:classifyTopic(topic),unit,syllabusReference:topic.slice(0,500),
+    text:markedText(topic,family(topic),marks,index),pattern:index,marks,
+  }))));
   for(let i=candidates.length-1;i>0;i--){const j=randomInt(i+1);[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}
   const topicUse=new Map();
   for(const slot of slots){
-    const available=candidates.filter(q=>!used.has(questionHash(q.text)));
-    if(!available.length) throw new HttpError(409,'No unused question variations remain for this syllabus. Add syllabus topics or expand the local model patterns.');
+    const available=candidates.filter(q=>q.marks===slot.marks&&!used.has(questionHash(q.text)));
+    if(!available.length) throw new HttpError(409,`No unused ${slot.marks}-mark question variations remain for this syllabus. Add syllabus topics or expand the local model patterns.`);
     const desired=slot.difficulty==='EASY'?0:slot.difficulty==='MEDIUM'?3:6;
     available.sort((a,b)=>(topicUse.get(a.topic)||0)-(topicUse.get(b.topic)||0) || Math.abs(a.pattern-desired)-Math.abs(b.pattern-desired));
     const chosen=available[0]; used.add(questionHash(chosen.text));topicUse.set(chosen.topic,(topicUse.get(chosen.topic)||0)+1);

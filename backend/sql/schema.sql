@@ -36,6 +36,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_questions_subject_unit_text
   ON questions (subject, unit, lower(text)) WHERE text <> '' AND NOT is_deleted;
 
 -- Preserve existing subjects, then enforce registration at the database layer.
+CREATE TABLE IF NOT EXISTS syllabus_history (
+  subject TEXT NOT NULL REFERENCES subjects(name),
+  syllabus_hash TEXT NOT NULL,
+  question_hash TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY(subject, syllabus_hash, question_hash)
+);
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'questions_subject_fk' AND conrelid = 'questions'::regclass) THEN
     ALTER TABLE questions ADD CONSTRAINT questions_subject_fk

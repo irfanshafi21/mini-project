@@ -107,3 +107,22 @@ ALTER TABLE saved_papers ALTER COLUMN subject DROP NOT NULL;
 ALTER TABLE syllabus_history DROP CONSTRAINT IF EXISTS syllabus_history_pkey;
 ALTER TABLE syllabus_history ALTER COLUMN subject DROP NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_syllabus_history_scope ON syllabus_history(subject,syllabus_hash,question_hash) NULLS NOT DISTINCT;
+
+CREATE TABLE IF NOT EXISTS reviewed_examples (
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  paper_id INTEGER NOT NULL REFERENCES saved_papers(id),
+  question_index INTEGER NOT NULL CHECK(question_index BETWEEN 0 AND 49),
+  topic TEXT NOT NULL,
+  label TEXT NOT NULL CHECK(label IN ('concept','process','comparison','numerical')),
+  question JSONB NOT NULL,
+  question_hash TEXT NOT NULL,
+  approved_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(paper_id,question_index)
+);
+CREATE TABLE IF NOT EXISTS model_training_runs (
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  status TEXT NOT NULL,
+  report JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE syllabus_history ADD COLUMN IF NOT EXISTS signature_hash TEXT;

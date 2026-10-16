@@ -598,7 +598,7 @@ Syllabus generation no longer opens a save popup. Use **Add to question bank** a
 
 Use **Download PDF** in manual, automatic bank, syllabus and stored-paper previews for a direct A4 PDF download. Sections, question numbering, marks, long-question page breaks and page numbers are included. An embedded open-source Noto Sans font supports Unicode text. **Print** remains a separate action.
 
-Creation subject fields accept typed names with existing-subject suggestions and are optional. A blank syllabus subject uses **General**, and a typed new syllabus subject is registered automatically. Blank bank/manual filters browse all subjects. A paper containing questions from one subject is stored under that subject; a mixed-subject paper is stored under General, while original bank entries keep their own subjects.
+Creation subject fields are optional dropdowns of existing subjects. Only **Subjects > Add subject** creates a subject. Blank syllabus and mixed-subject papers are stored as **Unassigned**, with a nullable subject reference, and do not create a General/Unassigned subject. Blank bank/manual filters browse all subjects. A paper containing questions from one subject is stored under that existing subject. To add unassigned syllabus questions to the bank, select an existing destination subject after generation. Unassigned papers remain editable and retrievable. Repeat-history tracking also supports an unassigned scope without registering a subject.
 
 
 ### One-mark questions
@@ -610,3 +610,8 @@ An MCQ has four distinct options and one matching correct answer. The local gene
 Fill-in-the-blank questions contain a blank and retain their answer separately. Options, types and answers survive bank storage, paper retrieval and editing. Add 1-mark bank questions through **Add question**, choosing their type and correct answer. The automatic bank workflow filters 1-mark entries by the selected type. Teacher edit forms expose answers; paper previews, TXT and PDF exports show only stems/options and do not label the correct choice or print an answer key.
 
 Paper previews and printing use compact spacing without divider lines between questions. Direct PDF downloads also use reduced line and question spacing. Run `npm run db:init` after updating backend files to add the objective-question columns safely; existing data is preserved.
+
+
+### Subject creation rule
+
+Only the explicit **Add subject** action registers a subject and creates its physical question table. Paper generation, manual question selection, paper editing and question-bank saving never create subjects. Unknown subject names sent directly to generation APIs are rejected before generation. Existing subjects and previously saved papers are preserved. After updating, run `npm run db:init` once to allow unassigned paper/history references without creating placeholder subjects.

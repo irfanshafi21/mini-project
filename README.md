@@ -1,10 +1,12 @@
+<a id="top"></a>
+
 <div align="center">
 
 <img src="docs/images/banner.png" alt="Question bank and examination paper generator" width="100%" />
 
 # Question Bank & Paper Generator
 
-### Organise questions. Build balanced papers. Keep everything local.
+### A complete academic workspace. A practical full-stack learning guide.
 
 A college examination workspace built with **React + Vite**, **Node.js + Express**, **Java**, **PostgreSQL**, and our own **trained ML classifiers**.
 
@@ -12,13 +14,42 @@ A college examination workspace built with **React + Vite**, **Node.js + Express
 ![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white)
 ![Node](https://img.shields.io/badge/Node.js-Backend-43853d?logo=nodedotjs&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-336791?logo=postgresql&logoColor=white)
+![Java](https://img.shields.io/badge/Java-Paper_engine-b27d42)
+![Python](https://img.shields.io/badge/Python-Model_training-3776ab?logo=python&logoColor=white)
 ![ML](https://img.shields.io/badge/ML-Trained_locally-2b7884)
 
-[Features](#what-you-can-do) · [Screenshots](#a-look-inside) · [Run locally](#run-on-your-laptop) · [Our model](#how-our-own-model-works) · [College hosting](#moving-to-the-college-server)
+**React UI** → **Express API** → **PostgreSQL + Java + Local ML** → **Examination paper**
+
+[Explore](#a-look-inside) · [Install & run](#run-on-your-laptop) · [Learn from scratch](#learn-the-project-from-scratch) · [Architecture](#system-architecture) · [Code walkthrough](#code-walkthrough) · [Local ML](#how-our-own-model-works) · [Viva](#viva-and-project-explanation)
 
 </div>
 
 > **Current generation is fully local:** no hosted AI provider, external AI key, Ollama installation, or pretrained language-model download is needed. The project uses trained classifiers, authored task grammars, checked objective facts, and numerical problem generators. It is not a neural LLM trained from scratch.
+
+<table>
+<tr>
+<td width="33%" align="center"><strong>01 · USE THE APP</strong><br/>Set up the database, start both servers and create your first paper.<br/><br/><a href="#run-on-your-laptop">Open the setup guide →</a></td>
+<td width="34%" align="center"><strong>02 · UNDERSTAND THE CODE</strong><br/>Follow a request from React through Express, Java and PostgreSQL.<br/><br/><a href="#code-walkthrough">Follow the code tour →</a></td>
+<td width="33%" align="center"><strong>03 · EXPLAIN THE PROJECT</strong><br/>Understand the ML boundaries, design choices and deployment steps.<br/><br/><a href="#viva-and-project-explanation">Prepare your explanation →</a></td>
+</tr>
+</table>
+
+<details>
+<summary><strong>Browse the complete guide</strong></summary>
+
+| Getting started | Understanding the implementation | Taking it further |
+| --- | --- | --- |
+| [Features](#what-you-can-do) | [System architecture](#system-architecture) | [Evaluation](#evaluation-what-the-numbers-mean) |
+| [Screenshots](#a-look-inside) | [Code walkthrough](#code-walkthrough) | [Development checks](#verification-and-development) |
+| [Learning roadmap](#learn-the-project-from-scratch) | [Our own model](#how-our-own-model-works) | [College hosting](#moving-to-the-college-server) |
+| [Installation](#run-on-your-laptop) | [Training visualised](#training-and-inference-visualised) | [Troubleshooting](#troubleshooting) |
+| [Everyday workflow](#everyday-workflow) | [Database relationships](#database-relationships) | [Viva questions](#viva-and-project-explanation) |
+| [Marks and sections](#marks-question-counts-and-sections) | [API routes](#useful-api-routes) | [Project boundaries](#project-boundaries) |
+
+</details>
+
+> [!TIP]
+> **Already installed?** Keep PostgreSQL running. In one VS Code terminal run `cd backend` then `npm.cmd start`. In a second terminal from the project root run `cd frontend` then `npm.cmd run dev`. Open [localhost:5173](http://localhost:5173/).
 
 ## What you can do
 
@@ -43,6 +74,70 @@ The interface combines light blue and warm neutral colours with an academic layo
 
 Screenshots illustrate the interface; stored data and totals vary by installation.
 
+<details>
+<summary><strong>See the question-paper layout with Bloom labels</strong></summary>
+
+<img src="docs/images/question-paper-blooms.png" alt="Saved paper showing K1 and K2 beside questions, with marks retained in the section heading" width="500" />
+
+K1–K6 appears beside each question. Section headings and the paper total show marks. PDF and print use the same rule.
+
+</details>
+
+## Learn the project from scratch
+
+You do not need to learn every file at once. Follow this order and use the checkpoints to test your understanding.
+
+```mermaid
+flowchart LR
+  A["01 · Browser basics"] --> B["02 · React + Vite"]
+  B --> C["03 · HTTP + Express"]
+  C --> D["04 · PostgreSQL"]
+  D --> E["05 · Java engine"]
+  E --> F["06 · Local ML"]
+  F --> G["07 · Test + export"]
+  G --> H["08 · Deploy + maintain"]
+  classDef sky fill:#edf6fd,stroke:#82aecb,color:#204d6b
+  classDef warm fill:#fff4e5,stroke:#ceac7b,color:#755431
+  class A,B,C,D sky
+  class E,F,G,H warm
+```
+
+| Stage | Learn | Read in this project | Checkpoint |
+| --- | --- | --- | --- |
+| **1. Foundations** | HTML structure, CSS, JavaScript functions, arrays, objects, promises and JSON | [index.html](frontend/index.html), [App.css](frontend/src/App.css) | Explain why the browser needs HTML, CSS and JavaScript. |
+| **2. Frontend** | JSX, components, props, state, effects and controlled forms | [main.jsx](frontend/src/main.jsx), [App.jsx](frontend/src/App.jsx) | Explain why changing a mark count updates the displayed total. |
+| **3. Connectivity** | Requests, responses, methods, endpoints, status codes and asynchronous work | [app.js](backend/src/app.js), [server.js](backend/src/server.js) | Trace a button click into an API request. |
+| **4. Persistence** | Tables, primary/foreign keys, SQL parameters, partitions and JSONB | [schema.sql](backend/sql/schema.sql), [db.js](backend/src/db.js) | Explain where questions and complete papers are stored. |
+| **5. Core logic** | Child processes, slot planning and question selection | [javaCore.js](backend/src/javaCore.js), [PaperEngine.java](core/src/PaperEngine.java) | Explain how Node receives a result from Java. |
+| **6. ML** | Features, labels, training, inference, holdouts and pseudo-labels | [localModel.js](backend/src/localModel.js), [train_reviewed.py](backend/ml/train_reviewed.py) | Distinguish a classifier from a general-purpose language model. |
+| **7. Quality** | Validation, regression checks, export and error handling | [backend tests](backend/test), [paperPdf.js](frontend/src/paperPdf.js) | Explain which checks protect paper structure and which require faculty review. |
+| **8. Operation** | Builds, configuration, service management and backups | [Deployment steps](#moving-to-the-college-server) | Explain how development differs from college hosting. |
+
+<details>
+<summary><strong>Beginner glossary · 14 terms used throughout the project</strong></summary>
+
+| Term | Plain-language meaning |
+| --- | --- |
+| Component | A React function that describes part of the screen. |
+| JSX | JavaScript syntax used to describe UI elements. |
+| State | Values React remembers, such as selected questions or input counts. |
+| Props | Values a parent component passes to another component. |
+| API endpoint | A URL and method representing one backend operation. |
+| HTTP | The request/response protocol between browser and backend. |
+| JSON | Text representing structured objects and arrays. |
+| Middleware | Express code that processes a request before or after a route. |
+| Schema | A definition of valid input or database structure, depending on context. |
+| Query | A database instruction, usually written in SQL. |
+| Partition | A physical subdivision of a database table. |
+| Inference | Applying already-trained model probabilities to new input. |
+| Training | Estimating model parameters from labelled examples. |
+| Holdout | Examples kept out of training to evaluate a candidate model. |
+
+</details>
+
+> [!TIP]
+> Start with a small example: register one subject, add two questions, select them manually, retrieve the saved paper, and download its PDF. Then study automatic generation. This separates basic connectivity from ML behaviour.
+
 ## Everyday workflow
 
 ```mermaid
@@ -66,6 +161,67 @@ flowchart TD
 
 Subjects are created **only** through **Subjects → Add subject**. Choosing an unassigned syllabus paper does not create a subject. Before adding its questions to the bank, select an existing destination subject.
 
+## System architecture
+
+```mermaid
+flowchart TB
+  U["Faculty / project user"] --> R["React interface"]
+  V["Vite development server or built static assets"] -. "serves UI" .-> R
+  R <-->|"HTTP + JSON"| E["Node.js + Express API"]
+  E <-->|"SQL through pg connection pool"| P[("PostgreSQL")]
+  E <-->|"stdin / stdout"| J["Java PaperEngine"]
+  E --> L["Local JavaScript ML inference"]
+  L --> W["Our trained JSON probabilities"]
+  E --> Q["Durable learning queue"]
+  Q --> T["Python classifier training"]
+  T --> W
+  R --> X["Browser PDF / TXT / print"]
+  classDef sky fill:#edf6fd,stroke:#82aecb,color:#204d6b
+  classDef warm fill:#fff4e5,stroke:#ceac7b,color:#755431
+  class R,V,E,X sky
+  class P,J,L,W,Q,T warm
+```
+
+The browser calls Express directly using `VITE_API_URL`. The current Vite configuration does **not** define a backend proxy. Express owns database access and starts Java/Python subprocesses when their work is needed. Java is not a second web server; Python training is not a separately hosted API.
+
+| Layer | Responsibility | Why it fits |
+| --- | --- | --- |
+| **React** | Components, state, forms, navigation and paper previews | Reuses UI behaviour across several paper workflows. |
+| **Vite** | Development serving, React tooling and production asset builds | Keeps frontend setup and the build command straightforward. |
+| **Node.js** | Server runtime, asynchronous I/O and subprocess integration | Connects HTTP, PostgreSQL, Java and Python in one backend. |
+| **Express** | Routes, request parsing, middleware and responses | Provides a small, explicit REST interface. |
+| **PostgreSQL** | Durable relational records, constraints, partitions and snapshots | Keeps subjects/questions linked while storing complete papers as JSONB. |
+| **Java** | Marks planning and ordinary bank selection | Keeps the core planning algorithm separate from HTTP/UI code. |
+| **Python + JavaScript ML** | Python training and JavaScript inference | Uses our own small classifiers without a model service or downloaded foundation weights. |
+
+### One request, end to end
+
+This example shows syllabus generation. Bank/manual flows use different selection logic but share validation and paper storage.
+
+```mermaid
+sequenceDiagram
+  actor User
+  participant UI as React
+  participant API as Express
+  participant DB as PostgreSQL
+  participant Java as Java planner
+  participant ML as Local generator
+  User->>UI: Upload syllabus and set marks/K counts
+  UI->>API: POST /api/papers/from-syllabus
+  API->>API: Validate body and extract document text
+  API->>DB: Check subject and previous generation history
+  API->>Java: Request marks/difficulty slots
+  Java-->>API: Planned slots as JSON
+  API->>ML: Topics, slots and repetition history
+  ML-->>API: Selected/generated question candidates
+  API->>DB: Record history, save paper and queue learning
+  API-->>UI: Saved paper with ID and questions
+  UI-->>User: Preview with Bloom levels beside questions
+  User->>UI: Download PDF
+  UI-->>User: Browser-generated PDF
+  Note over API,DB: Background local learning runs separately from display
+```
+
 ## Marks, question counts and sections
 
 - Supported question values: **1, 2, 5, 10 and 16 marks**.
@@ -74,6 +230,7 @@ Subjects are created **only** through **Subjects → Add subject**. Choosing an 
 - The selected questions must equal the entered total marks. Papers support at most **50 questions** and **1,000 marks**.
 - With all category counts at zero, Java attempts an automatic denomination plan.
 - The final paper groups the selected mark values into consecutive sections, starting with **Section A**.
+- Each question shows its **Bloom level on the right**, such as K1 or K4. Section headings and paper totals retain marks. PDF/print follow the same arrangement; TXT retains the K label without a per-question marks suffix.
 - One-mark questions support **multiple choice** or **fill in the blanks**. Checked MCQs have four distinct options and one recorded correct answer.
 
 ## College Bloom mapping
@@ -127,6 +284,65 @@ The Python trainer excludes held-out records and conflicting labels, evaluates t
 
 **Self-training labels are not independent ground truth.** Agreement and structural checks do not prove factual accuracy or automatically guarantee improvement. Faculty-reviewed data and independently reviewed papers are needed to measure educational quality.
 
+## Training and inference visualised
+
+**Training builds probabilities. Inference uses them. Generation also needs authored task rules.**
+
+```mermaid
+flowchart LR
+  subgraph TRAIN["Training · Python"]
+    A["Curated / eligible labelled examples"] --> B["Extract words, pairs and character features"]
+    B --> C["Estimate Naive Bayes probabilities"]
+    C --> D["Validate and evaluate candidate"]
+    D --> E{"Checks do not regress?"}
+    E -->|"Yes, with eligible reviewed topics"| F["Activate candidate JSON"]
+    E -->|"No"| G["Keep previous model"]
+  end
+  subgraph RUN["Inference and generation · JavaScript"]
+    H["New syllabus topics"] --> I["Load learned probabilities"]
+    F -.-> I
+    I --> J["Classify topic family and rank Bloom tasks"]
+    J --> K["Controlled grammar + checked facts + numerical factories"]
+    K --> L["Validate counts, prefixes and reuse budget"]
+  end
+```
+
+<details>
+<summary><strong>Understand the model mathematics without a machine-learning background</strong></summary>
+
+Suppose a topic contains words such as *conversion*, *binary* and *arithmetic*. Training counts how frequently its features occur in each labelled topic class. At inference time, the classifier scores each class using its saved probabilities:
+
+```text
+score(class) = log P(class) + sum of log P(feature | class)
+predicted class = the class with the highest score
+```
+
+Smoothing avoids assigning zero probability to a feature/class combination merely because it was absent in the small training set. The current trainer compares feature/smoothing configurations using a separate validation set. Tests check that Python training and JavaScript inference produce matching predictions.
+
+The Bloom classifier uses whole-question words and bigrams. A shared opening word, such as *Compare*, cannot by itself distinguish understanding, analysis and evaluation. Candidate task wording supplies additional context.
+
+The local review's `confidence` field is a structural eligibility gate (0 or 1), **not** a calibrated probability of academic correctness. Automatic self-training can reinforce errors, so its results must be interpreted alongside independently labelled faculty data.
+
+</details>
+
+### What happens after a paper is saved?
+
+```mermaid
+stateDiagram-v2
+  [*] --> Pending: paper saved
+  Pending --> Processing: worker claims job
+  Processing --> Completed: checks and optional training finish
+  Processing --> Retrying: recoverable failure
+  Retrying --> Processing: retry becomes due
+  Processing --> Failed: attempt limit reached
+  Processing --> Skipped: saved paper unavailable
+  Completed --> [*]
+  Failed --> [*]
+  Skipped --> [*]
+```
+
+The queue survives a backend restart. A completed job can accept zero examples or retain the previous classifier; **completed** does not necessarily mean that new weights were activated. The stored paper remains available when background learning fails. Current source polls every 15 seconds and permits up to three attempts; legacy queue states may still appear in old installations.
+
 ## Evaluation: what the numbers mean
 
 The bundled classifier was rebuilt locally from **176 curated topic training examples**:
@@ -154,6 +370,58 @@ Saving a paper does **not** automatically add its questions to the reusable bank
 
 A subject gets a safe, generated PostgreSQL **LIST partition** beneath the shared `questions` parent. Queries against the parent retrieve all subjects. The `subject_storage` view shows partition names. Editing a saved paper changes its snapshot, not the original bank question.
 
+## Database relationships
+
+The diagram shows selected logical relationships, not every schema column. Subject partitions share the `questions` parent rather than duplicating bank data.
+
+```mermaid
+erDiagram
+  SUBJECTS ||--o{ QUESTIONS : owns
+  SUBJECTS o|--o{ SAVED_PAPERS : groups
+  SUBJECTS o|--o{ SYLLABUS_HISTORY : scopes
+  SAVED_PAPERS ||--o{ REVIEWED_EXAMPLES : supplies
+  SAVED_PAPERS ||--o| AUTOMATIC_LEARNING_JOBS : queues
+  SUBJECTS {
+    text name PK
+    int generated_papers
+  }
+  QUESTIONS {
+    int id
+    text subject FK
+    int marks
+    text bloom_level
+    boolean is_deleted
+  }
+  SAVED_PAPERS {
+    int id PK
+    text subject FK
+    text title
+    jsonb paper
+  }
+  REVIEWED_EXAMPLES {
+    int id PK
+    int paper_id FK
+    text label
+    text bloom_level
+  }
+  SYLLABUS_HISTORY {
+    text subject FK
+    text syllabus_hash
+    text question_hash
+    text signature_hash
+  }
+  AUTOMATIC_LEARNING_JOBS {
+    int paper_id PK, FK
+    text status
+    int attempts
+  }
+```
+
+The question primary key is the composite **(id, subject)**. `model_training_runs` stores run-level JSON reports separately; there is no invented foreign-key relationship from that table to an individual example. `subject_storage` is a view for finding safe physical partition names.
+
+> [!IMPORTANT]
+> A paper snapshot, a bank question and a training example serve different purposes. Deleting or editing one does not mean every other representation has changed.
+
 ## Run on your laptop
 
 ### Prerequisites
@@ -167,6 +435,21 @@ A subject gets a safe, generated PostgreSQL **LIST partition** beneath the share
 | VS Code | Convenient editor and terminals |
 
 **No external AI key or model download is required.** PostgreSQL Stack Builder add-ons are optional for this project.
+
+### 0. Get the source and check the tools
+
+Clone your repository, or download its ZIP and extract it. Open the folder containing `frontend`, `backend` and `core` in VS Code.
+
+```powershell
+git clone https://github.com/irfanshafi21/mini-project.git
+cd mini-project
+node --version
+npm.cmd --version
+java -version
+python --version
+```
+
+Git is optional for ZIP users. Reopen VS Code after installing tools so new PATH entries become available. Keep the three project folders together; Node locates Java through the relative `core/src` path.
 
 ### 1. Create the database
 
@@ -247,6 +530,267 @@ mini-project/
 
 React handles state, forms and rendering. Vite serves the frontend in development and produces its build. Express validates HTTP requests, calls Java/our local ML logic, and reads/writes PostgreSQL. The browser never connects directly to the database.
 
+## Code walkthrough
+
+Use this as a guided reading order. The short examples explain the real design; they are educational fragments, not complete replacement source files.
+
+### Frontend component map
+
+```mermaid
+flowchart TD
+  M["main.jsx · React root"] --> A["App.jsx · shell, navigation, library, subjects"]
+  A --> S["SyllabusPaper · automatic bank / syllabus"]
+  A --> N["ManualPaper · exact question selection"]
+  A --> P["StoredPapers · list and retrieval"]
+  S --> B["BloomCounts · K allocation"]
+  S --> E["PaperEditor"]
+  N --> E
+  P --> E
+  S --> D["PdfDownload"]
+  N --> D
+  P --> D
+  D --> U["paperPdf.js · PDF layout"]
+  S --> L["ReviewLearning · job status"]
+  N --> L
+  P --> L
+  classDef sky fill:#edf6fd,stroke:#82aecb,color:#204d6b
+  class M,A,S,N,P,B,E,D,L,U sky
+```
+
+<details open>
+<summary><strong>01 · React: how the interface is built</strong></summary>
+
+[main.jsx](frontend/src/main.jsx) finds the HTML element with ID `root` and mounts `<App />`. [App.jsx](frontend/src/App.jsx) supplies the shared sidebar, navigation, question library, subject screens and dialogs. Components return JSX describing the screen.
+
+- **State:** `useState` remembers inputs, selected subjects, source choice, errors and loaded records.
+- **Props:** the parent passes values such as `subjects`, `apiUrl` and callbacks into child screens.
+- **Effects:** `useEffect` fetches data or listens for navigation changes; cleanup cancels obsolete work where implemented.
+- **Derived values:** question counts and mark subtotals are calculated from inputs instead of being manually entered twice.
+- **Conditional rendering:** only the selected page or source configuration is displayed.
+- **Hash navigation:** views use paths such as `#bank`, `#create`, `#subjects` and `#stored-papers/8`; this project does not use React Router.
+
+A simplified version of the live count calculation:
+
+```jsx
+const totalQuestions = [1, 2, 5, 10, 16].reduce(
+  (sum, marks) => sum + (Number(form['m' + marks]) || 0),
+  0,
+)
+
+<input type="number" readOnly value={totalQuestions} />
+```
+
+When a controlled input updates `form`, React renders again. The derived total and allocation summary therefore update immediately. It does not require a database write for every keystroke in the mark controls.
+
+The CSS in [App.css](frontend/src/App.css) controls the academic theme, desktop sidebar, mobile layouts, focus states and print-specific hiding. The paper illustration is CSS/HTML decoration; it does not load an external image/model service.
+
+</details>
+
+<details>
+<summary><strong>02 · Vite: where it is and what it does</strong></summary>
+
+Read [vite.config.js](frontend/vite.config.js), [frontend/package.json](frontend/package.json) and [index.html](frontend/index.html).
+
+| Command | What happens |
+| --- | --- |
+| `npm.cmd run dev` | Vite serves the frontend, usually on port 5173, and updates development code as files change. |
+| `npm.cmd run build` | Vite prepares production frontend assets in `frontend/dist`. |
+| `npm.cmd run preview` | Locally previews that build; it does not start Express or PostgreSQL. |
+
+The React plugin supplies the frontend's React integration. Vite is a development/build tool; Node + Express remains the application backend. A successful frontend build cannot prove the database or Java engine works.
+
+`VITE_API_URL` is read by the frontend build. Values exposed with the `VITE_` prefix are intended for the browser, so database credentials do not belong there. The current frontend directly requests the configured API URL; it does not rely on a Vite proxy.
+
+</details>
+
+<details>
+<summary><strong>03 · Frontend/backend connectivity: follow the request</strong></summary>
+
+A simplified subject-registration request has this shape:
+
+```js
+const response = await fetch(`${API}/subjects`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ name: 'Computer Organisation' }),
+})
+const result = await response.json()
+if (!response.ok) throw new Error(result.error)
+```
+
+`fetch` starts an HTTP request. `JSON.stringify` turns the JavaScript object into request text. Express parses that text back into an object. The route validates the name and writes to PostgreSQL. The response becomes frontend state, so the interface can refresh.
+
+| Method | Typical meaning here |
+| --- | --- |
+| `GET` | Retrieve questions, a subject overview, papers or model status. |
+| `POST` | Create a subject/question/paper or request an action such as training. |
+| `PUT` | Update an existing question or saved-paper snapshot. |
+| `DELETE` | Soft-delete a bank question through its route. |
+
+The frontend and backend normally run on different ports. Express uses `cors()` to permit cross-origin frontend requests. **CORS is not authentication or access control.**
+
+</details>
+
+<details>
+<summary><strong>04 · Node and Express: middleware, routes and errors</strong></summary>
+
+[server.js](backend/src/server.js) starts the HTTP listener and the local learning worker. [app.js](backend/src/app.js) creates Express, registers JSON parsing/CORS, connects route modules and installs the error handler.
+
+```text
+Incoming request
+  → CORS / JSON middleware
+  → matching route
+  → Zod validation
+  → database / Java / local model work
+  → JSON response
+  → shared error handler if an operation fails
+```
+
+Route modules separate questions, subjects, statistics, paper generation, stored papers and learning. [validation.js](backend/src/validation.js) defines supported values, counts and consistency checks. [errors.js](backend/src/errors.js) converts failures into HTTP responses.
+
+| Status | Typical meaning in this project |
+| --- | --- |
+| `400` | Invalid request, subject or allocation. |
+| `404` | Requested record/route not found. |
+| `409` | Conflict or insufficient fresh/matching questions. |
+| `413` | Request body too large. |
+| `503` | A required local service/runtime is unavailable. |
+| `500` | Unexpected server failure. |
+
+Server validation is essential even when the form already checks inputs: callers can send requests without using the website.
+
+</details>
+
+<details>
+<summary><strong>05 · PostgreSQL: how records persist</strong></summary>
+
+[db.js](backend/src/db.js) creates a `pg.Pool` using the private `DATABASE_URL`. Routes call its shared `query` function. A connection pool manages database connections rather than creating a new unmanaged connection for each operation.
+
+A simplified parameterised lookup:
+
+```js
+const { rows } = await query(
+  'SELECT id, text, marks, bloom_level FROM questions WHERE subject = $1 AND NOT is_deleted',
+  [subject],
+)
+```
+
+`$1` represents a data value supplied separately. The questions route also constructs a filter from fixed SQL fragments and parameter values, instead of inserting raw user text into SQL.
+
+Subject names are normalised, foreign keys link records, constraints reject unsupported values, and soft deletion allows question restoration. Subject partitions provide separate physical question storage while the parent table supports shared searches. Complete papers use JSONB snapshots so that later bank edits do not silently change an archived paper.
+
+The browser does not contain the database password and does not run SQL directly. See [schema.sql](backend/sql/schema.sql) for the authoritative constraints and migration details.
+
+</details>
+
+<details>
+<summary><strong>06 · Java: why a separate core exists</strong></summary>
+
+[javaCore.js](backend/src/javaCore.js) starts [PaperEngine.java](core/src/PaperEngine.java) using the JDK's source-file launcher. It sends a small line/tab-separated protocol to standard input, collects standard output, parses the JSON result and maps selected IDs back to question metadata.
+
+```text
+Node: parameters + candidate IDs
+       │ stdin
+       ▼
+Java: PLAN / PLAN_FIXED / SELECT / SELECT_FIXED
+       │ stdout JSON
+       ▼
+Node: planned slots or selected bank questions
+```
+
+Java handles marks planning and ordinary bank selection. Explicit bank Bloom/difficulty matching is also handled by [blooms.js](backend/src/blooms.js), so not every selection rule belongs to Java alone. Java does not train the model, access the browser or run its own HTTP port. The bridge checks failures, malformed output and a timeout.
+
+</details>
+
+<details>
+<summary><strong>07 · Local generation: where the questions come from</strong></summary>
+
+Read these files in order:
+
+| File | What to look for |
+| --- | --- |
+| [syllabusGenerator.js](backend/src/syllabusGenerator.js) | Validated request shape, extracted text, Java slots and local generation call. |
+| [localModel.js](backend/src/localModel.js) | Model loading, topic extraction, topic classification, task grammars and candidate ranking. |
+| [blooms.js](backend/src/blooms.js) | Contextual K classification, permitted prefixes and allocation matching. |
+| [objectiveQuestions.js](backend/src/objectiveQuestions.js) | Checked definition groups and related MCQ distractors. |
+| [numericalQuestions.js](backend/src/numericalQuestions.js) | Parameterised mathematical problems and calculated answers. |
+| [routes/syllabus.js](backend/src/routes/syllabus.js) | Registered-subject checks, history policy, saved papers and explicit bank insertion. |
+
+For example, a supported linear-prediction factory can generate a problem such as `y = 3x + 2` at `x = 4` and calculate `14`. A later numerical variant can change the coefficients or input. Those values are generated by code; they are not invented by a remote LLM.
+
+Changing numbers still counts as reusing the same known numerical pattern. Topic classification, task composition and repetition checking are separate steps. Adding a new arbitrary topic does not automatically supply verified objective facts or a new mathematical solver for it.
+
+</details>
+
+<details>
+<summary><strong>08 · Python training: how weights are rebuilt</strong></summary>
+
+[train.py](backend/ml/train.py) provides topic feature extraction, Naive Bayes training and prediction. [train_bloom.py](backend/ml/train_bloom.py) trains the six-class cognitive-task model. [train_reviewed.py](backend/ml/train_reviewed.py) combines eligible examples, excludes held-out/conflicting rows, selects a configuration and produces evaluation reports.
+
+[automaticLearning.js](backend/src/automaticLearning.js) performs local eligibility checks and processes queued papers. [routes/learning.js](backend/src/routes/learning.js) launches Python, evaluates the returned report, and either activates the candidate or keeps the current model.
+
+Read the frozen train/validation/test files before interpreting accuracy. Runtime reports are available through `/api/model/status`. A training run can finish successfully without activating a model. More self-labelled questions do not necessarily mean better accuracy or better academic content.
+
+</details>
+
+<details>
+<summary><strong>09 · Paper editing, PDF, TXT and print</strong></summary>
+
+[PaperEditor.jsx](frontend/src/PaperEditor.jsx) manages an editable draft and saves an updated snapshot. It does not modify an existing bank question simply because its paper copy changed.
+
+[paperText.js](frontend/src/paperText.js) formats question stems/options and supplies Bloom labels. Previews and [paperPdf.js](frontend/src/paperPdf.js) place K1–K6 beside each question, while marks stay in section headings/totals. TXT keeps the K tag without a per-question marks suffix.
+
+[PdfDownload.jsx](frontend/src/PdfDownload.jsx) calls the browser's PDF utility. jsPDF lays out A4 pages, wraps long text, adds section headers/page numbers, and embeds the supplied Noto Sans font. Print styles hide navigation, controls and workspace decoration. Teacher answers remain in data/editing fields and are omitted from student paper exports.
+
+</details>
+
+### A complete marks-and-Bloom example
+
+This is an illustrative **50-mark, 10-question** configuration. Each row's K counts equal its question count.
+
+| Marks each | Questions | K1 | K2 | K3 | K4 | K5 | K6 | Marks subtotal |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2 | 5 | 3 | 2 | 0 | 0 | 0 | 0 | 10 |
+| 5 | 2 | 0 | 1 | 1 | 0 | 0 | 0 | 10 |
+| 10 | 3 | 0 | 0 | 0 | 1 | 1 | 1 | 30 |
+| **Total** | **10** | **3** | **3** | **1** | **1** | **1** | **1** | **50** |
+
+This example does not impose a permanent relationship between marks and K level. Difficulty percentages must separately total 100, and the selected source must have enough supported candidates.
+
+## Viva and project explanation
+
+### A short explanation you can practise
+
+> The project manages a subject-based question bank and creates examination papers through manual selection, automatic bank selection or syllabus upload. React manages the interface, Vite handles frontend development/builds, and Express provides the HTTP API on Node.js. PostgreSQL stores subjects, questions, paper snapshots and learning records. Java plans marks and ordinary bank selection. Our locally trained Naive Bayes classifiers support topic/Bloom classification, while authored grammars, checked facts and numerical factories compose questions. Successful papers are saved automatically, with an explicit button for adding syllabus questions to the reusable bank. Eligible local examples can retrain the classifiers, but faculty review is still needed before real examination use.
+
+<details>
+<summary><strong>20 viva questions with concise answers</strong></summary>
+
+| Question | Answer |
+| --- | --- |
+| What problem does the project solve? | It organises reusable questions and helps assemble balanced examination papers. |
+| Why React? | State and reusable components support forms, filters, previews and several paper workflows. |
+| Why Vite? | It serves the frontend during development and builds production assets. |
+| Are React and Vite the backend? | No. Node.js runs the Express backend. |
+| What is JSX? | UI-description syntax used inside JavaScript React components. |
+| What are props and state? | Props are passed into a component; state is remembered and updated by that component. |
+| How do frontend and backend communicate? | HTTP requests and JSON responses using the configured API URL. |
+| Why Express? | It provides routes and middleware around the application logic. |
+| Why PostgreSQL? | Persistent records, relational constraints, partitions and JSONB paper snapshots. |
+| Why use parameterised queries? | They keep data values separate from SQL instructions. |
+| What does Java do? | Plans marks and performs ordinary bank selection through a Node subprocess bridge. |
+| What is the local ML algorithm? | Multinomial Naive Bayes classifiers for topic families and Bloom task levels. |
+| Is the project a newly trained general-purpose LLM? | No. Learned classification is combined with controlled question composition. |
+| Does generation require an external AI key? | No. The current generation and learning paths are local. |
+| What does automatic learning change? | Eligible examples can update classifier probabilities after evaluation. |
+| Does self-training guarantee improvement? | No. Pseudo-labels can reinforce errors, and synthetic tests have limited coverage. |
+| How are repeated questions controlled? | Text hashes and known pattern signatures are checked within the subject/syllabus history scope. |
+| Where are generated papers stored? | As JSONB snapshots in `saved_papers`; bank insertion is a separate action. |
+| What do K1–K6 represent? | Remember, Understand, Apply, Analyze, Evaluate and Create. |
+| Is this already deployed on the college server? | Laptop operation is separate from deploying services, data, configuration and access controls on that server. |
+
+</details>
+
 ## Inspect data in pgAdmin
 
 Expand **Databases → questionbank → Schemas → public → Tables**. Right-click a table and choose **View/Edit Data → All Rows**. Use Query Tool for read-only inspection:
@@ -293,7 +837,40 @@ Backend tests use a **separate `questionbank_test` database**. Create it first a
 
 Python trainers and seed datasets are in `backend/ml/`. The topic and Bloom classifiers are our own trained models; no `pip` model package or downloaded foundation weights are required. The background trainer writes candidates and reports automatically. Tests check software behaviour and synthetic classification, not faculty acceptance of exam questions.
 
+## Project boundaries
+
+| Implemented | Boundary to understand |
+| --- | --- |
+| Fully local generation | A finite controlled generator, with no hosted-provider quota; not unlimited subject knowledge. |
+| Automatic classifier retraining | Pseudo-labels are not independent faculty validation. |
+| Bloom allocation and opening checks | Structural/task rules do not mathematically guarantee cognitive or academic correctness. |
+| Numerical factories | Cover supported operations, not arbitrary symbolic mathematics. |
+| PDF/TXT extraction | Scanned image PDFs need OCR first. |
+| Repetition policy | Known signatures do not detect every possible semantic paraphrase. |
+| Saved-paper retrieval | Historical unsaved papers cannot be reconstructed automatically. |
+| Responsive academic UI | No application authentication/role-permission system is included. |
+
+There is no external AI daily quota. Current application bounds still include **50 questions**, **1,000 marks**, a **5 MB upload**, available topic/fact/pattern coverage and the historical **20% repeat budget**, rounded down.
+
 ## Moving to the college server
+
+```mermaid
+flowchart LR
+  B["User browser"] --> W["College web server / approved access layer"]
+  W --> F["Built frontend dist"]
+  W --> E["Express service"]
+  E --> D[("PostgreSQL")]
+  E --> J["Java runtime"]
+  E --> M["Local inference weights"]
+  E --> P["Python training process"]
+  D --> S["Scheduled backups"]
+  M --> S
+  P --> M
+  classDef sky fill:#edf6fd,stroke:#82aecb,color:#204d6b
+  class B,W,F,E sky
+```
+
+This is a deployment layout to prepare with the administrator, not a claim that the college installation has already been completed.
 
 1. Obtain the server's operating system, RAM, Java/Node/Python availability, database details and approved deployment access from the college administrator.
 2. Copy or clone the application; install dependencies and create the PostgreSQL database.
@@ -322,4 +899,12 @@ Server credentials have not been requested or configured here. Laptop operation 
 
 ---
 
-<div align="center"><strong>Built for a clear examination workflow, transparent local ML and college-controlled data.</strong></div>
+<div align="center">
+
+**Organise → Prepare → Review → Assess**
+
+Built for a clear examination workflow, transparent local ML and college-controlled data.
+
+[Back to top ↑](#top) · [Start the app](#run-on-your-laptop) · [Study the code](#code-walkthrough) · [Read the model card](backend/ml/MODEL_CARD.md)
+
+</div>

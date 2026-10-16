@@ -358,28 +358,38 @@ test('editing a stored paper updates its snapshot and totals without changing ba
 });
 
 
-test('creation permits blank subjects and registers typed syllabus subjects', async () => {
-  const first=(await call('POST','/api/questions',q(1,'PDF','Export','EASY',2,'Define a PDF document.'))).body;
-  const manual=await call('POST','/api/papers/manual',{title:'No subject selected',questionIds:[first.id]});
-  assert.equal(manual.status,201);
-  assert.equal(manual.body.paper.subject,'GENERAL');
-  const bank=await call('POST','/api/papers/generate',{totalMarks:2,split:{easy:100,medium:0,hard:0}});
-  assert.equal(bank.status,200);assert.ok(bank.body.id);
+test('only Add subject creates names; blank and mixed papers remain unassigned', async () => {
   const previous=process.env.AI_PROVIDER;process.env.AI_PROVIDER='local';
   try {
+    const before=(await query('SELECT name FROM subjects ORDER BY name')).rows;
     const body={fileName:'topics.txt',mimeType:'text/plain',data:Buffer.from('Unit 1: Memory\nCache memory. CPU registers.').toString('base64'),totalMarks:2,count:1,split:{easy:100,medium:0,hard:0}};
-    const general=await call('POST','/api/papers/from-syllabus',body);
-    assert.equal(general.status,200);assert.equal(general.body.paper.subject,'GENERAL');
-    const typed=await call('POST','/api/papers/from-syllabus',{...body,subject:'Typed new subject'});
-    assert.equal(typed.status,200);assert.equal(typed.body.paper.subject,'TYPED_NEW_SUBJECT');
-    assert.equal((await call('GET','/api/subjects/TYPED_NEW_SUBJECT/overview')).status,200);
+    const blank=await call('POST','/api/papers/from-syllabus',body);
+    assert.equal(blank.status,200);assert.equal(blank.body.paper.subject,'UNASSIGNED');
+    const again=await call('POST','/api/papers/from-syllabus',body);
+    assert.equal(again.status,200);
+    assert.notEqual(again.body.paper.questions[0].text,blank.body.paper.questions[0].text);
+    assert.equal((await call('POST','/api/papers/from-syllabus',{...body,subject:'Do not create this subject'})).status,400);
+    assert.deepEqual((await query('SELECT name FROM subjects ORDER BY name')).rows,before);
+    assert.equal((await call('POST','/api/papers/save-syllabus',{subject:'Do not create this subject',questions:blank.body.paper.questions})).status,400);
+    const edited=await call('PUT',`/api/papers/saved/${blank.body.id}`,{title:'Unassigned edited paper',questions:blank.body.paper.questions});
+    assert.equal(edited.status,200);assert.equal(edited.body.paper.subject,'UNASSIGNED');
+    await call('POST','/api/subjects',{name:'Created using Add subject'});
+    assert.equal((await call('POST','/api/papers/from-syllabus',{...body,subject:'Created using Add subject'})).status,200);
+    const q1=(await call('POST','/api/questions',q(1,'CPU','Registers','EASY',2,'Subject separation test.'))).body;
+    const q2=(await call('POST','/api/questions',{...q(1,'CPU','Registers','EASY',2,'Second subject test.'),subject:'CREATED_USING_ADD_SUBJECT'})).body;
+    const mixed=await call('POST','/api/papers/manual',{title:'Mixed paper',questionIds:[q1.id,q2.id]});
+    assert.equal(mixed.status,201);assert.equal(mixed.body.paper.subject,'UNASSIGNED');
+    assert.equal((await query('SELECT subject FROM saved_papers WHERE id=$1',[mixed.body.id])).rows[0].subject,null);
+    assert.equal((await call('POST','/api/papers/generate',{totalMarks:2,split:{easy:100,medium:0,hard:0}})).status,200);
+    const after=(await query('SELECT name FROM subjects ORDER BY name')).rows;
+    assert.equal(after.length,before.length+1);
   } finally {if(previous===undefined)delete process.env.AI_PROVIDER;else process.env.AI_PROVIDER=previous;}
 });
-
 
 test('one-mark MCQs and blanks survive generation, bank storage, selection and paper editing', async () => {
   const previous=process.env.AI_PROVIDER;process.env.AI_PROVIDER='local';
   try {
+    await call('POST','/api/subjects',{name:'OBJECTIVE_TEST'});
     const body={subject:'OBJECTIVE_TEST',fileName:'topics.txt',mimeType:'text/plain',data:Buffer.from('Unit 1: Data structures\nStacks. Queues. Binary search. Linear search.').toString('base64'),totalMarks:3,count:3,markCounts:{1:3,2:0,5:0,10:0,16:0},split:{easy:100,medium:0,hard:0},oneMarkType:'MCQ'};
     const mcq=await call('POST','/api/papers/from-syllabus',body);
     assert.equal(mcq.status,200);

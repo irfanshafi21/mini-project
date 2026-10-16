@@ -13,6 +13,7 @@ const manual = z.object({ subject:z.preprocess(v=>typeof v==='string' && !v.trim
   .refine(b => new Set(b.questionIds).size === b.questionIds.length, { message: 'Select each question only once.' });
 const snapshotQuestion = z.object({
   ...objectiveFields,
+  reuseKey: z.string().max(200).optional(),
   text: z.string().trim().min(1).max(2000), marks: z.number().int().min(1).max(100),
   unit: z.number().int().min(1).max(5), difficulty: z.enum(['EASY','MEDIUM','HARD']),
   topic: z.string().max(200), subtopic: z.string().max(200).optional(),

@@ -6,9 +6,19 @@ import { z } from 'zod';
 import { requireRegisteredSubject, recordGeneratedPaper } from './subjects.js';
 import { query } from '../db.js';
 import { normalizeName, objectiveFields, validateObjective } from '../validation.js';
-import { extractSyllabusText, questionHash } from '../localModel.js';
+import { extractSyllabusText, questionHash, reuseSignature } from '../localModel.js';
 
 const router = Router();
+// Serialize matching uploads in this server so concurrent requests share current history.
+const pending=new Map();
+router.post('/papers/from-syllabus',async(req,res,next)=>{
+  const key=questionHash(`${req.body?.subject || ''}|${req.body?.data || ''}`);
+  const previous=pending.get(key) || Promise.resolve();
+  let release;const gate=new Promise(resolve=>{release=resolve;});pending.set(key,gate);
+  await previous;
+  let done=false;const finish=()=>{if(done)return;done=true;release();if(pending.get(key)===gate)pending.delete(key);};
+  res.once('finish',finish);res.once('close',finish);next();
+});
 router.post('/papers/from-syllabus', async (req, res) => {
   const body = syllabusBody.parse(req.body);
   if(body.subject) await requireRegisteredSubject(body.subject);
@@ -17,14 +27,24 @@ router.post('/papers/from-syllabus', async (req, res) => {
   if(local) {
     body.preparedText = await extractSyllabusText(body);
     syllabusHash = questionHash(body.preparedText);
-    body.previousQuestionHashes = (await query('SELECT question_hash FROM syllabus_history WHERE subject IS NOT DISTINCT FROM $1 AND syllabus_hash=$2',[body.subject || null,syllabusHash])).rows.map(row=>row.question_hash);
+    const history = (await query('SELECT question_hash,signature_hash FROM syllabus_history WHERE subject IS NOT DISTINCT FROM $1 AND syllabus_hash=$2',[body.subject || null,syllabusHash])).rows;
+    body.previousQuestionHashes=history.map(r=>r.question_hash);
+    body.previousSignatures=history.map(r=>r.signature_hash).filter(Boolean);
+    body.reviewedQuestions=(await query('SELECT question FROM reviewed_examples ORDER BY approved_at DESC LIMIT 500')).rows.map(r=>r.question);
   }
   const result = await generateSyllabusPaper(body);
   if(local) {
-    const hashes=result.paper.questions.map(q=>questionHash(q.text));
-    const reserved=await query(`INSERT INTO syllabus_history(subject,syllabus_hash,question_hash)
-      SELECT $1,$2,h FROM unnest($3::text[]) h ON CONFLICT DO NOTHING RETURNING question_hash`,[body.subject || null,syllabusHash,hashes]);
-    if(reserved.rows.length!==hashes.length) return res.status(409).json({error:'Another request used these variations. Generate again to select unused questions.'});
+    const questions=result.paper.questions;
+    const history=new Set(body.previousQuestionHashes), signatures=new Set(body.previousSignatures);
+    const repeated=questions.filter(q=>history.has(questionHash(q.text)) || signatures.has(reuseSignature(q))).length;
+    const budget=Math.floor(questions.length*.2);
+    if(repeated>budget)return res.status(409).json({error:'This paper exceeds the 20% repeat limit. Add more topics or request fewer questions.'});
+    const fresh=questions.filter(q=>!history.has(questionHash(q.text)));
+    const reserved=await query(`INSERT INTO syllabus_history(subject,syllabus_hash,question_hash,signature_hash)
+      SELECT $1,$2,h.question_hash,h.signature_hash FROM jsonb_to_recordset($3::jsonb) AS h(question_hash text,signature_hash text)
+      ON CONFLICT DO NOTHING RETURNING question_hash`,[body.subject || null,syllabusHash,JSON.stringify(fresh.map(q=>({question_hash:questionHash(q.text),signature_hash:reuseSignature(q)})))]);
+    if(reserved.rows.length!==fresh.length)return res.status(409).json({error:'Another request used these variations. Generate again.'});
+    Object.assign(result.paper,{repeatCount:repeated,repeatBudget:budget,repeatLimitPercent:20});
   }
   if(body.subject) await recordGeneratedPaper(body.subject, result.paper.questions.length, 'syllabus');
   const saved = await storePaper(body.subject, `${(body.subject || 'Unassigned').replaceAll('_',' ')} - Syllabus paper`, result.paper.questions, {...result.paper,source:'syllabus'});

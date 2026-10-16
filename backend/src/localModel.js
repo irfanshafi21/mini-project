@@ -1,3 +1,4 @@
+import { reloadBloomModel } from './blooms.js';
 import fs from 'node:fs';
 import { numericalCandidates } from './numericalQuestions.js';
 import path from 'node:path';
@@ -7,10 +8,11 @@ import { HttpError } from './errors.js';
 
 const activePath=process.env.MODEL_RUNTIME_DIR ? path.join(process.env.MODEL_RUNTIME_DIR,'active-model.json') : new URL('../.runtime/active-model.json',import.meta.url);
 let model=JSON.parse(fs.readFileSync(fs.existsSync(activePath)?activePath:new URL('../ml/model.json',import.meta.url),'utf8'));
+if(model.bloomModel)reloadBloomModel(model.bloomModel);
 export function validateLocalModel(candidate){
   if(candidate.kind!=='multinomial-naive-bayes-topic-type' || !['concept','process','comparison','numerical'].every(l=>candidate.labels?.includes(l) && Number.isFinite(candidate.logPrior?.[l]) && candidate.logLikelihood?.[l]))throw new Error('Invalid trained model');
 }
-export function reloadLocalModel(candidate){validateLocalModel(candidate);model=candidate;}
+export function reloadLocalModel(candidate){validateLocalModel(candidate);model=candidate;if(candidate.bloomModel)reloadBloomModel(candidate.bloomModel); }
 export function getLocalModelInfo(){const r=model.trainingReport || JSON.parse(fs.readFileSync(new URL('../ml/evaluation.json',import.meta.url),'utf8'));return {kind:model.kind,trainedAt:model.trainedAt || null,accuracy:r.accuracy,trainingExamples:r.trainingExamples,testExamples:r.testExamples,reviewedTopicsUsed:r.reviewedTopicsUsed || 0,independentBenchmark:r.independentBenchmark ? {accuracy:r.independentBenchmark.accuracy,testExamples:r.independentBenchmark.testExamples,macroF1:r.independentBenchmark.macroF1,splitHash:r.splitHashes?.benchmark}:null};}
 
 export const questionHash = text => createHash('sha256').update(text.toLowerCase().replace(/\s+/g, ' ').trim()).digest('hex');

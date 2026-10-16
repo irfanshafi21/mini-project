@@ -1,6 +1,8 @@
+import { assignBloomSlots } from './blooms.js';
+import { generateBloomQuestions } from './bloomGenerator.js';
 import { z } from 'zod';
 import { HttpError } from './errors.js';
-import { normalizeName, markCountsSchema, validMarkPattern } from './validation.js';
+import { normalizeName, markCountsSchema, validMarkPattern, bloomCountsSchema, validBloomCounts } from './validation.js';
 import { planPaper } from './javaCore.js';
 import { extractSyllabusText, generateLocalQuestions } from './localModel.js';
 export { planPaper } from './javaCore.js';
@@ -15,11 +17,12 @@ export const syllabusBody = z.object({
   totalMarks: z.number().int().min(1).max(1000),
   count: z.number().int().min(0).max(50),
   markCounts: markCountsSchema.optional(),
+  bloomCounts:bloomCountsSchema.optional(),
   split: z.object({ easy: z.number().min(0).max(100), medium: z.number().min(0).max(100), hard: z.number().min(0).max(100) }),
 }).refine(b => Math.abs(b.split.easy + b.split.medium + b.split.hard - 100) < 0.001,
   { message: 'Difficulty percentages must add up to 100', path: ['split'] })
   .refine(b => b.markCounts || (b.count > 0 && b.totalMarks >= b.count && b.totalMarks <= b.count * 100),
-    { message: 'Total marks must allow 1–100 marks per question', path: ['totalMarks'] }).refine(validMarkPattern, { message: 'Question counts must total the requested marks and match the question count (or use 0 for automatic).', path: ['markCounts'] });
+    { message: 'Total marks must allow 1–100 marks per question', path: ['totalMarks'] }).refine(validBloomCounts,{message:'K1-K6 counts must match each mark category.',path:['bloomCounts']}).refine(validMarkPattern, { message: 'Question counts must total the requested marks and match the question count (or use 0 for automatic).', path: ['markCounts'] });
 
 const questionSchema = z.object({
   topic: z.string().trim().min(1).max(200),
@@ -41,7 +44,8 @@ export async function generateSyllabusPaper(body, { fetchImpl = fetch,
   if (body.mimeType === 'application/pdf' && bytes.subarray(0, 5).toString() !== '%PDF-') {
     throw new HttpError(400, 'The uploaded file is not a PDF');
   }
-  const slots = await planPaper(body.totalMarks, body.count, body.split, body.markCounts);
+  const slots = assignBloomSlots(await planPaper(body.totalMarks, body.count, body.split, body.markCounts),body.bloomCounts);
+  if(body.bloomCounts){const text=body.preparedText || await extractSyllabusText(body);const questions=await generateBloomQuestions(text,slots,body.oneMarkType,{fetchImpl});return {paper:{source:'syllabus',subject:body.subject,requestedMarks:body.totalMarks,totalMarks:body.totalMarks,complete:true,bloomCounts:body.bloomCounts,questions}};}
   if (provider === 'local') {
     const text = body.preparedText || await extractSyllabusText(body);
     return { paper: { source:'syllabus',fileName:body.fileName,model:'local-topic-naive-bayes-v1',subject:body.subject,

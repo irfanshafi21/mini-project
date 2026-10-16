@@ -1,3 +1,4 @@
+import { validateBloomPrefix } from './blooms.js';
 import { z } from 'zod';
 
 export const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'];
@@ -14,7 +15,12 @@ const difficulty = z.preprocess(
   z.enum(DIFFICULTIES, { error: 'difficulty must be EASY, MEDIUM or HARD' }),
 );
 
+export const bloomLevelSchema=z.enum(['K1','K2','K3','K4','K5','K6']);
+export const bloomCountsSchema=z.object(Object.fromEntries([1,2,5,10,16].map(m=>[String(m),z.object(Object.fromEntries(['K1','K2','K3','K4','K5','K6'].map(k=>[k,z.number().int().min(0).max(50).default(0)]))).strict().optional()])));
+export function validBloomCounts(b){return !b.bloomCounts || (b.markCounts && Object.entries(b.bloomCounts).every(([m,counts])=>Object.values(counts).reduce((n,c)=>n+c,0)===(b.markCounts[m] || 0)) && Object.entries(b.markCounts).every(([m,count])=>!count || !!b.bloomCounts[m]));}
 export const objectiveFields = {
+  bloomLevel:bloomLevelSchema.optional(),
+  bloomSource:z.enum(['local-model','assigned','requested-llm','teacher-reviewed']).optional(),
   questionType: z.enum(['SHORT','MCQ','FILL_BLANK']).default('SHORT'),
   options: z.array(z.string().trim().min(1).max(300)).max(4).default([]),
   answer: z.string().trim().max(300).default(''),
@@ -44,7 +50,7 @@ export const questionBody = z.object({
   difficulty,
   marks,
   text: z.string().trim().max(2000).default(''),
-}).superRefine(validateObjective);
+}).superRefine(validateObjective).superRefine(validateBloomPrefix);
 
 export const listQuery = z.object({
   subject: name.optional(),
@@ -53,6 +59,7 @@ export const listQuery = z.object({
   subtopic: name.optional(),
   difficulty: difficulty.optional(),
   marks: marks.optional(),
+  bloomLevel:bloomLevelSchema.optional(),
   q: z.string().trim().max(200).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -68,6 +75,7 @@ export const paperBody = z
     totalMarks: z.coerce.number().int().min(1).max(1000),
     count: z.number().int().min(0).max(50).default(0),
     markCounts: markCountsSchema.optional(),
+    bloomCounts:bloomCountsSchema.optional(),
     oneMarkType: z.enum(['MCQ','FILL_BLANK']).default('MCQ'),
     split: z
       .object({
@@ -80,7 +88,7 @@ export const paperBody = z
   .refine((b) => Math.abs(b.split.easy + b.split.medium + b.split.hard - 100) < 0.001, {
     message: 'split percentages must add up to 100',
     path: ['split'],
-  }).refine(validMarkPattern, { message: 'Question counts must total the requested marks and match the question count (or use 0 for automatic).', path: ['markCounts'] });
+  }).refine(validBloomCounts,{message:'K1-K6 counts must match each mark category.',path:['bloomCounts']}).refine(validMarkPattern, { message: 'Question counts must total the requested marks and match the question count (or use 0 for automatic).', path: ['markCounts'] });
 
 export const autoBody = z.object({
   subject: name,

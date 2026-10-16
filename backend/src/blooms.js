@@ -24,3 +24,23 @@ export function assignBloomSlots(slots,counts){
 }
 
 export function validateBloomPrefix(q,ctx){if(q.bloomLevel && !startsWithBloomVerb(q.text,q.bloomLevel))ctx.addIssue({code:'custom',path:['bloomLevel'],message:'Question must start with an allowed verb for '+q.bloomLevel});}
+
+// Match K counts and difficulty independently; a K6 question need not be HARD.
+export function selectBloomBank(pool,slots,counts){
+ const selected=[];
+ for(const mark of [...new Set(slots.map(s=>s.marks))]){
+  const required=slots.filter(s=>s.marks===mark),difficulty=['EASY','MEDIUM','HARD'];
+  const size=11,source=0,sink=10,capacity=Array.from({length:size},()=>Array(size).fill(0));
+  BLOOM_LEVELS.forEach((k,i)=>{capacity[source][i+1]=counts[mark]?.[k] || 0;difficulty.forEach((d,j)=>{capacity[i+1][j+7]=pool.filter(q=>q.marks===mark && q.bloomLevel===k && q.difficulty===d && startsWithBloomVerb(q.text,k)).length;});});
+  difficulty.forEach((d,j)=>{capacity[j+7][sink]=required.filter(s=>s.difficulty===d).length;});
+  const original=capacity.map(row=>[...row]);let total=0;
+  while(true){const parent=Array(size).fill(-1),queue=[source];parent[source]=source;
+   for(let at=0;at<queue.length && parent[sink]<0;at++)for(let v=0;v<size;v++)if(parent[v]<0 && capacity[queue[at]][v]>0){parent[v]=queue[at];queue.push(v);}
+   if(parent[sink]<0)break;let amount=50;for(let v=sink;v!==source;v=parent[v])amount=Math.min(amount,capacity[parent[v]][v]);
+   for(let v=sink;v!==source;v=parent[v]){capacity[parent[v]][v]-=amount;capacity[v][parent[v]]+=amount;}total+=amount;
+  }
+  if(total!==required.length)throw new HttpError(409,`Not enough ${mark}-mark bank questions to satisfy both K levels and difficulty. Add matching questions or adjust the allocation.`);
+  BLOOM_LEVELS.forEach((k,i)=>difficulty.forEach((d,j)=>{const n=original[i+1][j+7]-capacity[i+1][j+7];selected.push(...pool.filter(q=>q.marks===mark && q.bloomLevel===k && q.difficulty===d && startsWithBloomVerb(q.text,k)).slice(0,n));}));
+ }
+ return selected;
+}

@@ -25,6 +25,7 @@ export async function storePaper(subjectName, paperTitle, questions, metadata = 
   if (totalMarks > 1000) throw new HttpError(400,'A paper may contain at most 1,000 marks.');
   const paper = { ...metadata, subject: subjectName || 'UNASSIGNED', title: paperTitle, questions, totalMarks, requestedMarks: totalMarks, complete: true };
   const { rows } = await query('INSERT INTO saved_papers(subject,title,paper) VALUES($1,$2,$3::jsonb) RETURNING id,created_at', [subjectName || null,paperTitle,JSON.stringify(paper)]);
+  await query('INSERT INTO automatic_learning_jobs(paper_id) VALUES($1) ON CONFLICT DO NOTHING',[rows[0].id]);
   return { id: rows[0].id, createdAt: rows[0].created_at, paper };
 }
 router.post('/manual', async (req,res) => {

@@ -52,7 +52,7 @@ function runTrainer(input,output){
       try{resolve(JSON.parse(stdout));}catch{reject(new HttpError(503,'Training did not return a valid report.'));}});
   });
 }
-router.post('/train',async(_req,res)=>{
+export async function trainApprovedExamples(){
   if(training)throw new HttpError(409,'A training run is already in progress.');
   const {rows}=await query('SELECT topic,label FROM (SELECT topic,label,approved_at,id FROM reviewed_examples ORDER BY approved_at DESC,id DESC LIMIT 5000) latest ORDER BY approved_at,id');
   if(!rows.length)throw new HttpError(400,'Approve reviewed questions before training.');
@@ -72,8 +72,14 @@ router.post('/train',async(_req,res)=>{
     }
     const full={...report,previousAccuracy:current.accuracy,promoted};
     await query('INSERT INTO model_training_runs(status,report) VALUES($1,$2::jsonb)',[status,JSON.stringify(full)]);
-    res.json({status,report:full});
+    return {status,report:full};
   }catch(err){await query('INSERT INTO model_training_runs(status,report) VALUES($1,$2::jsonb)',['failed',JSON.stringify({message:err.message})]);throw err;}
   finally{training=false;}
+}
+router.post('/train',async(_req,res)=>res.json(await trainApprovedExamples()));
+router.get('/papers/:id',async(req,res)=>{
+ const id=z.coerce.number().int().positive().parse(req.params.id);
+ const job=(await query('SELECT status,attempts,report,updated_at FROM automatic_learning_jobs WHERE paper_id=$1',[id])).rows[0];
+ res.json({job:job || null});
 });
 export default router;

@@ -446,12 +446,31 @@ test('automatic learning consumes a queued paper without manual labels and recor
  try{
  let trained=false;
  await processAutomaticLearning({fetchImpl:async()=>({ok:true,json:async()=>({choices:[{finish_reason:'stop',message:{content:JSON.stringify({reviews:[
- {index:0,topic:'Processor registers',label:'concept',approved:true,confidence:.98,reason:'Clear and appropriate'},
- {index:1,topic:'Processor registers',label:'concept',approved:true,confidence:.4,reason:'Too broad'}]})}}]})}),train:async()=>{trained=true;return {status:'kept_previous',report:{accuracy:.7}}}});
+ {index:0,topic:'Processor registers',label:'concept',bloomLevel:'K1',approved:true,confidence:.98,reason:'Clear and appropriate'},
+ {index:1,topic:'Processor registers',label:'concept',bloomLevel:'K1',approved:true,confidence:.4,reason:'Too broad'}]})}}]})}),train:async()=>{trained=true;return {status:'kept_previous',report:{accuracy:.7}}}});
  assert.ok(trained);
  const job=await call('GET',`/api/model/papers/${paper.id}`);assert.equal(job.body.job.status,'completed');assert.equal(job.body.job.report.accepted,1);assert.equal(job.body.job.report.rejected,1);
  const rows=(await query('SELECT topic,label,review_source FROM reviewed_examples WHERE paper_id=$1',[paper.id])).rows;
  assert.deepEqual(rows,[{topic:'Processor registers',label:'concept',review_source:'llm'}]);
  await processAutomaticLearning({fetchImpl:async()=>{throw new Error('Completed jobs must not run again');}});
  }finally{for(const [key,value] of [['GROQ_API_KEY',oldKey],['AUTO_LEARNING_PROVIDER',oldProvider],['GROQ_MODEL',oldModel]]){if(value===undefined)delete process.env[key];else process.env[key]=value;}}
+});
+
+test('Bloom levels survive syllabus generation, bank storage, selection and retrieval',async()=>{
+ const oldFetch=globalThis.fetch,oldProvider=process.env.AI_PROVIDER,oldKey=process.env.GROQ_API_KEY,oldModel=process.env.GROQ_MODEL,oldTeacher=process.env.AUTO_LEARNING_PROVIDER;
+ process.env.AI_PROVIDER='local';process.env.GROQ_API_KEY='test-key';process.env.GROQ_MODEL='test-model';process.env.AUTO_LEARNING_PROVIDER='groq';
+ const texts=['Define cache memory.','Explain how cache memory reduces average access latency.','Solve the cache access time for hit time 2 ns, miss rate 0.1 and additional penalty 50 ns.','Analyze how cache locality and miss rate are related.','Evaluate two cache replacement policies against latency and complexity criteria; justify your choice.','Design a new cache replacement policy for a workload with alternating scans and repeated accesses.'];
+ globalThis.fetch=async(url,options)=>String(url).startsWith('https://api.groq.com') && JSON.parse(options.body).messages[0].content.includes('question-paper reviewer')?{ok:true,json:async()=>({choices:[{finish_reason:'stop',message:{content:JSON.stringify({reviews:texts.map((text,index)=>({index,topic:'Cache memory',label:'concept',bloomLevel:'K'+(index+1),approved:true,confidence:.99,reason:'Matches the requested task'}))})}}]})}:String(url).startsWith('https://api.groq.com')?{ok:true,json:async()=>({choices:[{finish_reason:'stop',message:{content:JSON.stringify({questions:texts.map((text,i)=>({topic:'Cache memory',subtopic:'concept',text,bloomLevel:'K'+(i+1),questionType:'SHORT',options:[],answer:'Teacher rubric',syllabusReference:'Cache memory'}))})}}]})}:oldFetch(url,options);
+ try{
+ await call('POST','/api/subjects',{name:'BLOOM_TEST'});
+ const b={subject:'BLOOM_TEST',fileName:'bloom.txt',mimeType:'text/plain',data:Buffer.from('Unit 1: Cache memory\nCache organization, locality, hit rate, miss penalty and replacement policies.').toString('base64'),totalMarks:12,count:6,markCounts:{2:6},bloomCounts:{2:{K1:1,K2:1,K3:1,K4:1,K5:1,K6:1}},split:{easy:100,medium:0,hard:0}};
+ assert.equal((await call('POST','/api/papers/from-syllabus',{...b,bloomCounts:{2:{K1:7}}})).status,400);
+ const generated=await call('POST','/api/papers/from-syllabus',b);assert.equal(generated.status,200,JSON.stringify(generated.body));
+ assert.deepEqual(generated.body.paper.questions.map(q=>q.bloomLevel),['K1','K2','K3','K4','K5','K6']);
+ assert.equal((await call('POST','/api/papers/save-syllabus',{subject:'BLOOM_TEST',questions:generated.body.paper.questions})).body.savedToBank,6);
+ const found=await call('GET','/api/questions?subject=BLOOM_TEST&bloomLevel=K4');assert.equal(found.body.total,1);assert.equal(found.body.items[0].bloomLevel,'K4');
+ const selected=await call('POST','/api/papers/generate',{subject:'BLOOM_TEST',totalMarks:12,count:6,markCounts:{2:6},bloomCounts:b.bloomCounts,split:b.split});assert.equal(selected.status,200);
+ const restored=await call('GET',`/api/papers/saved/${selected.body.id}`);assert.deepEqual(restored.body.paper.questions.map(q=>q.bloomLevel),['K1','K2','K3','K4','K5','K6']);
+ assert.equal((await call('POST','/api/papers/generate',{subject:'BLOOM_TEST',totalMarks:4,count:2,markCounts:{2:2},bloomCounts:{2:{K6:2}},split:b.split})).status,409);
+ }finally{globalThis.fetch=oldFetch;for(const [k,v] of [['AI_PROVIDER',oldProvider],['GROQ_API_KEY',oldKey],['GROQ_MODEL',oldModel],['AUTO_LEARNING_PROVIDER',oldTeacher]]){if(v===undefined)delete process.env[k];else process.env[k]=v;}}
 });

@@ -18,7 +18,7 @@ assert r['testExamples']==16 and r['independentBenchmark']['testExamples']==48
 assert r['validation']['testExamples']==32
 assert r['topicOverlap']==0
 assert r['splitHashes']['benchmark']
-assert r['candidateCount']==9
+assert r['candidateCount']==9\nassert r['bloomEvaluation']['testExamples']==24\nassert m['bloomModel']['labels']==['K1','K2','K3','K4','K5','K6']
 print(json.dumps({'parity':[{'topic':row['topic'],'predicted':predict(m,row['topic'])} for row in b['benchmark']]}))`;
  const run=spawnSync(process.env.PYTHON_COMMAND || 'python',['-c',code],{cwd:fileURLToPath(new URL('../ml/',import.meta.url)),encoding:'utf8',windowsHide:true});
  assert.equal(run.status,0,run.stderr);

@@ -126,3 +126,13 @@ CREATE TABLE IF NOT EXISTS model_training_runs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ALTER TABLE syllabus_history ADD COLUMN IF NOT EXISTS signature_hash TEXT;
+
+ALTER TABLE reviewed_examples ADD COLUMN IF NOT EXISTS review_source TEXT NOT NULL DEFAULT 'faculty';
+CREATE TABLE IF NOT EXISTS automatic_learning_jobs (
+ paper_id INTEGER PRIMARY KEY REFERENCES saved_papers(id),
+ status TEXT NOT NULL DEFAULT 'pending',
+ attempts INTEGER NOT NULL DEFAULT 0,
+ next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ report JSONB NOT NULL DEFAULT '{}'::jsonb
+);

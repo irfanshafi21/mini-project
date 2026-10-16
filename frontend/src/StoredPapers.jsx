@@ -10,7 +10,7 @@ export function StoredPaperPreview({ result, apiUrl, onSaved }) {
   const sections = [...new Set(paper.questions.map(q => q.marks))].sort((a,b) => a-b)
   function download() {
     let number = 0
-    const text = [paper.title, pretty(paper.subject), `Total: ${paper.totalMarks} marks`, ...sections.flatMap((m,i) => [`\nSECTION ${String.fromCharCode(65+i)} - ${m} MARKS`, ...paper.questions.filter(q=>q.marks===m).map(q=>`${++number}. ${formatQuestion(q)} [${m} {m===1?'mark':'marks'}]`)])].join('\n')
+    const text = [paper.title, pretty(paper.subject), `Total: ${paper.totalMarks} marks`, ...sections.flatMap((m,i) => [`\nSECTION ${String.fromCharCode(65+i)} - ${m} MARKS`, ...paper.questions.filter(q=>q.marks===m).map(q=>`${++number}. ${formatQuestion(q)} [${m} ${m===1?'mark':'marks'}]`)])].join('\n')
     const url = URL.createObjectURL(new Blob([text], {type:'text/plain;charset=utf-8'})), a=document.createElement('a')
     a.href=url; a.download=`question-paper-${result.id}.txt`; a.click(); URL.revokeObjectURL(url)
   }

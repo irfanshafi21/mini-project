@@ -1,6 +1,9 @@
 // Run with: npm test   (uses its own database "questionbank_test", so your real data is never touched)
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+process.env.MODEL_RUNTIME_DIR=fs.mkdtempSync(path.join(os.tmpdir(),'paper-model-test-'));
 import { after, before, test } from 'node:test';
 
 process.env.DATABASE_URL =
@@ -14,7 +17,7 @@ let base;
 
 before(async () => {
   await query(fs.readFileSync(new URL('../sql/schema.sql', import.meta.url), 'utf8'));
-  await query('TRUNCATE questions, syllabus_history, saved_papers RESTART IDENTITY');
+  await query('TRUNCATE reviewed_examples, model_training_runs, questions, syllabus_history, saved_papers RESTART IDENTITY');
   await query('DELETE FROM subjects');
   for (const name of ['GENERAL','DATA_STRUCTURES','PROGRAMMING','ALGORITHMS']) await query('INSERT INTO subjects(name) VALUES($1)', [name]);
   server = app.listen(0);
@@ -406,11 +409,27 @@ test('one-mark MCQs and blanks survive generation, bank storage, selection and p
     assert.deepEqual(loaded.body.paper.questions[0].options,bank.body.paper.questions[0].options);
     const changed={...loaded.body.paper.questions[0],options:['One','Two','Three','Four'],answer:'Two'};
     assert.equal((await call('PUT',`/api/papers/saved/${bank.body.id}`,{subject:body.subject,title:'Edited MCQ',questions:[changed]})).status,200);
-    const blanks=await call('POST','/api/papers/from-syllabus',{...body,oneMarkType:'FILL_BLANK'});
+    assert.equal((await call('POST','/api/papers/from-syllabus',{...body,oneMarkType:'FILL_BLANK'})).status,409);
+    await call('POST','/api/subjects',{name:'BLANK_TEST'});
+    const blanks=await call('POST','/api/papers/from-syllabus',{...body,subject:'BLANK_TEST',oneMarkType:'FILL_BLANK'});
     assert.equal(blanks.status,200);
     assert.ok(blanks.body.paper.questions.every(q=>q.questionType==='FILL_BLANK' && q.text.includes('____') && q.answer && !q.options.length));
     const invalid={...mcq.body.paper.questions[0],subject:body.subject};
     for(const options of [['Same','Same','Two','Three'],['One','Two','Three']])assert.equal((await call('POST','/api/questions',{...invalid,options})).status,400);
     assert.equal((await call('POST','/api/questions',{...invalid,answer:'Not an option'})).status,400);
   } finally {if(previous===undefined)delete process.env.AI_PROVIDER;else process.env.AI_PROVIDER=previous;}
+});
+
+test('review approval checks saved snapshots and retraining uses the frozen classification holdout',async()=>{
+ const list=await call('GET','/api/papers/saved');
+ const id=list.body.items[0].id;
+ const loaded=await call('GET',`/api/papers/saved/${id}`),q=loaded.body.paper.questions[0];
+ const review={index:0,label:'concept',text:q.text,marks:q.marks,options:q.options || [],answer:q.answer || ''};
+ assert.equal((await call('POST','/api/model/reviews',{paperId:id,reviews:[{...review,text:'stale text'}]})).status,409);
+ assert.equal((await call('POST','/api/model/reviews',{paperId:id,reviews:[review]})).status,201);
+ assert.equal((await call('POST','/api/model/reviews',{paperId:id,reviews:[review]})).status,201);
+ const status=await call('GET','/api/model/status');assert.equal(status.body.approvedExamples,1);
+ const trained=await call('POST','/api/model/train',{});assert.equal(trained.status,200);
+ assert.equal(trained.body.report.testExamples,16);assert.equal(trained.body.report.topicOverlap,0);
+ assert.ok(!trained.body.report.promoted || trained.body.report.accuracy>=trained.body.report.previousAccuracy);
 });

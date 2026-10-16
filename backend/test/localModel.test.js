@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { classifyTopic, generateLocalQuestions, syllabusTopics, questionHash } from '../src/localModel.js';
+import { classifyTopic, generateLocalQuestions, syllabusTopics, questionHash, reuseSignature } from '../src/localModel.js';
 
 test('local model predicts learned topic families and reads numeric/roman units', () => {
   assert.equal(classifyTopic('binary addition arithmetic'),'numerical');
@@ -17,9 +17,9 @@ test('local generation changes questions and reports finite-capacity exhaustion 
   const second=generateLocalQuestions(text,slots,hashes);
   assert.ok(second.every(q=>!hashes.includes(questionHash(q.text))));
   assert.equal(new Set(first.map(q=>q.unit)).size,2);
-  const all=generateLocalQuestions(text,Array.from({length:16},()=>slots[0]));
-  assert.equal(new Set(all.map(q=>q.text)).size,16);
-  assert.throws(()=>generateLocalQuestions(text,slots,all.map(q=>questionHash(q.text))),e=>e.status===409);
+  const all=generateLocalQuestions('Unit 1: CPU registers\nUnit 3: Virtual memory',Array.from({length:14},()=>slots[0]));
+  assert.equal(new Set(all.map(q=>q.text)).size,14);
+  assert.throws(()=>generateLocalQuestions('Unit 1: CPU registers\nUnit 3: Virtual memory',slots,all.map(q=>questionHash(q.text)),'MCQ',{previousSignatures:all.map(reuseSignature)}),e=>e.status===409);
 });
 
 
@@ -67,3 +67,12 @@ test('checked objective facts produce one correct option and blanks without reve
   assert.ok(!blank.text.toLowerCase().includes(blank.answer.toLowerCase()));
   assert.throws(()=>generateLocalQuestions('Unit 1: Unsupported advanced topic',[{marks:1,difficulty:'EASY'}]),e=>e.status===409);
 });
+
+ test('numerical variants retain a repeat signature and the repeat budget is at most 20 percent',()=>{
+ const source='Unit 1: Binary addition arithmetic';
+ const slot={marks:2,difficulty:'EASY'};
+ const first=generateLocalQuestions(source,[slot]);
+ const next=generateLocalQuestions(source+'\nCPU registers. Cache memory.',Array(5).fill(slot),first.map(q=>questionHash(q.text)),'MCQ',{previousSignatures:first.map(reuseSignature)});
+ assert.ok(next.filter(q=>q.reused).length<=1);
+ assert.throws(()=>generateLocalQuestions(source,[slot],first.map(q=>questionHash(q.text)),'MCQ',{previousSignatures:first.map(reuseSignature)}),e=>e.status===409);
+ });

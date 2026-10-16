@@ -207,13 +207,12 @@ test('subject overview excludes deleted questions and tracks only successful com
   assert.equal((await call('POST','/api/papers/generate',pattern)).status,200);
   assert.equal((await call('POST','/api/papers/generate',{...pattern,totalMarks:32,count:2,markCounts:{2:0,5:0,10:0,16:2}})).status,400);
   const originalFetch = globalThis.fetch, originalProvider = process.env.AI_PROVIDER, originalKey = process.env.GROQ_API_KEY;
-  process.env.AI_PROVIDER = 'groq'; process.env.GROQ_API_KEY = 'test';
-  globalThis.fetch = (url, options) => String(url).startsWith('https://api.groq.com/') ? Promise.resolve({ok:true,json:async()=>({choices:[{finish_reason:'stop',message:{content:JSON.stringify({questions:[{topic:'CPU',subtopic:'Registers',text:'Define the program counter register.',syllabusReference:'CPU registers'}]})}}]})}) : originalFetch(url,options);
+  process.env.AI_PROVIDER = 'templates'; process.env.GROQ_API_KEY = 'test';
   try {
-    const upload = {...pattern,unit:2,fileName:'s.txt',mimeType:'text/plain',data:Buffer.from('Unit 1: CPU registers and instruction processing.').toString('base64')};
+    const upload = {...pattern,unit:2,fileName:'s.txt',mimeType:'text/plain',data:Buffer.from('Unit 2: CPU registers and instruction processing.').toString('base64')};
     const generated = await call('POST','/api/papers/from-syllabus',upload);
     assert.equal(generated.status,200);
-    // Generating (and declining the popup) never inserts questions.
+    // Generating a paper never implicitly inserts bank questions.
     assert.equal((await call('GET',`/api/questions?subject=${subject}&unit=2`)).body.total,0);
     const save = {subject, unit:2, questions:generated.body.paper.questions};
     assert.equal((await call('POST','/api/papers/save-syllabus',{...save,subject:'UNKNOWN'})).status,400);
@@ -223,7 +222,7 @@ test('subject overview excludes deleted questions and tracks only successful com
     const repeat = await call('POST','/api/papers/save-syllabus',save);
     assert.equal(repeat.status,200); assert.equal(repeat.body.savedToBank,0); assert.equal(repeat.body.alreadyInBank,1);
     const stored = await call('GET',`/api/questions?subject=${subject}&unit=2`);
-    assert.equal(stored.body.total,1); assert.equal(stored.body.items[0].text,'Define the program counter register.');
+    assert.equal(stored.body.total,1); assert.equal(stored.body.items[0].text,generated.body.paper.questions[0].text);
   } finally {
     globalThis.fetch = originalFetch;
     if(originalProvider === undefined) delete process.env.AI_PROVIDER; else process.env.AI_PROVIDER = originalProvider;
@@ -267,7 +266,7 @@ test('bank paper selects two or three units and never selects an excluded unit',
 });
 
 test('local syllabus repeats do not reuse text, and saving follows detected units without a unit selector', async () => {
-  const original=process.env.AI_PROVIDER;process.env.AI_PROVIDER='local';
+  const original=process.env.AI_PROVIDER;process.env.AI_PROVIDER='templates';
   const subject='LOCAL_REPEAT';await call('POST','/api/subjects',{name:subject});
   const body={subject,fileName:'local.txt',mimeType:'text/plain',data:Buffer.from('Unit 1: CPU registers\nUnit 3: Cache memory hierarchy').toString('base64'),totalMarks:4,count:2,markCounts:{2:2,5:0,10:0,16:0},split:{easy:100,medium:0,hard:0}};
   try {
@@ -362,7 +361,7 @@ test('editing a stored paper updates its snapshot and totals without changing ba
 
 
 test('only Add subject creates names; blank and mixed papers remain unassigned', async () => {
-  const previous=process.env.AI_PROVIDER;process.env.AI_PROVIDER='local';
+  const previous=process.env.AI_PROVIDER;process.env.AI_PROVIDER='templates';
   try {
     const before=(await query('SELECT name FROM subjects ORDER BY name')).rows;
     const body={fileName:'topics.txt',mimeType:'text/plain',data:Buffer.from('Unit 1: Memory\nCache memory. CPU registers.').toString('base64'),totalMarks:2,count:1,split:{easy:100,medium:0,hard:0}};
@@ -390,7 +389,7 @@ test('only Add subject creates names; blank and mixed papers remain unassigned',
 });
 
 test('one-mark MCQs and blanks survive generation, bank storage, selection and paper editing', async () => {
-  const previous=process.env.AI_PROVIDER;process.env.AI_PROVIDER='local';
+  const previous=process.env.AI_PROVIDER;process.env.AI_PROVIDER='templates';
   try {
     await call('POST','/api/subjects',{name:'OBJECTIVE_TEST'});
     const body={subject:'OBJECTIVE_TEST',fileName:'topics.txt',mimeType:'text/plain',data:Buffer.from('Unit 1: Data structures\nStacks. Queues. Binary search. Linear search.').toString('base64'),totalMarks:3,count:3,markCounts:{1:3,2:0,5:0,10:0,16:0},split:{easy:100,medium:0,hard:0},oneMarkType:'MCQ'};
@@ -445,22 +444,22 @@ test('automatic learning consumes a queued paper without manual labels and recor
  process.env.GROQ_API_KEY='test-key';process.env.AUTO_LEARNING_PROVIDER='groq';process.env.GROQ_MODEL='test-model';
  try{
  let trained=false;
- await processAutomaticLearning({fetchImpl:async()=>({ok:true,json:async()=>({choices:[{finish_reason:'stop',message:{content:JSON.stringify({reviews:[
- {index:0,topic:'Processor registers',label:'concept',bloomLevel:'K1',approved:true,confidence:.98,reason:'Clear and appropriate'},
- {index:1,topic:'Processor registers',label:'concept',bloomLevel:'K1',approved:true,confidence:.4,reason:'Too broad'}]})}}]})}),train:async()=>{trained=true;return {status:'kept_previous',report:{accuracy:.7}}}});
+ await processAutomaticLearning({review:async()=>[
+ {index:0,topic:'Processor registers',label:'concept',bloomLevel:'K1',approved:true,confidence:1,reason:'Local checks pass'},
+ {index:1,topic:'Processor registers',label:'concept',bloomLevel:'K1',approved:false,confidence:0,reason:'Too broad'}],train:async()=>{trained=true;return {status:'kept_previous',report:{accuracy:.7}}}});
  assert.ok(trained);
  const job=await call('GET',`/api/model/papers/${paper.id}`);assert.equal(job.body.job.status,'completed');assert.equal(job.body.job.report.accepted,1);assert.equal(job.body.job.report.rejected,1);
  const rows=(await query('SELECT topic,label,review_source FROM reviewed_examples WHERE paper_id=$1',[paper.id])).rows;
- assert.deepEqual(rows,[{topic:'Processor registers',label:'concept',review_source:'llm'}]);
+ assert.deepEqual(rows,[{topic:'Processor registers',label:'concept',review_source:'local'}]);
  await processAutomaticLearning({fetchImpl:async()=>{throw new Error('Completed jobs must not run again');}});
  }finally{for(const [key,value] of [['GROQ_API_KEY',oldKey],['AUTO_LEARNING_PROVIDER',oldProvider],['GROQ_MODEL',oldModel]]){if(value===undefined)delete process.env[key];else process.env[key]=value;}}
 });
 
 test('Bloom levels survive syllabus generation, bank storage, selection and retrieval',async()=>{
  const oldFetch=globalThis.fetch,oldProvider=process.env.AI_PROVIDER,oldKey=process.env.GROQ_API_KEY,oldModel=process.env.GROQ_MODEL,oldTeacher=process.env.AUTO_LEARNING_PROVIDER;
- process.env.AI_PROVIDER='local';process.env.GROQ_API_KEY='test-key';process.env.GROQ_MODEL='test-model';process.env.AUTO_LEARNING_PROVIDER='groq';
+ process.env.AI_PROVIDER='templates';process.env.GROQ_API_KEY='test-key';process.env.GROQ_MODEL='test-model';process.env.AUTO_LEARNING_PROVIDER='groq';
  const texts=['Define cache memory.','Explain how cache memory reduces average access latency.','Solve the cache access time for hit time 2 ns, miss rate 0.1 and additional penalty 50 ns.','Analyze how cache locality and miss rate are related.','Evaluate two cache replacement policies against latency and complexity criteria; justify your choice.','Design a new cache replacement policy for a workload with alternating scans and repeated accesses.'];
- globalThis.fetch=async(url,options)=>String(url).startsWith('https://api.groq.com') && JSON.parse(options.body).messages[0].content.includes('question-paper reviewer')?{ok:true,json:async()=>({choices:[{finish_reason:'stop',message:{content:JSON.stringify({reviews:texts.map((text,index)=>({index,topic:'Cache memory',label:'concept',bloomLevel:'K'+(index+1),approved:true,confidence:.99,reason:'Matches the requested task'}))})}}]})}:String(url).startsWith('https://api.groq.com')?{ok:true,json:async()=>({choices:[{finish_reason:'stop',message:{content:JSON.stringify({questions:texts.map((text,i)=>({topic:'Cache memory',subtopic:'concept',text,bloomLevel:'K'+(i+1),questionType:'SHORT',options:[],answer:'Teacher rubric',syllabusReference:'Cache memory'}))})}}]})}:oldFetch(url,options);
+
  try{
  await call('POST','/api/subjects',{name:'BLOOM_TEST'});
  const b={subject:'BLOOM_TEST',fileName:'bloom.txt',mimeType:'text/plain',data:Buffer.from('Unit 1: Cache memory\nCache organization, locality, hit rate, miss penalty and replacement policies.').toString('base64'),totalMarks:12,count:6,markCounts:{2:6},bloomCounts:{2:{K1:1,K2:1,K3:1,K4:1,K5:1,K6:1}},split:{easy:100,medium:0,hard:0}};

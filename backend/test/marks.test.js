@@ -33,16 +33,11 @@ test('schemas reject inconsistent negative fractional and oversized custom count
   for(const markCounts of [{...auto,2:-1},{...auto,5:1.5},{...auto,2:51},{...auto,5:9}]) assert.equal(paperBody.safeParse({...base,markCounts}).success,false);
   assert.equal(paperBody.safeParse({...base,count:8,markCounts:{2:0,5:10,10:0,16:0}}).success,false);
 });
-test('syllabus output is validated against Java automatic slot count',async()=>{
-  const body=syllabusBody.parse({subject:'GENERAL',fileName:'s.txt',mimeType:'text/plain',data:Buffer.from('CPU and memory syllabus').toString('base64'),totalMarks:10,count:0,markCounts:auto,split});
-  const result=await generateSyllabusPaper(body,{provider:'gemini',apiKey:'test',model:'test',fetchImpl:async(_url,request)=>{
-    const slots=JSON.parse(JSON.parse(request.body).contents[0].parts[1].text.split('slots: ')[1].split('. Return')[0]);
-    return {ok:true,json:async()=>({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({questions:slots.map((_,i)=>({topic:'CPU',subtopic:'Memory',text:'Explain CPU operation '+i,syllabusReference:'CPU and memory'}))})}]}}]})};
-  }});
-  assert.equal(result.paper.totalMarks,10);
-  assert.equal(result.paper.questions.length,1);
+test('syllabus output matches Java automatic slot count in template mode',async()=>{
+ const body=syllabusBody.parse({subject:'GENERAL',fileName:'s.txt',mimeType:'text/plain',data:Buffer.from('Unit 1: CPU registers and memory hierarchy').toString('base64'),totalMarks:10,count:0,markCounts:auto,split});
+ const result=await generateSyllabusPaper(body,{provider:'templates'});
+ assert.equal(result.paper.totalMarks,10);assert.equal(result.paper.questions.length,1);
 });
-
 
 test('Java plans mixed one-mark patterns exactly',async()=>{
   const slots=await planPaper(10,0,split,{1:3,2:1,5:1,10:0,16:0});

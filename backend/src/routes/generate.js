@@ -1,4 +1,4 @@
-import { assignBloomSlots, startsWithBloomVerb } from '../blooms.js';
+import { selectBloomBank } from '../blooms.js';
 import { planPaper } from '../javaCore.js';
 import { Router } from 'express';
 import { storePaper } from './savedPapers.js';
@@ -38,9 +38,7 @@ router.post('/papers/generate', async (req, res) => {
 
   let result;
   if(b.bloomCounts){
-    const slots=assignBloomSlots(await planPaper(b.totalMarks,b.count,b.split,b.markCounts),b.bloomCounts),pool=rows.map(toApi).filter(q=>startsWithBloomVerb(q.text,q.bloomLevel)),selected=[];
-    for(const slot of slots){const q=pool.find(q=>!selected.some(s=>s.id===q.id) && q.marks===slot.marks && q.bloomLevel===slot.bloomLevel && q.difficulty===slot.difficulty);
-      if(!q)throw new HttpError(409,`Not enough ${slot.marks}-mark ${slot.bloomLevel} ${slot.difficulty.toLowerCase()} questions in the bank. Add matching questions or adjust the pattern.`);selected.push(q);}
+    const slots=await planPaper(b.totalMarks,b.count,b.split,b.markCounts),selected=selectBloomBank(rows.map(toApi),slots,b.bloomCounts);
     result={questions:selected,totalMarks:selected.reduce((n,q)=>n+q.marks,0),targets:slots};
   }else result = await generatePaper(rows.map(toApi), b.totalMarks, b.split, b.markCounts, b.count);
   const complete = result.totalMarks === b.totalMarks;

@@ -2,21 +2,21 @@
 
 <div align="center">
 
-<img src="docs/images/banner.png" alt="Question bank and examination paper generator" width="100%" />
+<img src="docs/images/readme-cover.svg" alt="Question bank and examination paper generator" width="100%" />
 
 # Question Bank & Paper Generator
 
-### A complete academic workspace. A practical full-stack learning guide.
+### Plan with precision. Generate locally. Learn the complete stack.
 
 A college examination workspace built with **React + Vite**, **Node.js + Express**, **Java**, **PostgreSQL**, and our own **trained ML classifiers**.
 
-![React](https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white)
-![Node](https://img.shields.io/badge/Node.js-Backend-43853d?logo=nodedotjs&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-336791?logo=postgresql&logoColor=white)
-![Java](https://img.shields.io/badge/Java-Paper_engine-b27d42)
-![Python](https://img.shields.io/badge/Python-Model_training-3776ab?logo=python&logoColor=white)
-![ML](https://img.shields.io/badge/ML-Trained_locally-2b7884)
+![React](https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white&style=for-the-badge)
+![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white&style=for-the-badge)
+![Node](https://img.shields.io/badge/Node.js-Backend-43853d?logo=nodedotjs&logoColor=white&style=for-the-badge)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-336791?logo=postgresql&logoColor=white&style=for-the-badge)
+![Java](https://img.shields.io/badge/Java-Paper_engine-b27d42?style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-Model_training-3776ab?logo=python&logoColor=white&style=for-the-badge)
+![ML](https://img.shields.io/badge/ML-Trained_locally-2b7884?style=for-the-badge)
 
 **React UI** → **Express API** → **PostgreSQL + Java + Local ML** → **Examination paper**
 
@@ -51,6 +51,10 @@ A college examination workspace built with **React + Vite**, **Node.js + Express
 > [!TIP]
 > **Already installed?** Keep PostgreSQL running. In one VS Code terminal run `cd backend` then `npm.cmd start`. In a second terminal from the project root run `cd frontend` then `npm.cmd run dev`. Open [localhost:5173](http://localhost:5173/).
 
+<br/>
+
+<img src="docs/images/section-explore.svg" alt="What you can do" width="100%" />
+
 ## What you can do
 
 | Workspace | Purpose |
@@ -67,21 +71,29 @@ The interface combines light blue and warm neutral colours with an academic layo
 
 ## A look inside
 
-<table>
-<tr><td><strong>Academic workspace</strong><br/><img src="docs/images/academic-dashboard.png" alt="Academic question-bank dashboard with desktop sidebar and paper creation panel" width="100%" /></td></tr>
-<tr><td><strong>Marks and Bloom allocation</strong><br/><img src="docs/images/local-bloom-builder.png" alt="Aligned mark counts and K1 to K6 allocations" width="100%" /></td></tr>
-</table>
+### 01 / The academic workspace
 
-Screenshots illustrate the interface; stored data and totals vary by installation.
+A dedicated sidebar, subject filters and a focused paper-creation area.
 
-<details>
-<summary><strong>See the question-paper layout with Bloom labels</strong></summary>
+[![Academic workspace — open original image](docs/images/academic-dashboard.png)](docs/images/academic-dashboard.png)
 
-<img src="docs/images/question-paper-blooms.png" alt="Saved paper showing K1 and K2 beside questions, with marks retained in the section heading" width="500" />
+### 02 / Build your assessment
 
-K1–K6 appears beside each question. Section headings and the paper total show marks. PDF and print use the same rule.
+Allocate question counts by marks, then distribute them across K1–K6.
 
-</details>
+[![Marks and Bloom allocation — open original image](docs/images/local-bloom-builder.png)](docs/images/local-bloom-builder.png)
+
+### 03 / The finished paper
+
+Bloom labels appear beside each question. Marks remain in section headings and the paper total.
+
+[![Question paper — open original image](docs/images/question-paper-blooms.png)](docs/images/question-paper-blooms.png)
+
+<sub>Actual application screenshots. Click any image to view the original at full resolution. Data varies by installation.</sub>
+
+<br/>
+
+<img src="docs/images/section-learn.svg" alt="Learn the project from scratch" width="100%" />
 
 ## Learn the project from scratch
 
@@ -234,6 +246,8 @@ sequenceDiagram
 - One-mark questions support **multiple choice** or **fill in the blanks**. Checked MCQs have four distinct options and one recorded correct answer.
 
 ## College Bloom mapping
+
+<img src="docs/images/bloom-spectrum.svg" alt="K1 Remember, K2 Understand, K3 Apply, K4 Analyze, K5 Evaluate, K6 Create" width="100%" />
 
 | Level | Cognitive task | Example opening words from the college chart |
 | --- | --- | --- |
@@ -422,6 +436,10 @@ The question primary key is the composite **(id, subject)**. `model_training_run
 > [!IMPORTANT]
 > A paper snapshot, a bank question and a training example serve different purposes. Deleting or editing one does not mean every other representation has changed.
 
+<br/>
+
+<img src="docs/images/section-build.svg" alt="Run on your laptop" width="100%" />
+
 ## Run on your laptop
 
 ### Prerequisites
@@ -529,6 +547,10 @@ mini-project/
 ```
 
 React handles state, forms and rendering. Vite serves the frontend in development and produces its build. Express validates HTTP requests, calls Java/our local ML logic, and reads/writes PostgreSQL. The browser never connects directly to the database.
+
+<br/>
+
+<img src="docs/images/section-explain.svg" alt="Code walkthrough" width="100%" />
 
 ## Code walkthrough
 
@@ -823,6 +845,10 @@ SELECT status, report FROM model_training_runs ORDER BY id DESC;
 | `GET /api/model/status` | Local classifier/training status |
 | `GET /api/model/papers/:id` | A paper's learning job |
 | `POST /api/model/train` | Retrain from eligible stored labels |
+
+<br/>
+
+<img src="docs/images/section-operate.svg" alt="Verification and development" width="100%" />
 
 ## Verification and development
 

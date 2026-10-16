@@ -75,7 +75,7 @@ def train_reviewed(reviews):
       'splitHashes':{name:__import__('hashlib').sha256(json.dumps(split,sort_keys=True).encode()).hexdigest() for name,split in [('legacyTest',heldout),('validation',validation),('benchmark',benchmark)]},
       'evaluationKind':'Frozen original holdout; separate validation selection and 48-topic synthetic benchmark',
       'limitations':'Synthetic topic classification only; not faculty-validated, question correctness, difficulty or language-model training. Semantic overlap between related topics can remain.'}
-    best['dataSource']='Original plus balanced curated training topics and accepted LLM/faculty labels; validation and test records excluded'
+    best['dataSource']='Original plus balanced curated training topics and eligible local/faculty labels; validation and test records excluded'
     bloom,bloom_report=train_bloom(reviews)
     best['bloomModel']=bloom
     report['bloomEvaluation']=bloom_report

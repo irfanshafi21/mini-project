@@ -873,5 +873,133 @@
     "benchmark": "14ddd09adbc521822fa53c0766f384edd892a0e869da221ad67850a3a75f79cf"
   },
   "evaluationKind": "Frozen original holdout; separate validation selection and 48-topic synthetic benchmark",
-  "limitations": "Synthetic topic classification only; not faculty-validated, question correctness, difficulty or language-model training. Semantic overlap between related topics can remain."
+  "limitations": "Synthetic topic classification only; not faculty-validated, question correctness, difficulty or language-model training. Semantic overlap between related topics can remain.",
+  "bloomEvaluation": {
+    "trainingExamples": 36,
+    "testExamples": 24,
+    "accuracy": 1.0,
+    "predictions": [
+      {
+        "text": "Name the basic components of file storage.",
+        "label": "K1",
+        "predicted": "K1"
+      },
+      {
+        "text": "Recall the meaning of CPU instruction processing.",
+        "label": "K1",
+        "predicted": "K1"
+      },
+      {
+        "text": "What is matrix operations?",
+        "label": "K1",
+        "predicted": "K1"
+      },
+      {
+        "text": "Match the term for data security with its definition.",
+        "label": "K1",
+        "predicted": "K1"
+      },
+      {
+        "text": "Illustrate file storage using a familiar example.",
+        "label": "K2",
+        "predicted": "K2"
+      },
+      {
+        "text": "Interpret the meaning of CPU instruction processing in context.",
+        "label": "K2",
+        "predicted": "K2"
+      },
+      {
+        "text": "Compare the features of matrix operations to explain their differences.",
+        "label": "K2",
+        "predicted": "K2"
+      },
+      {
+        "text": "Classify examples of data security by their properties.",
+        "label": "K2",
+        "predicted": "K2"
+      },
+      {
+        "text": "Utilize file storage to calculate the required output for given inputs.",
+        "label": "K3",
+        "predicted": "K3"
+      },
+      {
+        "text": "Make use of CPU instruction processing to complete the specified task.",
+        "label": "K3",
+        "predicted": "K3"
+      },
+      {
+        "text": "Construct a solution using the supplied method of matrix operations.",
+        "label": "K3",
+        "predicted": "K3"
+      },
+      {
+        "text": "Develop the result by executing the known procedure for data security.",
+        "label": "K3",
+        "predicted": "K3"
+      },
+      {
+        "text": "Distinguish the assumptions responsible for different outcomes in file storage.",
+        "label": "K4",
+        "predicted": "K4"
+      },
+      {
+        "text": "Compare the internal structures of CPU instruction processing and explain their relationships.",
+        "label": "K4",
+        "predicted": "K4"
+      },
+      {
+        "text": "Inspect the faulty result of matrix operations to locate its cause.",
+        "label": "K4",
+        "predicted": "K4"
+      },
+      {
+        "text": "Categorize the components of data security and determine their dependencies.",
+        "label": "K4",
+        "predicted": "K4"
+      },
+      {
+        "text": "Recommend the most suitable approach to file storage and support your decision.",
+        "label": "K5",
+        "predicted": "K5"
+      },
+      {
+        "text": "Assess the quality of CPU instruction processing against the supplied requirements.",
+        "label": "K5",
+        "predicted": "K5"
+      },
+      {
+        "text": "Criticize the proposed approach to matrix operations using explicit criteria.",
+        "label": "K5",
+        "predicted": "K5"
+      },
+      {
+        "text": "Compare alternatives for data security and judge which best satisfies the constraints.",
+        "label": "K5",
+        "predicted": "K5"
+      },
+      {
+        "text": "Propose an original architecture for file storage.",
+        "label": "K6",
+        "predicted": "K6"
+      },
+      {
+        "text": "Formulate a novel method for CPU instruction processing and describe its construction.",
+        "label": "K6",
+        "predicted": "K6"
+      },
+      {
+        "text": "Develop a new system for matrix operations with a coherent design.",
+        "label": "K6",
+        "predicted": "K6"
+      },
+      {
+        "text": "Build an original model for data security rather than executing an existing method.",
+        "label": "K6",
+        "predicted": "K6"
+      }
+    ],
+    "limitations": "Small synthetic Bloom task benchmark with shared wording templates; overlapping verbs require contextual review. Not educational-quality accuracy."
+  }
 }

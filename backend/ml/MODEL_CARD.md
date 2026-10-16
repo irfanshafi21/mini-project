@@ -1,45 +1,28 @@
-# Local syllabus question model — version 1
+# Our local question-generation ML system
 
-This is a small **trained topic-type classifier plus a template-based question generator**. It is not a newly trained neural language model and does not match the expressive range of Groq's hosted LLM. Local inference uses JavaScript on the CPU, without API keys, cloud calls or Python at runtime.
+No pretrained language model or external AI service is used. Python trains our own topic-type and Bloom-task Naive Bayes classifiers; JavaScript performs inference from the saved weights. Question writing is constrained composition from authored grammars, curated objective facts and numerical factories. It is not a learned free-form neural language model.
 
-## How it was built
+## Data and measured results
 
-1. Hand-author and label 64 example topics as `concept`, `process`, `comparison` or `numerical`.
-2. Split by unique topic with seed 21: 48 training topics and 16 held-out test topics. No overlap.
-3. Extract word tokens and character trigrams.
-4. Train multinomial Naive Bayes with add-one smoothing and learned class priors.
-5. Save the learned probabilities to `model.json`; `localModel.js` performs inference.
-6. The predicted topic family chooses a pool of eight authored question patterns. Java supplies marks and requested difficulty; pattern ordering provides a heuristic complexity preference, not a validated difficulty prediction.
-7. Extract topic/unit headings from PDF/TXT and spread questions across topics. Store normalised question hashes per subject and syllabus fingerprint to exclude previous outputs.
+The bundled topic model uses 176 curated training examples, with a separate 32-topic validation set for choosing feature settings. It scores 13/16 (81.25%) on the original synthetic topic holdout and 47/48 (97.92%) on the expanded synthetic benchmark. The Bloom model starts with 36 authored training examples and scores 24/24 on a small synthetic holdout with shared wording templates. These figures measure classification only. They do not measure question correctness, syllabus relevance, realistic difficulty or faculty acceptance.
 
-## Evaluation
+## Generation and bounds
 
-See `evaluation.json` for exact predictions, confusion matrix and macro F1. The initial held-out classification accuracy is **13/16 = 81.25%**, on a small synthetic benchmark. This is **not 81.25% question correctness**, syllabus relevance, examination suitability, or difficulty accuracy. No faculty-reviewed educational evaluation has been completed. More real labelled topics and independently reviewed generated papers are needed before academic deployment.
+Java plans marks/difficulty slots. Extracted syllabus topics produce candidate tasks scoped to marks and the requested K1–K6 allocation. Learned Bloom predictions rank candidates. Opening verbs must match the college list. MCQ/blank generation requires supported checked facts or numerical factories; unavailable K/mark combinations fail clearly. Repetition is checked through normalised hashes and known signatures, with a 20% historical pattern budget rounded down. This is a finite candidate system, not an unlimited paraphrase model.
 
-Automated API tests additionally check multi-unit bank filtering, repeat-upload novelty, inferred save units, no-save behaviour and duplicate-safe saving. These are software checks, not learning metrics.
+## Training after generation
 
-## Train again
+Locally generated examples can become pseudo-labelled training records when structural checks pass and the model agrees with the assigned K level. Manual/faculty examples require their own review path. New local training excludes historical cloud-labelled records. Held-out rows and conflicting labels are excluded. Candidates activate only when the configured classification checks do not regress; the previous model otherwise remains active.
 
-From the repository root, with Python 3 installed:
+Self-training is not independent validation and cannot guarantee improving accuracy. Classifier agreement is not proof of correct subject knowledge. Real faculty-labelled data, a separate real-question evaluation set and periodic question-quality audits remain necessary. The runtime model is in ignored `.runtime/active-model.json`; training reports are stored in PostgreSQL.
 
-```powershell
-python backend/ml/train.py
-```
+## Files
 
-Training uses only Python's standard library. All training/test records, weights and evaluation results are checked into this folder for reproducibility. Restart the backend after retraining so it reloads weights.
+- `dataset.json`, `supplemental.json`: topic train/validation/test records.
+- `bloom-dataset.json`, `bloom-verbs.json`: cognitive-task examples and college verbs.
+- `train_reviewed.py`: current balanced trainer and evaluation/promotion inputs.
+- `train_bloom.py`: Bloom training implementation.
+- `model.json`, `bloom-model.json`, `evaluation.json`: locally trained weights and reproducible synthetic evaluation.
+- `train.py`: underlying topic feature extraction and baseline trainer. Running its command-line entry point rebuilds the smaller original baseline, not the expanded current model.
 
-For real faculty labels, create a JSON file with an `examples` array of `{ "topic": "...", "label": "concept" }` records and run:
-
-```powershell
-python backend/ml/train.py --dataset faculty-topics.json
-```
-
-Use the four supported labels and at least eight unique topics per class. Keep topics from one source group together in a separate external evaluation when assessing generalisation; the simple CLI split is topic-disjoint, not institution-disjoint. Do not repeatedly tune against the same final test set.
-
-## Limits and repetition
-
-There are eight candidate texts per distinct extracted topic. A repeated local-mode upload cannot reuse a previously returned normalised question text for that subject and syllabus while its database history remains intact. No finite generator can promise unlimited new questions. Exhaustion returns HTTP 409 instead of recycling questions or appending meaningless random identifiers. Concurrent conflicts also return 409 for a fresh attempt. API providers are optional alternatives; this local novelty guarantee applies to local mode.
-
-Unit parsing recognises Unit 1–5 and Unit I–V. Unlabelled content defaults to Unit 1; verify and edit bank entries if the document uses another structure. Topic parsing is heuristic. Questions can be generic, awkward, or incorrectly categorised. Faculty must review them. Bloom-level modelling is not implemented in this stage.
-
-Generation history contains hashes and timestamps, not question-bank rows. Choosing No in the save popup leaves the question bank unchanged, but consumes those variations to prevent repetition on the next upload.
+No Python libraries outside the standard library are required.

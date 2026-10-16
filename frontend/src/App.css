@@ -384,3 +384,8 @@ textarea { resize: vertical; }
 .question-card h3 { white-space:pre-line; }
 .objective-editor { grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px; }
 @media print { .paper-questions li { padding:6px 0!important;border:0!important; } .paper-sheet { padding:12px; } }
+
+.learning-review { margin:18px 0; }
+.learning-question {padding:16px 0;display:grid;gap:12px;border-bottom:1px solid #dce8f2;}
+.learning-question input[type=checkbox] {width:auto;margin-right:8px;}
+@media print {.learning-review{display:none!important;}}

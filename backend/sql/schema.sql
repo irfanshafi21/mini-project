@@ -101,3 +101,9 @@ CREATE OR REPLACE VIEW subject_storage AS SELECT name AS subject,
 ALTER TABLE questions ADD COLUMN IF NOT EXISTS question_type TEXT NOT NULL DEFAULT 'SHORT' CHECK(question_type IN ('SHORT','MCQ','FILL_BLANK'));
 ALTER TABLE questions ADD COLUMN IF NOT EXISTS options JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE questions ADD COLUMN IF NOT EXISTS answer TEXT NOT NULL DEFAULT '';
+
+-- Unassigned papers/history do not create academic subjects.
+ALTER TABLE saved_papers ALTER COLUMN subject DROP NOT NULL;
+ALTER TABLE syllabus_history DROP CONSTRAINT IF EXISTS syllabus_history_pkey;
+ALTER TABLE syllabus_history ALTER COLUMN subject DROP NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_syllabus_history_scope ON syllabus_history(subject,syllabus_hash,question_hash) NULLS NOT DISTINCT;

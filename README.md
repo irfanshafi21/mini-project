@@ -1,661 +1,325 @@
 <div align="center">
 
-<img src="docs/images/banner.png" alt="Question Bank — syllabus to structured examination papers" width="100%" />
+<img src="docs/images/banner.png" alt="Question bank and examination paper generator" width="100%" />
 
-# 📘 Question Bank & Paper Generator
+# Question Bank & Paper Generator
 
-### From a syllabus to a structured examination paper
+### Organise questions. Build balanced papers. Keep everything local.
 
-Register subjects, build your question library, and create papers with a clear marks pattern.
+A college examination workspace built with **React + Vite**, **Node.js + Express**, **Java**, **PostgreSQL**, and our own **trained ML classifiers**.
 
-![React](https://img.shields.io/badge/React-Frontend-61DAFB?style=flat-square&logo=react&logoColor=222222)
-![Vite](https://img.shields.io/badge/Vite-Development-646CFF?style=flat-square&logo=vite&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-Backend-339933?style=flat-square&logo=nodedotjs&logoColor=white)
-![Express](https://img.shields.io/badge/Express-REST_API-353535?style=flat-square&logo=express&logoColor=white)
-![Java](https://img.shields.io/badge/Java-Paper_Engine-E58B35?style=flat-square)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=flat-square&logo=postgresql&logoColor=white)
+![React](https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white)
+![Node](https://img.shields.io/badge/Node.js-Backend-43853d?logo=nodedotjs&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-336791?logo=postgresql&logoColor=white)
+![ML](https://img.shields.io/badge/ML-Trained_locally-2b7884)
 
-**Light blue interface · Warm accents · Subject-based collections · PDF / TXT export**
-
-[Screenshots](#a-look-inside) · [Walkthrough](#visual-walkthrough) · [Features](#features) · [Workflow](#workflow) · [Architecture](#architecture) · [Setup](#local-setup) · [Paper rules](#paper-rules) · [Troubleshooting](#troubleshooting)
+[Features](#what-you-can-do) · [Screenshots](#a-look-inside) · [Run locally](#run-on-your-laptop) · [Our model](#how-our-own-model-works) · [College hosting](#moving-to-the-college-server)
 
 </div>
 
----
+> **Current generation is fully local:** no hosted AI provider, external AI key, Ollama installation, or pretrained language-model download is needed. The project uses trained classifiers, authored task grammars, checked objective facts, and numerical problem generators. It is not a neural LLM trained from scratch.
 
-> [!TIP]
-> **Already installed?** Keep PostgreSQL running. Start `npm.cmd start` in `backend` and `npm.cmd run dev` in `frontend`. Open the Local URL printed by Vite.
+## What you can do
+
+| Workspace | Purpose |
+| --- | --- |
+| **Question bank** | Add, search, edit, soft-delete and restore questions; filter by subject, unit, difficulty, marks and K level where available. |
+| **Subjects** | Register subjects explicitly, browse their questions and view question counts. Each registered subject has its own PostgreSQL partition. |
+| **Choose questions yourself** | Select the exact bank questions to include in a paper. |
+| **Generate from question bank** | Select saved questions automatically using marks, units, difficulty and Bloom allocation. |
+| **Upload a syllabus** | Upload a readable PDF or TXT file and generate new questions locally. |
+| **Stored papers** | Retrieve saved paper snapshots, edit their contents and download them again. |
+| **Exports** | Download a PDF or TXT paper, or print from the browser. Student exports omit teacher answer fields. |
+
+The interface uses light blue and warm neutral colours, responsive cards, aligned mark fields, six K-level controls and live count summaries. No application login is included.
 
 ## A look inside
 
-Real screenshots from the running application. The sample collection contains a Computer Organisation question generated from a syllabus.
-
 <table>
-<tr>
-<td width="50%" valign="top">
-<h3>📚 Question library</h3>
-<p>Search, filter and manage questions by subject, unit and difficulty.</p>
-<img src="docs/images/question-bank.jpg" alt="Question bank with a saved Computer Organisation question, statistics and filters" width="100%" />
-</td>
-<td width="50%" valign="top">
-<h3>🗂️ Subject overview</h3>
-<p>See your collection totals, marks breakdown and generated-paper count.</p>
-<img src="docs/images/subject-overview.jpg" alt="Subject overview with stored question totals and counts for each mark value" width="100%" />
-</td>
-</tr>
+<tr><td width="50%"><strong>Question library</strong><br/><img src="docs/images/question-bank.jpg" alt="Question bank with filters and question cards" /></td><td width="50%"><strong>Subject overview</strong><br/><img src="docs/images/subject-overview.jpg" alt="Subject question counts" /></td></tr>
+<tr><td colspan="2"><strong>Marks and Bloom allocation</strong><br/><img src="docs/images/local-bloom-builder.png" alt="Aligned mark counts and K1 to K6 allocations" width="100%" /></td></tr>
 </table>
 
-## Visual walkthrough
+Screenshots illustrate the interface; stored data and totals vary by installation.
 
-<table>
-<tr>
-<td width="33%" align="center"><h3>01 · Organise</h3><p>Register a subject and build its question collection.</p></td>
-<td width="34%" align="center"><h3>02 · Configure</h3><p>Choose your source, marks pattern and difficulty mix.</p></td>
-<td width="33%" align="center"><h3>03 · Review</h3><p>Check the paper, then print or download it.</p></td>
-</tr>
-</table>
-
-### A marks pattern you can see
-
-The builder shows live question counts, Section A–D labels and subtotals. This screenshot uses **2 + 2 + 2 + 1 = 7 questions**, totalling **50 marks**.
-
-<details>
-<summary><strong>Open the paper-builder screenshot</strong></summary>
-
-<img src="docs/images/paper-builder.jpg" alt="Syllabus paper builder configured for seven questions totalling fifty marks" width="720" />
-
-</details>
-
-### From collection to examination paper
-
-The following is a real **2-mark bank paper** produced from the saved sample question. Larger papers use the same section layout.
-
-<p align="center">
-<img src="docs/images/paper-preview.jpg" alt="Real Computer Organisation paper preview with Section A and a two-mark question" width="520" />
-</p>
-
-> [!TIP]
-> **Try the full flow:** register a subject → upload a syllabus → generate → choose Yes in the save popup → open the question bank. Choose No to keep a preview without saving questions.
-
----
-
-## Features
-
-| Workspace | Available features |
-| :--- | :--- |
-| **Subjects** | Register subjects and view stored-question totals, counts by marks, and paper-generation totals |
-| **Question bank** | Add, edit, search, filter and paginate questions; soft-delete and restore |
-| **Paper sources** | Select existing questions or upload a syllabus to generate new questions |
-| **Marks pattern** | Set counts for 2-, 5-, 10- and 16-mark questions, with a live question total and marks subtotal |
-| **Difficulty mix** | Configure easy, medium and hard percentages |
-| **Save confirmation** | Choose Yes or No after syllabus generation before adding questions to the bank |
-| **Paper preview** | Group questions into Sections A–D and review the final paper |
-| **Exports** | Download TXT or use the browser's Print / PDF option |
-
-The website has no login or user profile. Subject registration means adding an academic subject, not creating a user account. The default syllabus engine is now a trained local topic classifier with authored question patterns. Groq/Gemini remain optional alternatives. See the model card for the distinction from a neural language model.
-
-## Workflow
-
-```mermaid
-flowchart LR
-    A[Register a subject] --> B{Choose paper source}
-    B --> C[Saved question bank]
-    B --> D[Upload syllabus]
-    C --> E[Set marks and difficulty]
-    D --> E
-    E --> F[Generate paper]
-    F --> G[Review sections]
-    G --> H[Print / PDF or TXT]
-```
-
-### 1. Register and organise
-
-Open **Subjects → Add subject**, enter the name, and save. The subject appears immediately with zero questions. Names are normalised, duplicate subjects are rejected, and other subject fields use dropdowns.
-
-Click a subject to see its overview. **View question bank** opens that subject's filtered collection. Deleting the last question does not delete the subject.
-
-### 2. Choose your source
-
-| Your question bank | Upload a syllabus |
-| :--- | :--- |
-| Select a registered subject | Select a registered subject; units are inferred from headings |
-| Optionally filter by unit and topic | Upload a PDF or UTF-8 TXT syllabus |
-| Java selects eligible stored questions | Java plans slots; the local ML-assisted generator constructs questions |
-| Existing entries are reused | New questions are saved only after confirmation |
-
-### 3. Configure, review and export
-
-Enter total marks, set question counts by marks, and choose the difficulty mix. Generate the paper, review its content, then select **Download TXT** or **Print / PDF**.
-
-> [!NOTE]
-> After generating a syllabus paper, a popup asks whether to add its questions to the bank. Yes saves to the selected subject and inferred units; No keeps the preview without inserting questions. Existing active text in that same subject and unit is skipped. The original uploaded file is not stored. Review the saved questions for academic correctness.
-
-## Architecture
+## Everyday workflow
 
 ```mermaid
 flowchart TD
-    UI[React interface] -->|HTTP JSON| API[Node.js + Express]
-    API -->|Read subjects and questions| DB[(PostgreSQL)]
-    API -->|Plan slots or select questions| JAVA[Java PaperEngine]
-    API --> FILE[Validate PDF / TXT upload]
-    FILE --> PROVIDER[Groq extracted text / Gemini document]
-    JAVA --> VALIDATE[Validate generated count and content]
-    PROVIDER --> VALIDATE
-    VALIDATE --> CHOICE{Save questions?}
-    CHOICE -->|Yes - insert questions| DB
-    CHOICE -->|No - preview only| PREVIEW
-    JAVA --> PREVIEW[Sectioned paper preview]
-    VALIDATE --> PREVIEW
-    PREVIEW --> EXPORT[Print / PDF and TXT]
+  A[Open the application] --> B{Choose a source}
+  B --> C[Select bank questions manually]
+  B --> D[Automatic bank selection]
+  B --> E[Upload syllabus PDF or TXT]
+  D --> F[Set marks, units, difficulty and K counts]
+  E --> G[Extract topic and unit text locally]
+  G --> H[Our trained classifiers and constrained generator]
+  F --> I[Validate and assemble paper]
+  H --> I
+  C --> I
+  I --> J[Save paper snapshot automatically]
+  J --> K[Review or edit paper]
+  K --> L[Download PDF, TXT or print]
+  K --> M[Optional Add to question bank button]
+  J --> N[Local checks and classifier retraining]
 ```
 
-**Bank paper:** React → Express → PostgreSQL pool → Java selection → preview.
+Subjects are created **only** through **Subjects → Add subject**. Choosing an unassigned syllabus paper does not create a subject. Before adding its questions to the bank, select an existing destination subject.
 
-**Syllabus paper:** React → registered-subject check → Java slots → upload processing → local generation → repeat-history check → preview → optional confirmed save.
+## Marks, question counts and sections
 
-The frontend calls `VITE_API_URL`, normally `http://localhost:4000/api`. Express owns HTTP, database access, validation and provider integration. Java owns marks planning and question selection, using JDK source-file launch as a subprocess. Keep `core` beside `backend`; there is no separate Java server or Maven requirement.
+- Supported question values: **1, 2, 5, 10 and 16 marks**.
+- Enter the quantity required for each mark value. An unused category stays at **0**.
+- The question total updates live: two 2-mark questions and two 5-mark questions produce **4 questions**, worth **14 marks**.
+- The selected questions must equal the entered total marks. Papers support at most **50 questions** and **1,000 marks**.
+- With all category counts at zero, Java attempts an automatic denomination plan.
+- The final paper groups the selected mark values into consecutive sections, starting with **Section A**.
+- One-mark questions support **multiple choice** or **fill in the blanks**. Checked MCQs have four distinct options and one recorded correct answer.
 
-### Technology choices
+## College Bloom mapping
 
-| Choice | Justification |
-|---|---|
-| React | Reusable components and state for forms, filters, modals and previews |
-| Vite | Fast development feedback and a straightforward production build |
-| Node.js | Asynchronous HTTP, database and subprocess integration |
-| Express | A small REST API with clear routes and middleware |
-| PostgreSQL | Persistent relational data, foreign keys, constraints and indexes |
-| Java | A dedicated, independently verifiable marks and selection engine |
-| Local ML | CPU inference using learned topic-type probabilities and authored question patterns; no API key |
-| Optional external AI | Groq/Gemini can still be selected in backend configuration |
+| Level | Cognitive task | Example opening words from the college chart |
+| --- | --- | --- |
+| **K1 — Remember** | Recall facts, definitions or terminology | Define, List, Name, Recall |
+| **K2 — Understand** | Explain meaning or illustrate understanding | Explain, Summarize, Illustrate, Outline |
+| **K3 — Apply** | Apply a method to an example or supplied data | Apply, Solve, Construct, Utilize |
+| **K4 — Analyze** | Examine causes, components or relationships | Analyze, Examine, Distinguish, Inspect |
+| **K5 — Evaluate** | Judge against criteria and justify a decision | Evaluate, Assess, Judge, Justify |
+| **K6 — Create** | Produce a design, adaptation or original proposal | Design, Create, Develop, Propose |
 
----
+The full college word lists are in [bloom-verbs.json](backend/ml/bloom-verbs.json). A requested K level must use an allowed opening word. The task grammar also changes its cognitive demand; merely replacing the first verb would be insufficient.
 
-## Local setup
+For every nonzero mark count, distribute that count across **K1–K6**. For example, **10 two-mark questions** can contain **2 K1 + 5 K2 + 3 K3 = 10**. An allocation of 2 + 5 + 4 totals 11 and is rejected.
+
+K level and difficulty are separate requirements. Bank selection satisfies both independently and reports a shortfall instead of silently substituting another level. Unsupported combinations, such as one-mark K6 questions without suitable bank content, can be rejected. Local objective generation covers curated recall facts and supported numerical application tasks; it does not fabricate higher-level MCQ answers.
+
+## How our own model works
+
+### 1. Extract the syllabus
+
+The backend reads text from a PDF or TXT file, removes common headings and page formatting, and extracts topics with Unit 1–5 or Roman-numeral unit headings. Scanned image PDFs need OCR before upload. The file limit is **5 MB**, and extracted text must contain 30–100,000 characters.
+
+### 2. Classify topics with trained ML
+
+Our multinomial Naive Bayes topic model learns four classes: **concept**, **process**, **comparison** and **numerical**. Its features include words, character trigrams and optional bigrams. Python trains the weights; JavaScript loads the saved probabilities and performs inference locally.
+
+A separate six-class Naive Bayes model learns **K1–K6** from complete question wording. It uses word and bigram context because opening verbs can overlap between Bloom levels.
+
+### 3. Generate within controlled question patterns
+
+Java plans marks and difficulty slots. The generator combines extracted syllabus topics with authored, mark-bounded tasks. For explicit K allocations, it uses the corresponding cognitive task grammar and ranks candidates using the trained Bloom classifier. Checked fact collections supply objective questions; supported numerical factories generate inputs, correct answers and variations.
+
+A two-mark question asks a focused task. Longer questions request appropriately expanded reasoning, examples or designs. Some general application tasks explicitly ask the student to supply a small example; they are not solved numerical questions with hidden inputs.
+
+**What is learned:** topic and cognitive-task classification probabilities. **What is authored:** question grammars, mathematical factories and objective fact records. The system does not learn unrestricted subject knowledge simply by generating a paper.
+
+### 4. Control repetition
+
+History is scoped to the subject and normalised syllabus fingerprint. Generation prefers unused text and checks known normalised question patterns. At most **20%** historical repeats are permitted, rounded down; papers with fewer than five questions allow zero. Supported numerical variants change their values, while still counting as the same underlying pattern.
+
+The candidate pool is finite. If it cannot satisfy the requested marks/K counts within the repeat budget, generation returns a clear shortfall. This is not a universal semantic-paraphrase detector. Deliberate manual reuse of bank questions is allowed.
+
+### 5. Retrain locally
+
+New saved papers enter a database-backed learning queue. Local validation and agreement with the Bloom classifier determine which locally generated examples are eligible for self-training. Faculty-labelled examples remain supported. Historical cloud-labelled records are excluded from new local training and candidate retrieval.
+
+The Python trainer excludes held-out records and conflicting labels, evaluates the candidate, and activates it only when the configured benchmark checks do not regress. Training reports are saved in PostgreSQL; active weights are stored under ignored `backend/.runtime/`. Temporary per-run training files are removed after use.
+
+**Self-training labels are not independent ground truth.** Agreement and structural checks do not prove factual accuracy or automatically guarantee improvement. Faculty-reviewed data and independently reviewed papers are needed to measure educational quality.
+
+## Evaluation: what the numbers mean
+
+The bundled classifier was rebuilt locally from **176 curated topic training examples**:
+
+| Check | Result | Interpretation |
+| --- | --- | --- |
+| Original frozen topic holdout | **13/16 — 81.25%** | Small synthetic topic classification test |
+| Expanded topic benchmark | **47/48 — 97.92%** | Separate synthetic topic benchmark |
+| Bloom task holdout | **24/24 — 100%** | Small synthetic test with shared wording templates |
+
+These are **classification scores**, not percentages of correct generated exam questions. The Bloom result particularly benefits from repeated wording structures. They do not establish real-college question quality, factual correctness, difficulty accuracy or a deployment guarantee. Runtime results can change after retraining. See [evaluation.json](backend/ml/evaluation.json) and [the model card](backend/ml/MODEL_CARD.md).
+
+## Where the data is stored
+
+| Data | Storage | When it is saved |
+| --- | --- | --- |
+| Registered subjects | `subjects` | Add subject action |
+| Reusable bank questions | `questions` and subject partitions | Manual question entry or **Add to question bank** |
+| Complete generated papers | `saved_papers.paper` JSON | Automatically after a successful paper |
+| Repetition history | `syllabus_history` | Syllabus generation |
+| Training examples | `reviewed_examples` | Eligible local checks or faculty labels |
+| Learning queue and results | `automatic_learning_jobs`, `model_training_runs` | Background local training |
+
+Saving a paper does **not** automatically add its questions to the reusable bank. Use the post-generation **Add to question bank** button; there is no save-confirmation popup. Training records and generated-question counters are also distinct from bank question rows.
+
+A subject gets a safe, generated PostgreSQL **LIST partition** beneath the shared `questions` parent. Queries against the parent retrieve all subjects. The `subject_storage` view shows partition names. Editing a saved paper changes its snapshot, not the original bank question.
+
+## Run on your laptop
 
 ### Prerequisites
 
-| Tool | Requirement | Official download |
-| :--- | :--- | :--- |
-| Node.js | 22.13 or newer supported LTS | [Node.js](https://nodejs.org/en/download) |
-| Java | JDK 17 or newer | [Adoptium](https://adoptium.net/temurin/releases/) |
-| PostgreSQL | Running local server; pgAdmin is useful | [PostgreSQL](https://www.postgresql.org/download/windows/) |
-| VS Code | Editor with integrated terminals | [VS Code](https://code.visualstudio.com/download) |
-| Git | Optional when downloading a ZIP | [Git](https://git-scm.com/downloads) |
+| Software | Requirement |
+| --- | --- |
+| Node.js and npm | Node 22.12+ or a version compatible with the installed Vite package |
+| PostgreSQL | 15+; keep its database service running |
+| Java JDK | 17+; `java` must be available in the terminal |
+| Python | Python 3; standard library only for classifier training |
+| VS Code | Convenient editor and terminals |
 
-PostgreSQL's optional Stack Builder extensions are not needed. Remember the database password and port chosen during installation. Reopen VS Code after installing tools so PATH updates take effect.
+**No external AI key or model download is required.** PostgreSQL Stack Builder add-ons are optional for this project.
 
-### Step 1 — Get the project
+### 1. Create the database
 
-Download this repository's ZIP, extract it, and open the folder containing `backend`, `frontend`, `core` and `README.md` in VS Code. Alternatively:
+Open pgAdmin, connect to the PostgreSQL server, right-click **Databases → Create → Database**, and create **questionbank**.
 
-```powershell
-git clone https://github.com/irfanshafi21/mini-project.git
-cd mini-project
-```
+The backend needs the PostgreSQL user's password, which may differ from the pgAdmin master password.
 
-Check the installations in a terminal:
+### 2. Start the backend
 
-```powershell
-node --version
-npm.cmd --version
-java -version
-```
-
-### Step 2 — Create the database
-
-In pgAdmin connect to your local PostgreSQL server. Right-click **Databases → Create → Database**, name it `questionbank`, and save. Alternatively, open Query Tool on `postgres` and run once:
-
-```sql
-CREATE DATABASE questionbank;
-```
-
-Skip this if the database already exists. Tables are created by `db:init` below.
-
-### Step 3 — Configure the backend
-
-From the project root:
-
-```powershell
-Copy-Item backend/.env.example backend/.env
-```
-
-Edit **backend/.env**:
-
-```dotenv
-DATABASE_URL=postgresql://postgres:YOUR_POSTGRES_PASSWORD@localhost:5432/questionbank
-PORT=4000
-AI_PROVIDER=local
-GROQ_API_KEY=YOUR_GROQ_API_KEY
-GROQ_MODEL=openai/gpt-oss-20b
-```
-
-Replace both placeholders with your own credentials. URL-encode special characters in the database password. The exact filename is `.env`, directly inside `backend`.
-
-Local mode requires no API key; the key/model lines above are optional. For Groq mode, get your key from the [Groq Console](https://console.groq.com/keys). Select an account-available model supporting [strict structured outputs](https://console.groq.com/docs/structured-outputs). The documented model is configurable; provider availability and quota depend on your account.
-
-> [!IMPORTANT]
-> Keep the actual API key and database password in local `.env` only. Never upload `.env` to GitHub or put API keys in frontend variables.
-
-<details>
-<summary><strong>Optional: use Gemini instead of Groq</strong></summary>
-
-Set `AI_PROVIDER=groq` with `GROQ_API_KEY` and `GROQ_MODEL`, or set `AI_PROVIDER=gemini`, `GEMINI_API_KEY` and `GEMINI_MODEL` in the backend configuration. Choose a model available to your account. Gemini can receive the PDF directly; Groq receives extracted text. Keys are not interchangeable and there is no automatic provider fallback.
-
-</details>
-
-### Step 4 — Start the backend
-
-In Terminal 1, from the project root:
+Open a terminal at the repository root:
 
 ```powershell
 cd backend
-npm.cmd ci
+npm.cmd install
+Copy-Item .env.example .env
+```
+
+Edit `backend/.env`:
+
+```dotenv
+DATABASE_URL=postgresql://postgres:YOUR_DATABASE_PASSWORD@localhost:5432/questionbank
+PORT=4000
+```
+
+Replace the password locally; URL-encode special characters when used in a connection URL. Then run:
+
+```powershell
 npm.cmd run db:init
 npm.cmd start
 ```
 
-Keep this terminal open. Visit [localhost:4000/api/health](http://localhost:4000/api/health). Expected response:
+Check [the backend health endpoint](http://localhost:4000/api/health). It should return a healthy response. Keep this terminal running.
 
-```json
-{ "status": "ok" }
-```
+### 3. Start the frontend
 
-The startup message confirms the HTTP server started. Health checks PostgreSQL, not Java or an AI provider. `db:init` creates tables and applies the included migrations while preserving existing questions.
-
-### Step 5 — Start the frontend
-
-Open Terminal 2 at the project root:
+Open a second terminal at the repository root:
 
 ```powershell
 cd frontend
-npm.cmd ci
+npm.cmd install
+Copy-Item .env.example .env
 npm.cmd run dev
 ```
 
-Open the Local URL Vite prints, normally [localhost:5173](http://localhost:5173). If that port is occupied, use the next printed port. Do not launch `index.html` directly or use Live Server.
-
-<details>
-<summary><strong>Using a different backend address</strong></summary>
-
-Create `frontend/.env.local` and set:
+The frontend configuration is:
 
 ```dotenv
 VITE_API_URL=http://localhost:4000/api
 ```
 
-Change it to match your backend's host and port. Restart Vite after changing frontend configuration and restart Express after changing backend `.env`.
+Open the URL printed by Vite, usually [http://localhost:5173](http://localhost:5173). Restart the relevant server after changing its environment file.
 
-</details>
+### Subsequent starts
 
-### Starting again later
+Keep PostgreSQL running. Start `npm.cmd start` inside `backend` and `npm.cmd run dev` inside `frontend`. Installation is needed initially or when dependencies change. Run `db:init` after schema updates; it is designed to preserve existing records.
 
-Keep PostgreSQL running. Start these in separate terminals:
+Old Gemini/Groq/Ollama environment variables are no longer read by generation or learning. Keep `.env` files private and outside Git.
 
-| Backend folder | Frontend folder |
-| :--- | :--- |
-| `npm.cmd start` | `npm.cmd run dev` |
-
-Press **Ctrl+C** to stop each server. Run `npm.cmd ci` after dependency changes and `npm.cmd run db:init` after schema updates.
-
-## Local model training and test report
-
-The default engine runs entirely on the CPU and makes no provider request. It is a **trained multinomial Naive Bayes topic classifier plus template-based question generation**, not a newly trained neural LLM. A learned topic family selects authored patterns; Java supplies marks and target difficulty. This practical prototype can produce generic questions and still requires faculty review.
-
-| Evaluation item | Result |
-|---|---:|
-| Hand-authored synthetic topic examples | 64 |
-| Training / held-out test | 48 / 16 |
-| Topic overlap | 0 |
-| Correct classifications | 13 / 16 |
-| Held-out topic classification accuracy | 81.25% |
-| Macro F1 | 0.8026 |
-
-These results do not measure academic correctness, question-generation accuracy, or difficulty accuracy. No faculty-reviewed quality score is claimed. [Model card](backend/ml/MODEL_CARD.md), [dataset](backend/ml/dataset.json), [learned weights](backend/ml/model.json), and [evaluation details](backend/ml/evaluation.json) are included.
-
-Train reproducibly from the project root with Python 3 (standard library only):
-
-```powershell
-python backend/ml/train.py
-```
-
-For real faculty-labelled topic examples, use `python backend/ml/train.py --dataset faculty-topics.json`; see the model card for format and limits. Restart the backend after retraining. Python is not needed for inference.
-
-Repeated local uploads exclude previously returned question text using PostgreSQL hash history. There are eight candidate patterns per extracted topic. When no unused variations remain, the app returns a clear error instead of pretending unlimited unique generation is possible. Choosing No consumes the generation variations but leaves the question bank unchanged. The original file and question text are not stored in the history table. Bloom-level modelling is intentionally deferred.
-
-## Paper rules
-
-### Choose any combination of units
-
-In bank mode, use the unit checkboxes to select one, two, three or more units. All units clears the specific selection. The API accepts `units: [1, 3, 5]` and excludes questions from other units. Legacy singular `unit` requests are still supported.
-
-### Live question counts
-
-**Number of questions** starts at **0** and is read-only. It updates immediately from the four mark counts: 2 two-mark questions show 2; adding 2 five-mark questions shows 4. Each mark card shows its section and subtotal.
-
-| Section | Marks per question | Example count | Subtotal |
-| :--- | ---: | ---: | ---: |
-| A | 2 | 2 | 4 |
-| B | 5 | 2 | 10 |
-| C | 10 | 2 | 20 |
-| D | 16 | 1 | 16 |
-| **Total** | | **7 questions** | **50 marks** |
-
-- With a custom pattern, `0` skips that mark category.
-- All four counts at `0` request automatic allocation.
-- Custom subtotals must equal Total marks. The limit is 50 questions and 1,000 marks.
-- Automatic syllabus planning uses 2, 5, 10 and 16 marks. Without an explicit API count it chooses the smallest feasible question count.
-- Bank mode needs enough eligible stored questions and never repeats an entry within one paper.
-- Empty sections are omitted. Question numbering continues across sections in preview, print and TXT.
-
-Legacy API requests omitting `markCounts` retain the earlier algorithms. Existing questions with other mark values can still be browsed and appear in legacy papers.
-
-### Difficulty mix
-
-Easy, medium and hard percentages must sum to **100**. Syllabus planning applies them to question counts, rounded using largest remainders. Bank selection treats difficulty as a target constrained by available questions and marks.
-
-### Uploads and save confirmation
-
-PDF or UTF-8 TXT uploads must be non-empty and no larger than **5 MB**. Groq extracts PDF text locally, limits the text to 100,000 characters, and rejects unreadable or scanned image-only PDFs. Apply OCR first or upload TXT. Extracted text is sent to Groq; Gemini mode sends the document to Google. Provider data policies also apply.
-
-After generating a syllabus paper, choose **Yes, add to question bank** or **No, preview only** in the popup. Generation itself does not insert questions. Yes sends the validated questions to the separate save API and inserts them under the selected subject and unit (1–5). No sends no save request. Local generation reads Unit 1–5 or I–V headings and saves each question to its inferred unit. Unlabelled content uses Unit 1. There is no destination-unit dropdown. Topic labels are normalised and limited to 60 characters. Existing active text in the same subject and unit is skipped, so retrying a save does not create duplicates. The batch insert is atomic. Generation counters count successful papers regardless of the save choice and are separate from actual stored-question totals.
-
-The save notice reports new entries and existing duplicates. The bank and subject totals refresh automatically. Syllabus references remain in the paper preview/TXT; the bank stores text, subject, unit, topic, subtopic, difficulty and marks. The uploaded file and full generated paper are not stored. Previous generations are not backfilled.
-
-## Subjects and database
-
-Click a subject card for its stored-question total, 2/5/10/16-mark breakdown, generated-question total and paper count. Other stored mark values are reported separately.
-
-Generation totals count question appearances across successful complete papers, including bank selections and syllabus generations. Reusing a question in a later paper counts again. Failed or incomplete generations do not increment counters. Tracking starts from the counter update; earlier activity cannot be reconstructed. The separate activity panel is hidden.
-
-| Table | Stored information |
-| :--- | :--- |
-| `subjects` | Registered names, creation timestamp and generation counters |
-| `questions` | Question ID, subject, unit, topic, subtopic, text, difficulty, marks, deletion state and timestamps |
-
-IDs begin at 101. Deletion is soft deletion so questions can be restored. A foreign key enforces registered subjects. Indexes support filters and prevent duplicate active text within a subject and unit.
-
-### Inspect data in pgAdmin
-
-Expand **Servers → your server → Databases → questionbank → Schemas → public → Tables**. Right-click a table and select **View/Edit Data → All Rows**. Refresh Tables after initialising the database.
-
-```sql
-SELECT * FROM subjects ORDER BY name;
-SELECT * FROM questions WHERE NOT is_deleted ORDER BY id;
-SELECT * FROM questions WHERE is_deleted ORDER BY deleted_at DESC;
-```
-
-## Project structure
+## Simple project structure
 
 ```text
 mini-project/
-├── README.md
-├── .gitignore
-├── core/
-│   └── src/
-│       └── PaperEngine.java       # Core marks, difficulty allocation and question selection
+├── frontend/
+│   ├── src/             React screens, shared UI, PDF/TXT utilities and CSS
+│   ├── public/          Favicon
+│   └── vite.config.js   Frontend development/build settings
 ├── backend/
-│   ├── .env.example
-│   ├── package.json
-│   ├── package-lock.json
-│   ├── requests.http             # API examples
-│   ├── scripts/init-db.js
-│   ├── sql/schema.sql
-│   ├── src/
-│   │   ├── app.js                 # Express application
-│   │   ├── server.js              # HTTP startup
-│   │   ├── db.js                  # PostgreSQL connection
-│   │   ├── javaCore.js            # Node → Java bridge
-│   │   ├── syllabusGenerator.js   # PDF text extraction, Groq/Gemini and output validation
-│   │   ├── validation.js
-│   │   ├── mapper.js
-│   │   ├── errors.js
-│   │   └── routes/
-│   │       ├── questions.js
-│   │       ├── subjects.js        # Create standalone subjects
-│   │       ├── stats.js
-│   │       ├── generate.js
-│   │       └── syllabus.js
-│   └── test/
-│       ├── groq.test.js
-│       ├── api.test.js
-│       ├── marks.test.js
-│       ├── javaCore.test.js
-│       └── syllabus.test.js
-└── frontend/
-    ├── .env.example
-    ├── package.json
-    ├── package-lock.json
-    ├── index.html
-    ├── vite.config.js
-    ├── eslint.config.js
-    ├── public/
-    └── src/
-        ├── main.jsx
-        ├── App.jsx                # Question bank and stored-paper interface
-        ├── SyllabusPaper.jsx      # Syllabus upload, generated preview and download
-        ├── App.css
+│   ├── src/             Express routes, local inference, validation and learning
+│   ├── ml/              Our datasets, trained probabilities and Python trainers
+│   ├── sql/schema.sql   Database tables, partitions and migrations
+│   ├── scripts/         Database initialisation
+│   └── test/            API, Java, ML and generation checks
+├── core/src/
+│   └── PaperEngine.java Java paper planning and selection
+├── docs/images/         README screenshots
+└── README.md
 ```
 
+React handles state, forms and rendering. Vite serves the frontend in development and produces its build. Express validates HTTP requests, calls Java/our local ML logic, and reads/writes PostgreSQL. The browser never connects directly to the database.
 
-Keep manifests, lockfiles and startup configuration. `node_modules` and `dist` are generated folders; do not edit or upload them.
+## Inspect data in pgAdmin
 
-## API reference
+Expand **Databases → questionbank → Schemas → public → Tables**. Right-click a table and choose **View/Edit Data → All Rows**. Use Query Tool for read-only inspection:
 
-Base address: `http://localhost:4000/api`.
-
-| Method | Path | Purpose |
-| :--- | :--- | :--- |
-| GET | `/health` | PostgreSQL health |
-| GET | `/stats` | Bank statistics and registered-subject counts |
-| POST | `/subjects` | Register a subject |
-| GET | `/subjects/:name/overview` | Subject totals, marks counts and generation counters |
-| GET | `/questions` | Filtered, searchable, paginated bank |
-| POST | `/questions` | Add a question |
-| GET | `/questions/:id` | Read a question |
-| PUT | `/questions/:id` | Edit a question |
-| DELETE | `/questions/:id` | Soft-delete a question |
-| GET | `/questions/deleted` | Deleted-question list |
-| POST | `/questions/undo` | Undo latest deletion |
-| POST | `/questions/:id/restore` | Restore a question |
-| POST | `/generate/questions` | Select matching stored questions |
-| POST | `/papers/generate` | Generate a bank paper through Java |
-| POST | `/papers/from-syllabus` | Generate and validate a syllabus preview |
-| POST | `/papers/save-syllabus` | Insert generated questions after confirmation |
-
-<details>
-<summary><strong>Example paper pattern</strong></summary>
-
-```json
-{
-  "subject": "COMPUTER_ORGANISATION",
-  "unit": 1,
-  "totalMarks": 50,
-  "count": 7,
-  "markCounts": { "2": 2, "5": 2, "10": 2, "16": 1 },
-  "split": { "easy": 40, "medium": 40, "hard": 20 }
-}
+```sql
+SELECT * FROM subjects ORDER BY name;
+SELECT * FROM subject_storage;
+SELECT id, subject, unit, marks, bloom_level, text
+FROM questions WHERE NOT is_deleted ORDER BY id DESC;
+SELECT id, title, created_at, paper
+FROM saved_papers WHERE NOT is_deleted ORDER BY id DESC;
+SELECT status, report FROM model_training_runs ORDER BY id DESC;
 ```
 
-For syllabus requests also send `fileName`, `mimeType` (`application/pdf` or `text/plain`) and base64 `data`. `count: 0` lets Java derive the count. Local generation includes `unit` on each question. To save after confirmation, POST `subject` and the generated `questions` array (including per-question `unit`) to `/papers/save-syllabus`; its response includes `savedToBank` and `alreadyInBank`. See `backend/requests.http` for other examples.
+## Useful API routes
 
-</details>
+| Method and route | Purpose |
+| --- | --- |
+| `GET /api/health` | API/database health |
+| `GET /api/questions` | List/filter bank questions |
+| `POST /api/subjects` | Register a subject |
+| `GET /api/subjects/:name/overview` | Subject overview |
+| `POST /api/papers/generate` | Automatic bank paper |
+| `POST /api/papers/manual` | Manual selection paper |
+| `POST /api/papers/from-syllabus` | Fully local syllabus generation |
+| `POST /api/papers/save-syllabus` | Explicitly add generated questions to bank |
+| `GET /api/papers/saved` | Search/list saved papers |
+| `GET /api/papers/saved/:id` | Retrieve a saved paper |
+| `PUT /api/papers/saved/:id` | Edit its snapshot |
+| `GET /api/model/status` | Local classifier/training status |
+| `GET /api/model/papers/:id` | A paper's learning job |
+| `POST /api/model/train` | Retrain from eligible stored labels |
 
-## Validation and tests
-
-The project validates requests, registered subjects, file metadata, marks patterns, generated question counts and duplicate output. Tests exercise Java and mock provider responses; they do not require a real AI key.
-
-**Backend — database-independent tests:**
+## Verification and development
 
 ```powershell
-node --test test/javaCore.test.js test/syllabus.test.js test/marks.test.js test/groq.test.js test/localModel.test.js
-```
-
-**Frontend:**
-
-```powershell
+# Frontend
+cd frontend
 npm.cmd run lint
 npm.cmd run build
 ```
 
-<details>
-<summary><strong>Full API tests with a dedicated PostgreSQL database</strong></summary>
+Backend tests use a **separate `questionbank_test` database**. Create it first and configure `TEST_DATABASE_URL` with its credentials, then run `npm.cmd test` in `backend`. Never point the test connection at a database containing real college data.
 
-Create `questionbank_test`, set `TEST_DATABASE_URL` to that database in your environment, then run `npm.cmd test` inside `backend`.
+Python trainers and seed datasets are in `backend/ml/`. The topic and Bloom classifiers are our own trained models; no `pip` model package or downloaded foundation weights are required. The background trainer writes candidates and reports automatically. Tests check software behaviour and synthetic classification, not faculty acceptance of exam questions.
 
-```sql
-CREATE DATABASE questionbank_test;
-```
+## Moving to the college server
 
-Database tests clear their configured tables. Never point `TEST_DATABASE_URL` at your working question bank. API tests include persistence, unit selection, duplicate skipping and generation tracking. A live provider check additionally requires a valid key and available quota.
+1. Obtain the server's operating system, RAM, Java/Node/Python availability, database details and approved deployment access from the college administrator.
+2. Copy or clone the application; install dependencies and create the PostgreSQL database.
+3. Configure the server's private `backend/.env`, run `db:init`, and migrate the existing database with PostgreSQL backup/restore if required.
+4. Build the frontend with `npm.cmd run build` (use `npm` on Linux). Set `VITE_API_URL` to the college API URL **before building**.
+5. Serve `frontend/dist` with the college web server; reverse-proxy the Express API and run it under the server's service manager.
+6. Persist and back up PostgreSQL and `backend/.runtime/`, and verify paper retrieval, PDF export and Python retraining after a restart.
 
-</details>
+The application has no authentication layer. Keep it within the approved campus access boundary or add the college's access controls before public exposure. Database credentials stay on the backend. The production workflow requires no external AI service; initial dependency installation still requires packages or an offline package copy.
+
+Server credentials have not been requested or configured here. Laptop operation does not itself mean the college deployment is complete.
 
 ## Troubleshooting
 
-| Symptom | Action |
-|---|---|
-| PostgreSQL password must be a string | Check that `backend/.env` exists, contains the correct `DATABASE_URL`, and restart the backend |
-| Internal server error on health | Read the backend terminal; check the PostgreSQL service, credentials, database and schema |
-| `ENOTEMPTY` while installing | Stop running app processes and pause OneDrive sync or move outside OneDrive before reinstalling |
-| Missing `dotenv` or `cors` | Complete a successful dependency installation before starting |
-| PowerShell blocks npm | Use `npm.cmd` instead of `npm` |
-| Java unavailable | Check JDK installation, PATH and that `core` is beside `backend` |
-| API key rejected | Check the selected provider's key and account access; restart after configuration changes |
-| Model unavailable | Choose a model available to your account with the required output support |
-| Rate limit reached | Wait for the provider's quota window to reset |
-| Generation temporarily unavailable / 503 | Provider is busy; retry later. Reinstalling the project does not resolve provider overload |
-| Groq cannot read a PDF | Use a text-based PDF or TXT; apply OCR to scanned pages first |
-| Wrong or incomplete generated count | Try fewer questions or a clearer syllabus; inspect the backend error |
-| Impossible marks pattern | Check the weighted sum and count; bank mode needs enough eligible questions |
-| Frontend cannot connect | Keep the backend running; check health and `VITE_API_URL` |
-
-The startup message only confirms that the HTTP server started. `/api/health` checks PostgreSQL; it does not test Java or an AI provider.
-
-
-## Updating your installation
-
-1. Pull the latest changes or replace the source files from this repository.
-2. Keep your local `.env` and its credentials.
-3. Run `npm.cmd ci` in a changed frontend/backend package when dependencies change.
-4. Run `npm.cmd run db:init` in `backend` when the schema changes.
-5. Restart both servers and refresh the browser.
-
-The local-model and repeat-history update requires running `npm.cmd run db:init` once. Existing subjects and bank questions are preserved. Select `AI_PROVIDER=local` in backend/.env and restart.
-
-The earlier save-confirmation update needs backend/frontend source changes but no additional database migration. Subject-generation counters require the schema migration included in `db:init`.
-
-## Current scope
-
-The project has no authentication, user permissions or saved paper history. Groq mode does not perform OCR. AI availability, quota and cost are external dependencies. Review generated questions before academic use. Add authentication and request limits before exposing the generation endpoint publicly.
+| Problem | Check |
+| --- | --- |
+| `client password must be a string` | Create `backend/.env`, confirm `DATABASE_URL` includes the PostgreSQL password, and restart the backend. |
+| Missing `dotenv`, `cors` or another package | Run `npm.cmd install` successfully inside `backend`. |
+| Missing tables or partitions | Run `npm.cmd run db:init` using the correct database connection. |
+| No syllabus text found | Use a text-based PDF/TXT with topic lines; scanned PDFs need OCR. |
+| Not enough fresh questions | Add topics/bank content, reduce the requested count or adjust mark/K allocation. |
+| K counts do not match | Sum the six K fields to exactly the question count for each mark value. |
+| Paper saved but bank empty | Click **Add to question bank** and select a registered subject. |
+| Java/Python unavailable | Verify `java -version` and `python --version` in the backend terminal. |
+| Old generation-limit message | Update both frontend and backend and restart them. Current local generation has no hosted-provider quota. |
 
 ---
 
-<div align="center">
-
-**Organise by subject. Build a balanced paper. Review before sharing.**
-
-[Your repository](https://github.com/irfanshafi21/mini-project) · [Original repository](https://github.com/naveen7655/mini-project) · [Back to top](#-question-bank--paper-generator)
-
-</div>
-
-
-## Manual selection, subject tables and retrieval
-
-In **Create a paper > Choose questions yourself**, select a registered subject and tick the exact bank questions you want. Search, unit and marks filters work across pages; your selection stays selected. The live summary shows the question count and total marks. Choose up to 50 questions and 1,000 marks, then click **Create and save paper**. Review the paper in sections by marks, print to PDF or download TXT.
-
-Completed automatic bank papers, syllabus papers and manually selected papers are saved automatically. Open the separate **Stored papers** navigation page to browse all subjects, filter by subject or search paper titles. Click **Open paper** to visit its retrieval page (`#stored-papers/ID`), review the original questions, print to PDF or download TXT. Reloading a paper URL retrieves it from PostgreSQL. Saving a paper is separate from adding syllabus questions to the question bank: the **Add to question bank** button appears after syllabus generation and controls bank insertion. Incomplete bank previews are not automatically stored. Historical papers generated before storage was introduced cannot be reconstructed unless previously saved or exported.
-
-Each newly registered subject automatically gets a **physical PostgreSQL table**, implemented as a LIST partition of `questions`. The parent table continues to support existing searches and APIs. Rows are stored in the subject partition without a second duplicate copy. Names contain a readable subject prefix and a hash to avoid unsafe names and collisions. The database primary key is `(id, subject)`; the shared identity sequence continues assigning question numbers. PostgreSQL also routes a question moved between subjects.
-
-The subject overview includes its physical table name, searchable stored questions, and saved papers. To locate subject tables in pgAdmin, refresh **Schemas > public > Tables**, or expand partitions under `questions`, depending on your pgAdmin version. You can also run:
-
-```sql
-SELECT * FROM subject_storage ORDER BY subject;
-SELECT id, subject, tableoid::regclass AS physical_table, text, marks FROM questions;
-SELECT id, subject, title, created_at FROM saved_papers ORDER BY id DESC;
-```
-
-After updating an older local copy, stop the backend, run `npm run db:init` inside `backend`, then restart it. The migration converts existing questions to subject partitions atomically, preserving IDs, text and soft-delete history. Back up important databases before migration. The database role must own the tables and be able to create tables and triggers. No new frontend packages are required.
-
-| Endpoint | Purpose |
-| --- | --- |
-| `POST /api/papers/manual` | Validate selected bank IDs for one subject and save the paper |
-| `POST /api/papers/saved` | Save a reviewed paper snapshot |
-| `GET /api/papers/saved?subject=SUBJECT&page=1&q=title` | List stored papers; subject and title filters are optional, 20 per page |
-| `GET /api/papers/saved/:id` | Retrieve a saved paper |
-
-Manual selection checks live records on the server and rejects duplicate, deleted, missing and cross-subject IDs. It does not replace your chosen questions or impose an automatic difficulty distribution. Saved-paper snapshots stay independent from the editable question bank.
-
-
-### Review and edit a paper
-
-All three creation workflows offer **Edit paper** above the preview. Edit the title, question wording and marks, then use **Save changes**. Totals and sections update from the edited marks, and the stored paper is updated under its original ID. Cancelling discards the draft. These edits do not change existing bank questions. The retrieval page also supports editing.
-
-Syllabus generation no longer opens a save popup. Use **Add to question bank** after reviewing the generated paper; questions are not inserted until that button is clicked. Stored papers remain available in the dedicated navigation page without an extra storage banner in the creation workflow. Markdown heading markers, bold wrappers and inline code wrappers are removed from paper display and exports. Unit titles are used only as a fallback when no detailed topics were supplied for that unit.
-
-
-### Direct PDF downloads and optional subjects
-
-Use **Download PDF** in manual, automatic bank, syllabus and stored-paper previews for a direct A4 PDF download. Sections, question numbering, marks, long-question page breaks and page numbers are included. An embedded open-source Noto Sans font supports Unicode text. **Print** remains a separate action.
-
-Creation subject fields are optional dropdowns of existing subjects. Only **Subjects > Add subject** creates a subject. Blank syllabus and mixed-subject papers are stored as **Unassigned**, with a nullable subject reference, and do not create a General/Unassigned subject. Blank bank/manual filters browse all subjects. A paper containing questions from one subject is stored under that existing subject. To add unassigned syllabus questions to the bank, select an existing destination subject after generation. Unassigned papers remain editable and retrievable. Repeat-history tracking also supports an unassigned scope without registering a subject.
-
-
-### One-mark questions
-
-Set a count in the **1 mark** tile, then choose **Multiple choice** or **Fill in the blanks**. The count is included in the live question count and total marks. Java plans and selects 1, 2, 5, 10 and 16-mark questions. Older four-mark-count requests remain compatible; an omitted 1-mark count defaults to zero.
-
-An MCQ has four distinct options and one matching correct answer. The local generator uses a reviewed definition library covering data structures, computer organisation, probability, machine learning, databases and linear algebra. Distractors come from the same subject area. It matches these facts to topics present in the syllabus and reports insufficient coverage rather than inventing facts. This checked objective layer is also used for 1-mark slots when an external generation provider is selected; longer questions can still use that provider. Faculty should extend and review the fact library for their curriculum.
-
-Fill-in-the-blank questions contain a blank and retain their answer separately. Options, types and answers survive bank storage, paper retrieval and editing. Add 1-mark bank questions through **Add question**, choosing their type and correct answer. The automatic bank workflow filters 1-mark entries by the selected type. Teacher edit forms expose answers; paper previews, TXT and PDF exports show only stems/options and do not label the correct choice or print an answer key.
-
-Paper previews and printing use compact spacing without divider lines between questions. Direct PDF downloads also use reduced line and question spacing. Run `npm run db:init` after updating backend files to add the objective-question columns safely; existing data is preserved.
-
-
-### Subject creation rule
-
-Only the explicit **Add subject** action registers a subject and creates its physical question table. Paper generation, manual question selection, paper editing and question-bank saving never create subjects. Unknown subject names sent directly to generation APIs are rejected before generation. Existing subjects and previously saved papers are preserved. After updating, run `npm run db:init` once to allow unassigned paper/history references without creating placeholder subjects.
-
-
-## Automatic LLM-assisted learning and repeat control
-
-Every newly saved paper is queued for background learning. The configured LLM teacher infers topics and labels, checks question scope and supplied answers, and rejects uncertain examples. No manual approval or topic entry is required. Only accepted examples with teacher confidence of at least 0.90 are included. This confidence is the LLM's own assessment, not proof of correctness.
-
-The local four-class topic classifier (concept, process, comparison and numerical) retrains automatically with accepted labels and is evaluated on the unchanged 16-topic holdout. A candidate is activated only if classification accuracy does not fall. This is classifier training and reviewed-example reuse, not language-model fine-tuning. The small holdout measures classification, not overall question quality.
-
-Install Python 3 on the backend server. Keep `GROQ_API_KEY` and `GROQ_MODEL` in `backend/.env`; use `AUTO_LEARNING_PROVIDER=groq` (or `gemini` with its configured key/model). `AUTO_LEARNING_MODEL` optionally overrides the generation model for the teacher. Generation can stay local while the teacher uses the external API. Question text, topic/reference, marks, choices and supplied answers are sent to that provider for review; credentials stay on the backend. The integration uses the [Groq chat API](https://console.groq.com/docs/openai).
-
-The database queue survives restarts. One worker polls every 15 seconds, retries failed requests up to three times with a one-minute delay, and rechecks missing API configuration every five minutes. Paper previews show learning status. Papers remain saved when review/training fails. Runtime files stay in ignored `backend/.runtime`; labels, job status and training reports stay in PostgreSQL. Run `npm run db:init` after pulling this update. Existing papers are not automatically backfilled.
-
-Local generation prefers fresh questions and allows at most **20% historical repeats** for the same syllabus and subject, rounded down. Papers shorter than five questions allow none. Changed numerical values or equation coefficients still count as the same pattern. Supported numerical templates calculate new values and teacher answers. Insufficient fresh questions produce an error rather than exceeding the limit. Normalized signatures detect known patterns, not every semantic paraphrase. This limit applies to local syllabus generation, not deliberate manual bank selection. Multiple server processes require shared database locking for concurrent generation and training activation.
-
-
-### Classifier evaluation upgrade
-
-The curated training pool now contains 176 topics: 44 per class across computing, mathematics, databases, networks and machine learning. Accepted teacher labels are deduplicated, conflicting topic labels are excluded, and any one class is capped at twice the smallest curated class count. The LLM teacher is instructed to retain task-specific topic names instead of collapsing operations and calculations into ambiguous bare terms.
-
-Nine Naive Bayes configurations are selected using only a separate 32-topic validation set. Features support word weighting, word pairs and character trigrams, smoothing, and equal class priors. Python training and JavaScript inference share the same feature rules and are checked for prediction parity.
-
-The original 16-topic test remains unchanged. A separately fixed 48-topic synthetic benchmark reports old/new performance on the same records. Training excludes exact-normalized topics from both tests and the validation set; report hashes identify those splits. On the bundled curated-only model, the original score remains 13/16 (81.25%), while the expanded benchmark improves from 39/48 (81.25%) to 47/48 (97.92%). Do not compare the new benchmark score directly to an old score from a different test. These hand-authored synthetic sets can share related concepts and are not a faculty-validated estimate of deployment accuracy. Bloom's-level prediction is not included in this upgrade.
-
-
-## College Bloom levels (K1-K6)
-
-| Code | Cognitive level | Example permitted opening |
-| --- | --- | --- |
-| K1 | Remember | Define, List, Recall |
-| K2 | Understand | Explain, Illustrate, Summarize |
-| K3 | Apply | Apply, Solve, Utilize |
-| K4 | Analyze | Analyze, Distinguish, Examine |
-| K5 | Evaluate | Evaluate, Justify, Recommend |
-| K6 | Create | Design, Create, Propose |
-
-The complete college verb lists are stored in `backend/ml/bloom-verbs.json`, transcribed from the supplied chart. A shared verb such as Compare can belong to several levels; the cognitive task and context determine its level.
-
-When a mark category has a nonzero question count, six K1-K6 fields appear below the marks controls. Allocate exactly that many questions. For ten 2-mark questions, K1=2, K2=5 and K3=3 is valid; 2+5+4 is eleven and is rejected. Each mark category has its own allocation. Bloom level is separate from marks and easy/medium/hard difficulty.
-
-Explicit Bloom-specific syllabus generation uses the configured API LLM even when ordinary generation is local. Java still plans the marks/difficulty slots. The writer must start each question with a verb from the requested college column and produce the corresponding cognitive task, not merely replace a verb. The backend verifies counts, level metadata, opening verbs, formats and objective answers. An independent LLM teacher review checks cognitive levels before a Bloom-specific paper is shown, with one bounded rewrite attempt. Accepted saved papers also enter background learning. Semantic correctness is not mathematically guaranteed by a keyword check.
-
-Question-bank generation matches the requested marks, difficulty and K level without silently substituting another level. Existing bank entries receive provisional local-model classifications during `npm run db:init`; teachers can correct them. The manual picker filters by K level. K labels survive question-bank storage, paper editing/retrieval, PDF, print and TXT export. A missing bank category produces a shortfall message.
-
-A separate six-class Naive Bayes classifier is trained by `python backend/ml/train_bloom.py`. Its seed data contains 36 synthetic training questions and 24 topic-separated test questions, with shared wording templates. This is a small development check, not a reliable educational-accuracy claim. Automatic accepted LLM reviews supply contextual Bloom labels for subsequent training alongside topic-classifier learning. Exact normalized Bloom test questions and contradictory duplicate labels are excluded. Activation requires the existing topic checks and nondecreasing Bloom test accuracy. No manual approval is required. The trained Bloom classifier labels tasks; it is not a fine-tuned generative LLM.
+<div align="center"><strong>Built for a clear examination workflow, transparent local ML and college-controlled data.</strong></div>

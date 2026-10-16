@@ -32,13 +32,13 @@ A college examination workspace built with **React + Vite**, **Node.js + Express
 | **Stored papers** | Retrieve saved paper snapshots, edit their contents and download them again. |
 | **Exports** | Download a PDF or TXT paper, or print from the browser. Student exports omit teacher answer fields. |
 
-The interface uses light blue and warm neutral colours, responsive cards, aligned mark fields, six K-level controls and live count summaries. No application login is included.
+The interface combines light blue and warm neutral colours with an academic layout: a dedicated desktop sidebar, clear page headings, consistent cards and controls, and compact mobile navigation. The paper studio includes aligned mark fields, six K-level controls and live count summaries. No application login is included.
 
 ## A look inside
 
 <table>
-<tr><td width="50%"><strong>Question library</strong><br/><img src="docs/images/question-bank.jpg" alt="Question bank with filters and question cards" /></td><td width="50%"><strong>Subject overview</strong><br/><img src="docs/images/subject-overview.jpg" alt="Subject question counts" /></td></tr>
-<tr><td colspan="2"><strong>Marks and Bloom allocation</strong><br/><img src="docs/images/local-bloom-builder.png" alt="Aligned mark counts and K1 to K6 allocations" width="100%" /></td></tr>
+<tr><td><strong>Academic workspace</strong><br/><img src="docs/images/academic-dashboard.png" alt="Academic question-bank dashboard with desktop sidebar and paper creation panel" width="100%" /></td></tr>
+<tr><td><strong>Marks and Bloom allocation</strong><br/><img src="docs/images/local-bloom-builder.png" alt="Aligned mark counts and K1 to K6 allocations" width="100%" /></td></tr>
 </table>
 
 Screenshots illustrate the interface; stored data and totals vary by installation.

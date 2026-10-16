@@ -11,12 +11,14 @@ export function validateLocalModel(candidate){
   if(candidate.kind!=='multinomial-naive-bayes-topic-type' || !['concept','process','comparison','numerical'].every(l=>candidate.labels?.includes(l) && Number.isFinite(candidate.logPrior?.[l]) && candidate.logLikelihood?.[l]))throw new Error('Invalid trained model');
 }
 export function reloadLocalModel(candidate){validateLocalModel(candidate);model=candidate;}
-export function getLocalModelInfo(){const r=model.trainingReport || JSON.parse(fs.readFileSync(new URL('../ml/evaluation.json',import.meta.url),'utf8'));return {kind:model.kind,trainedAt:model.trainedAt || null,accuracy:r.accuracy,trainingExamples:r.trainingExamples,testExamples:r.testExamples,reviewedTopicsUsed:r.reviewedTopicsUsed || 0};}
+export function getLocalModelInfo(){const r=model.trainingReport || JSON.parse(fs.readFileSync(new URL('../ml/evaluation.json',import.meta.url),'utf8'));return {kind:model.kind,trainedAt:model.trainedAt || null,accuracy:r.accuracy,trainingExamples:r.trainingExamples,testExamples:r.testExamples,reviewedTopicsUsed:r.reviewedTopicsUsed || 0,independentBenchmark:r.independentBenchmark ? {accuracy:r.independentBenchmark.accuracy,testExamples:r.independentBenchmark.testExamples,macroF1:r.independentBenchmark.macroF1,splitHash:r.splitHashes?.benchmark}:null};}
 
 export const questionHash = text => createHash('sha256').update(text.toLowerCase().replace(/\s+/g, ' ').trim()).digest('hex');
 export function classifyTopic(text) {
   const words = text.toLowerCase().match(/[a-z]+/g) || [];
-  const features = [...words, ...words.flatMap(w => Array.from({ length: Math.max(0,w.length-2) },(_,i)=>'#'+w.slice(i,i+3)))];
+  const settings=model.featureSettings || {}, weight=settings.wordWeight || 1;
+  const features = [...Array.from({length:weight},()=>words).flat(), ...words.flatMap(w => Array.from({ length: Math.max(0,w.length-2) },(_,i)=>'#'+w.slice(i,i+3)))];
+  if(settings.bigrams)for(let i=1;i<words.length;i++)for(let j=0;j<weight;j++)features.push('@'+words[i-1]+' '+words[i]);
   return model.labels.map(label=>({label,score:model.logPrior[label]+features.reduce((n,w)=>n+(model.logLikelihood[label][w]||0),0)})).sort((a,b)=>b.score-a.score)[0].label;
 }
 export async function extractSyllabusText(body) {

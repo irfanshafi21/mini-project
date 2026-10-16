@@ -3,7 +3,7 @@ import { storePaper } from './savedPapers.js';
 import { generateSyllabusPaper, syllabusBody } from '../syllabusGenerator.js';
 
 import { z } from 'zod';
-import { requireRegisteredSubject, recordGeneratedPaper, ensureSubject } from './subjects.js';
+import { requireRegisteredSubject, recordGeneratedPaper } from './subjects.js';
 import { query } from '../db.js';
 import { normalizeName, objectiveFields, validateObjective } from '../validation.js';
 import { extractSyllabusText, questionHash } from '../localModel.js';
@@ -11,23 +11,23 @@ import { extractSyllabusText, questionHash } from '../localModel.js';
 const router = Router();
 router.post('/papers/from-syllabus', async (req, res) => {
   const body = syllabusBody.parse(req.body);
+  if(body.subject) await requireRegisteredSubject(body.subject);
   const local = (process.env.AI_PROVIDER || 'local') === 'local';
   let syllabusHash;
   if(local) {
     body.preparedText = await extractSyllabusText(body);
     syllabusHash = questionHash(body.preparedText);
-    body.previousQuestionHashes = (await query('SELECT question_hash FROM syllabus_history WHERE subject=$1 AND syllabus_hash=$2',[body.subject,syllabusHash])).rows.map(row=>row.question_hash);
+    body.previousQuestionHashes = (await query('SELECT question_hash FROM syllabus_history WHERE subject IS NOT DISTINCT FROM $1 AND syllabus_hash=$2',[body.subject || null,syllabusHash])).rows.map(row=>row.question_hash);
   }
   const result = await generateSyllabusPaper(body);
-  await ensureSubject(body.subject);
   if(local) {
     const hashes=result.paper.questions.map(q=>questionHash(q.text));
     const reserved=await query(`INSERT INTO syllabus_history(subject,syllabus_hash,question_hash)
-      SELECT $1,$2,h FROM unnest($3::text[]) h ON CONFLICT DO NOTHING RETURNING question_hash`,[body.subject,syllabusHash,hashes]);
+      SELECT $1,$2,h FROM unnest($3::text[]) h ON CONFLICT DO NOTHING RETURNING question_hash`,[body.subject || null,syllabusHash,hashes]);
     if(reserved.rows.length!==hashes.length) return res.status(409).json({error:'Another request used these variations. Generate again to select unused questions.'});
   }
-  await recordGeneratedPaper(body.subject, result.paper.questions.length, 'syllabus');
-  const saved = await storePaper(body.subject, `${body.subject.replaceAll('_',' ')} - Syllabus paper`, result.paper.questions, {...result.paper,source:'syllabus'});
+  if(body.subject) await recordGeneratedPaper(body.subject, result.paper.questions.length, 'syllabus');
+  const saved = await storePaper(body.subject, `${(body.subject || 'Unassigned').replaceAll('_',' ')} - Syllabus paper`, result.paper.questions, {...result.paper,source:'syllabus'});
   res.json({ ...result, ...saved, savedUnit: body.unit });
 });
 

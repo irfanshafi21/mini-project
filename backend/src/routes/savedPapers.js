@@ -4,7 +4,7 @@ import { query } from '../db.js';
 import { HttpError } from '../errors.js';
 import { normalizeName, objectiveFields, validateObjective } from '../validation.js';
 import { toApi } from '../mapper.js';
-import { requireRegisteredSubject, ensureSubject } from './subjects.js';
+import { requireRegisteredSubject } from './subjects.js';
 
 const router = Router();
 const subject = z.string().trim().min(1).max(60).transform(normalizeName);
@@ -18,12 +18,12 @@ const snapshotQuestion = z.object({
   topic: z.string().max(200), subtopic: z.string().max(200).optional(),
   syllabusReference: z.string().max(500).optional(),
 }).superRefine(validateObjective);
-const snapshot = z.object({ subject, title, questions: z.array(snapshotQuestion).min(1).max(50) });
+const snapshot = z.object({ subject:subject.optional(), title, questions: z.array(snapshotQuestion).min(1).max(50) });
 export async function storePaper(subjectName, paperTitle, questions, metadata = {}) {
   const totalMarks = questions.reduce((sum,q) => sum + q.marks,0);
   if (totalMarks > 1000) throw new HttpError(400,'A paper may contain at most 1,000 marks.');
-  const paper = { ...metadata, subject: subjectName, title: paperTitle, questions, totalMarks, requestedMarks: totalMarks, complete: true };
-  const { rows } = await query('INSERT INTO saved_papers(subject,title,paper) VALUES($1,$2,$3::jsonb) RETURNING id,created_at', [subjectName,paperTitle,JSON.stringify(paper)]);
+  const paper = { ...metadata, subject: subjectName || 'UNASSIGNED', title: paperTitle, questions, totalMarks, requestedMarks: totalMarks, complete: true };
+  const { rows } = await query('INSERT INTO saved_papers(subject,title,paper) VALUES($1,$2,$3::jsonb) RETURNING id,created_at', [subjectName || null,paperTitle,JSON.stringify(paper)]);
   return { id: rows[0].id, createdAt: rows[0].created_at, paper };
 }
 router.post('/manual', async (req,res) => {
@@ -33,20 +33,19 @@ router.post('/manual', async (req,res) => {
   const { rows } = await query('SELECT * FROM questions WHERE NOT is_deleted AND id=ANY($1::int[])' + (b.subject?' AND subject=$2':''),b.subject?[b.questionIds,b.subject]:[b.questionIds]);
   if(rows.length !== b.questionIds.length) throw new HttpError(400,'Some selected questions were removed or belong to another subject. Refresh your selection.');
   const byId = new Map(rows.map(q=>[q.id,toApi(q)]));
-  const subjects=[...new Set(rows.map(q=>q.subject))], paperSubject=b.subject || (subjects.length===1?subjects[0]:'GENERAL');
-  await ensureSubject(paperSubject);
+  const subjects=[...new Set(rows.map(q=>q.subject))], paperSubject=b.subject || (subjects.length===1?subjects[0]:null);
   res.status(201).json(await storePaper(paperSubject,b.title,b.questionIds.map(id=>byId.get(id)), {source:'manual'}));
 });
 router.post('/saved', async (req,res) => {
   const b = snapshot.parse(req.body);
-  await requireRegisteredSubject(b.subject);
+  if(b.subject) await requireRegisteredSubject(b.subject);
   res.status(201).json(await storePaper(b.subject,b.title,b.questions));
 });
 router.put('/saved/:id', async (req,res) => {
   const id=z.coerce.number().int().positive().parse(req.params.id), b=snapshot.parse(req.body);
   const previous=(await query('SELECT * FROM saved_papers WHERE id=$1 AND NOT is_deleted',[id])).rows[0];
   if(!previous) throw new HttpError(404,'Stored paper not found.');
-  if(previous.subject!==b.subject) throw new HttpError(400,'A stored paper must keep its original subject.');
+  if((previous.subject || undefined)!==b.subject) throw new HttpError(400,'A stored paper must keep its original subject.');
   const totalMarks=b.questions.reduce((n,q)=>n+q.marks,0);
   if(totalMarks>1000) throw new HttpError(400,'A paper may contain at most 1,000 marks.');
   const paper={...previous.paper,title:b.title,questions:b.questions,totalMarks,requestedMarks:totalMarks,complete:true};
@@ -63,7 +62,7 @@ router.get('/saved', async (req,res) => {
   const filter=where.join(' AND ');
   const total=Number((await query(`SELECT count(*) AS n FROM saved_papers WHERE ${filter}`,params)).rows[0].n);
   const { rows } = await query(`SELECT id,subject,title,created_at,paper FROM saved_papers WHERE ${filter} ORDER BY id DESC LIMIT 20 OFFSET $${params.length+1}`,[...params,(b.page-1)*20]);
-  res.json({ items: rows.map(r=>({id:r.id,subject:r.subject,title:r.title,createdAt:r.created_at,totalMarks:r.paper.totalMarks,count:r.paper.questions.length,source:r.paper.source})), page:b.page,total });
+  res.json({ items: rows.map(r=>({id:r.id,subject:r.subject || r.paper.subject || 'UNASSIGNED',title:r.title,createdAt:r.created_at,totalMarks:r.paper.totalMarks,count:r.paper.questions.length,source:r.paper.source})), page:b.page,total });
 });
 router.get('/saved/:id', async (req,res) => {
   const id=z.coerce.number().int().positive().parse(req.params.id);

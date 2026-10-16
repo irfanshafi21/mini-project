@@ -6,7 +6,7 @@ import { toApi } from '../mapper.js';
 import { generatePaper } from '../javaCore.js';
 import { autoBody, paperBody } from '../validation.js';
 
-import { requireRegisteredSubject, recordGeneratedPaper, ensureSubject } from './subjects.js';
+import { requireRegisteredSubject, recordGeneratedPaper } from './subjects.js';
 
 const router = Router();
 
@@ -37,11 +37,10 @@ router.post('/papers/generate', async (req, res) => {
   const result = await generatePaper(rows.map(toApi), b.totalMarks, b.split, b.markCounts, b.count);
   const complete = result.totalMarks === b.totalMarks;
   const selectedSubjects=[...new Set(result.questions.map(q=>q.subject))];
-  const paperSubject=b.subject || (selectedSubjects.length===1?selectedSubjects[0]:'GENERAL');
-  await ensureSubject(paperSubject);
-  if (complete) await recordGeneratedPaper(paperSubject, result.questions.length, 'bank');
+  const paperSubject=b.subject || (selectedSubjects.length===1?selectedSubjects[0]:null);
+  if (complete && paperSubject) await recordGeneratedPaper(paperSubject, result.questions.length, 'bank');
   const paper = {
-      subject: paperSubject,
+      subject: paperSubject || 'UNASSIGNED',
       unit: b.unit || 'ALL',
       units: b.units || (b.unit ? [b.unit] : [1,2,3,4,5]),
       topic: b.topic ?? 'ALL',
@@ -52,7 +51,7 @@ router.post('/papers/generate', async (req, res) => {
       targets: result.targets,
       questions: result.questions,
     };
-  const saved = complete ? await storePaper(paperSubject, `${paperSubject.replaceAll('_',' ')} - Question paper`, result.questions, {...paper,source:'bank'}) : null;
+  const saved = complete ? await storePaper(paperSubject, `${(paperSubject || 'Unassigned').replaceAll('_',' ')} - Question paper`, result.questions, {...paper,source:'bank'}) : null;
   res.json({ ...(saved || {paper}),
     ...(complete ? {} : { warning: `Only ${result.totalMarks} of ${b.totalMarks} marks could be reached. Add more questions to the bank.` }),
   });

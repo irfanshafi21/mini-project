@@ -3,7 +3,7 @@ import ReviewLearning from './ReviewLearning'
 import { useState } from 'react'
 import PaperEditor from './PaperEditor'
 import PdfDownload from './PdfDownload'
-import { formatQuestion } from './paperText'
+import { formatQuestion, bloomLabel } from './paperText'
 export default function SyllabusPaper({ apiUrl, subjects = [], source = 'syllabus', onGenerated }) {
   const [bankSubject,setBankSubject]=useState('')
   const [bloomCounts,setBloomCounts]=useState({})
@@ -61,7 +61,7 @@ export default function SyllabusPaper({ apiUrl, subjects = [], source = 'syllabu
     let number = 0
     const text = ['QUESTION PAPER', `Subject: ${paper.subject.replaceAll('_', ' ')}`, `Total marks: ${paper.totalMarks} / ${paper.requestedMarks}`, '',
       ...sections.flatMap(section => [`SECTION ${section.letter} - ${section.mark} MARKS`, `${section.questions.length} questions x ${section.mark} ${section.mark===1?'mark':'marks'} = ${section.questions.length * section.mark} marks`, '',
-        ...section.questions.map(q => `${++number}. ${formatQuestion(q)}\n[${q.marks} marks | ${q.difficulty}]\n`), '']), 'END OF QUESTION PAPER'].join('\n')
+        ...section.questions.map(q => `${++number}. ${formatQuestion(q)}\n`), '']), 'END OF QUESTION PAPER'].join('\n')
     const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' })), a = document.createElement('a'); a.href = url; a.download = 'question-paper.txt'; a.click(); URL.revokeObjectURL(url)
   }
   return <><section className="panel generation-panel"><span className="eyebrow">STEP 02 / CONFIGURE</span><h2>{syllabus ? 'Generate from syllabus' : 'Generate from question bank'}</h2><p className="muted">{syllabus ? 'Create a balanced question paper based on the topics in your syllabus.' : 'Choose a subject. We will select suitable questions from your saved collection.'}</p><form onSubmit={generate}><fieldset disabled={busy}>
@@ -72,7 +72,7 @@ export default function SyllabusPaper({ apiUrl, subjects = [], source = 'syllabu
     {result && <section className="paper-preview" aria-label="Generated question paper"><div className="section-heading"><div><span className="eyebrow">STEP 03 / YOUR PAPER</span><h2>Question paper preview</h2><p className="muted small">Review every question before sharing with your class.</p></div><div className="preview-actions"><PaperEditor apiUrl={apiUrl} result={result} onSaved={updated => { setResult(updated); setSaveMessage('') }} />{syllabus && <button className="secondary" disabled={saving || !!saveMessage} onClick={saveQuestions}>{saving ? 'Adding...' : saveMessage ? 'Added to question bank' : 'Add to question bank'}</button>}<PdfDownload paper={result.paper} /><button className="secondary" onClick={() => window.print()}>Print</button><button className="primary" onClick={download}>Download TXT </button></div></div>{syllabus && !form.subject && <label className="field"><span>Question bank subject</span><select value={bankSubject} onChange={e=>setBankSubject(e.target.value)}><option value="">Choose an existing subject to add questions</option>{subjects.map(s=><option key={s} value={s}>{s.replaceAll('_',' ')}</option>)}</select></label>}{syllabus && saveMessage && <p className="saved-notice" role="status">{saveMessage}</p>}{saveError && <p className="error" role="alert">{saveError}</p>}{result.warning && <p className="warning" role="status">{result.warning}</p>}<ReviewLearning key={JSON.stringify(result.paper)} result={result} apiUrl={apiUrl} /><div className="paper-sheet"><div className="paper-header"><span className="eyebrow">EXAMINATION QUESTION PAPER</span><h2>{result.paper.subject?.replaceAll('_', ' ') || 'General'}</h2><div><span>{result.paper.questions.length} questions</span><span>Total: {result.paper.totalMarks} marks</span></div></div>{sections.map(section => {
       const start = questionNumber + 1
       questionNumber += section.questions.length
-      return <section className="paper-section" key={section.mark} aria-label={`Section ${section.letter}`}><div className="paper-section-heading"><h3>Section {section.letter} - {section.mark} {section.mark===1?'mark':'marks'}</h3><span>{section.questions.length} x {section.mark} = {section.questions.length * section.mark} marks</span></div><ol className="paper-questions" start={start}>{section.questions.map((q, i) => <li key={q.id || i}><div><p>{formatQuestion(q)}</p></div><strong>{q.marks}<span>{q.marks===1?'mark':'marks'}</span></strong></li>)}</ol></section>
+      return <section className="paper-section" key={section.mark} aria-label={`Section ${section.letter}`}><div className="paper-section-heading"><h3>Section {section.letter} - {section.mark} {section.mark===1?'mark':'marks'}</h3><span>{section.questions.length} x {section.mark} = {section.questions.length * section.mark} marks</span></div><ol className="paper-questions" start={start}>{section.questions.map((q, i) => <li key={q.id || i}><div><p>{formatQuestion(q, { includeBloom: false })}</p></div><strong className="paper-bloom" aria-label={`Bloom level ${bloomLabel(q)}`}>{bloomLabel(q)}</strong></li>)}</ol></section>
     })}<div className="paper-end">END OF QUESTION PAPER</div></div></section>}
   </>
 }

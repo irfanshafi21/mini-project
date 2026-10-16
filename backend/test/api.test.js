@@ -17,7 +17,7 @@ let base;
 
 before(async () => {
   await query(fs.readFileSync(new URL('../sql/schema.sql', import.meta.url), 'utf8'));
-  await query('TRUNCATE reviewed_examples, model_training_runs, questions, syllabus_history, saved_papers RESTART IDENTITY');
+  await query('TRUNCATE automatic_learning_jobs, reviewed_examples, model_training_runs, questions, syllabus_history, saved_papers RESTART IDENTITY');
   await query('DELETE FROM subjects');
   for (const name of ['GENERAL','DATA_STRUCTURES','PROGRAMMING','ALGORITHMS']) await query('INSERT INTO subjects(name) VALUES($1)', [name]);
   server = app.listen(0);
@@ -432,4 +432,26 @@ test('review approval checks saved snapshots and retraining uses the frozen clas
  const trained=await call('POST','/api/model/train',{});assert.equal(trained.status,200);
  assert.equal(trained.body.report.testExamples,16);assert.equal(trained.body.report.topicOverlap,0);
  assert.ok(!trained.body.report.promoted || trained.body.report.accuracy>=trained.body.report.previousAccuracy);
+});
+
+test('automatic learning consumes a queued paper without manual labels and records training outcome',async()=>{
+ const {storePaper}=await import('../src/routes/savedPapers.js');
+ const {processAutomaticLearning}=await import('../src/automaticLearning.js');
+ await query('DELETE FROM automatic_learning_jobs');
+ const paper=await storePaper('GENERAL','Automatic learning test',[
+ {topic:'CPU registers',subtopic:'concept',text:'Define the program counter.',marks:2,unit:1,difficulty:'EASY'},
+ {topic:'CPU registers',subtopic:'concept',text:'Describe everything about all processors.',marks:2,unit:1,difficulty:'EASY'}]);
+ const oldKey=process.env.GROQ_API_KEY,oldProvider=process.env.AUTO_LEARNING_PROVIDER,oldModel=process.env.GROQ_MODEL;
+ process.env.GROQ_API_KEY='test-key';process.env.AUTO_LEARNING_PROVIDER='groq';process.env.GROQ_MODEL='test-model';
+ try{
+ let trained=false;
+ await processAutomaticLearning({fetchImpl:async()=>({ok:true,json:async()=>({choices:[{finish_reason:'stop',message:{content:JSON.stringify({reviews:[
+ {index:0,topic:'Processor registers',label:'concept',approved:true,confidence:.98,reason:'Clear and appropriate'},
+ {index:1,topic:'Processor registers',label:'concept',approved:true,confidence:.4,reason:'Too broad'}]})}}]})}),train:async()=>{trained=true;return {status:'kept_previous',report:{accuracy:.7}}}});
+ assert.ok(trained);
+ const job=await call('GET',`/api/model/papers/${paper.id}`);assert.equal(job.body.job.status,'completed');assert.equal(job.body.job.report.accepted,1);assert.equal(job.body.job.report.rejected,1);
+ const rows=(await query('SELECT topic,label,review_source FROM reviewed_examples WHERE paper_id=$1',[paper.id])).rows;
+ assert.deepEqual(rows,[{topic:'Processor registers',label:'concept',review_source:'llm'}]);
+ await processAutomaticLearning({fetchImpl:async()=>{throw new Error('Completed jobs must not run again');}});
+ }finally{for(const [key,value] of [['GROQ_API_KEY',oldKey],['AUTO_LEARNING_PROVIDER',oldProvider],['GROQ_MODEL',oldModel]]){if(value===undefined)delete process.env[key];else process.env[key]=value;}}
 });

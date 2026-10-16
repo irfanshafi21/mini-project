@@ -615,3 +615,12 @@ Paper previews and printing use compact spacing without divider lines between qu
 ### Subject creation rule
 
 Only the explicit **Add subject** action registers a subject and creates its physical question table. Paper generation, manual question selection, paper editing and question-bank saving never create subjects. Unknown subject names sent directly to generation APIs are rejected before generation. Existing subjects and previously saved papers are preserved. After updating, run `npm run db:init` once to allow unassigned paper/history references without creating placeholder subjects.
+
+
+## Reviewed learning and repeat control
+
+After generating or retrieving a paper, select **Review for learning**. Correct it using **Edit paper**, verify marks and teacher answers, select approved questions and their topic types, then choose **Approve and retrain**. Install Python 3 on the backend server.
+
+Only approved examples become training data. Retraining updates the local four-class topic classifier (concept, process, comparison and numerical), not a generative language model. Approved questions may also be reused for matching syllabus topics. Training is tested against the unchanged 16-topic holdout; the classifier is activated only when classification accuracy does not fall. This small test score does not measure question correctness or difficulty. Runtime files stay in ignored `backend/.runtime`; review records and reports are stored in PostgreSQL.
+
+Local generation prefers fresh questions and allows at most **20% historical repeats** for the same syllabus and subject, rounded down. Papers shorter than five questions allow none. Changed numerical values or equation coefficients still count as the same pattern. Supported numerical templates calculate new values and teacher answers. Insufficient fresh questions produce an error rather than exceeding the limit. Normalized signatures detect known patterns, not every semantic paraphrase. This limit applies to local syllabus generation, not deliberate manual bank selection. Multiple server processes require shared database locking for concurrent requests.

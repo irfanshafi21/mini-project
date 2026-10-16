@@ -62,7 +62,9 @@ export async function trainApprovedExamples(){
     const input=path.join(dir,'reviews.json'),output=path.join(dir,'model.json');
     await fs.writeFile(input,JSON.stringify(rows),'utf8');
     const report=await runTrainer(input,output), current=getLocalModelInfo();
-    const promoted=report.reviewedTopicsUsed>0 && report.accuracy>=current.accuracy;
+    const sameBenchmark=current.independentBenchmark?.splitHash===report.splitHashes?.benchmark;
+    const benchmarkFloor=sameBenchmark?current.independentBenchmark.accuracy:report.baselineIndependentBenchmark.accuracy;
+    const promoted=report.reviewedTopicsUsed>0 && report.accuracy>=current.accuracy && report.independentBenchmark.accuracy>=benchmarkFloor;
     const status=promoted?'activated':'kept_previous';
     if(promoted){
       const candidate=JSON.parse(await fs.readFile(output,'utf8'));

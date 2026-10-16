@@ -1,3 +1,4 @@
+import { withBloom } from '../blooms.js';
 import { Router } from 'express';
 import { storePaper } from './savedPapers.js';
 import { generateSyllabusPaper, syllabusBody } from '../syllabusGenerator.js';
@@ -66,12 +67,12 @@ const saveBody = z.object({
 router.post('/papers/save-syllabus', async (req, res) => {
   const body = saveBody.parse(req.body);
   await requireRegisteredSubject(body.subject);
-  const questions = body.questions.map(q => ({ ...q, unit:q.unit || body.unit || 1, topic: normalizeName(q.topic).slice(0, 60),
-    subtopic: normalizeName(q.subtopic).slice(0, 60), question_type:q.questionType }));
+  const questions = body.questions.map(original => {const q=withBloom(original);return ({ ...q,bloom_level:q.bloomLevel, unit:q.unit || body.unit || 1, topic: normalizeName(q.topic).slice(0, 60),
+    subtopic: normalizeName(q.subtopic).slice(0, 60), question_type:q.questionType });});
   const { rows } = await query(`WITH inserted AS (
-    INSERT INTO questions(subject, unit, topic, subtopic, text, marks, difficulty, question_type, options, answer)
-    SELECT $1, q.unit, q.topic, q.subtopic, q.text, q.marks, q.difficulty, q.question_type, q.options, q.answer
-    FROM jsonb_to_recordset($2::jsonb) AS q(unit smallint, topic text, subtopic text, text text, marks smallint, difficulty text, question_type text, options jsonb, answer text)
+    INSERT INTO questions(subject, unit, topic, subtopic, text, marks, difficulty, question_type, options, answer, bloom_level)
+    SELECT $1, q.unit, q.topic, q.subtopic, q.text, q.marks, q.difficulty, q.question_type, q.options, q.answer,q.bloom_level
+    FROM jsonb_to_recordset($2::jsonb) AS q(unit smallint, topic text, subtopic text, text text, marks smallint, difficulty text, question_type text, options jsonb, answer text,bloom_level text)
     ON CONFLICT DO NOTHING RETURNING id
   ) SELECT count(*)::int AS saved FROM inserted`, [body.subject, JSON.stringify(questions)]);
   const saved = rows[0].saved;

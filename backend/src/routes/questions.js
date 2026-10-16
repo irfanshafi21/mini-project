@@ -1,3 +1,4 @@
+import { classifyBloom } from '../blooms.js';
 import { Router } from 'express';
 import { query } from '../db.js';
 import { HttpError, notFound } from '../errors.js';
@@ -30,6 +31,7 @@ router.get('/', async (req, res) => {
   if (f.subtopic) add('subtopic = $?', f.subtopic);
   if (f.difficulty) add('difficulty = $?', f.difficulty);
   if (f.marks) add('marks = $?', f.marks);
+  if(f.bloomLevel)add('bloom_level = $?',f.bloomLevel);
   if (f.q) add('text ILIKE $?', `%${f.q}%`);
   const w = where.join(' AND ');
 
@@ -54,9 +56,9 @@ router.post('/', async (req, res) => {
   const b = questionBody.parse(req.body);
   await requireRegisteredSubject(b.subject);
   const { rows } = await query(
-    `INSERT INTO questions (unit, topic, subtopic, difficulty, marks, text, subject, question_type, options, answer)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10) RETURNING *`,
-    [b.unit, b.topic, b.subtopic, b.difficulty, b.marks, b.text, b.subject, b.questionType, JSON.stringify(b.options), b.answer],
+    `INSERT INTO questions (unit, topic, subtopic, difficulty, marks, text, subject, question_type, options, answer, bloom_level)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11) RETURNING *`,
+    [b.unit, b.topic, b.subtopic, b.difficulty, b.marks, b.text, b.subject, b.questionType, JSON.stringify(b.options), b.answer,b.bloomLevel || classifyBloom(b.text)],
   );
   res.status(201).json(toApi(rows[0]));
 });
@@ -84,9 +86,9 @@ router.put('/:id', async (req, res) => {
   await requireRegisteredSubject(b.subject);
   const { rows } = await query(
     `UPDATE questions
-     SET unit = $2, topic = $3, subtopic = $4, difficulty = $5, marks = $6, text = $7, subject = $8, question_type=$9, options=$10::jsonb, answer=$11, updated_at = now()
+     SET unit = $2, topic = $3, subtopic = $4, difficulty = $5, marks = $6, text = $7, subject = $8, question_type=$9, options=$10::jsonb, answer=$11,bloom_level=$12, updated_at = now()
      WHERE id = $1 AND NOT is_deleted RETURNING *`,
-    [id, b.unit, b.topic, b.subtopic, b.difficulty, b.marks, b.text, b.subject,b.questionType,JSON.stringify(b.options),b.answer],
+    [id, b.unit, b.topic, b.subtopic, b.difficulty, b.marks, b.text, b.subject,b.questionType,JSON.stringify(b.options),b.answer,b.bloomLevel || classifyBloom(b.text)],
   );
   if (!rows.length) throw notFound();
   res.json(toApi(rows[0]));

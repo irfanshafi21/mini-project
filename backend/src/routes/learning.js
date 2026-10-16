@@ -1,3 +1,4 @@
+import { getBloomInfo } from '../blooms.js';
 import { Router } from 'express';
 import { z } from 'zod';
 import fs from 'node:fs/promises';
@@ -17,7 +18,7 @@ let training=false;
 router.get('/status',async(_req,res)=>{
   const count=Number((await query('SELECT count(*) AS n FROM reviewed_examples')).rows[0].n);
   const {rows}=await query('SELECT id,status,report,created_at FROM model_training_runs ORDER BY id DESC LIMIT 1');
-  res.json({approvedExamples:count,training,activeModel:getLocalModelInfo(),lastRun:rows[0] || null});
+  res.json({approvedExamples:count,training,activeModel:getLocalModelInfo(),bloomModel:getBloomInfo(),lastRun:rows[0] || null});
 });
 router.post('/reviews',async(req,res)=>{
   const b=z.object({paperId:z.number().int().positive(),reviews:z.array(z.object({
@@ -54,7 +55,7 @@ function runTrainer(input,output){
 }
 export async function trainApprovedExamples(){
   if(training)throw new HttpError(409,'A training run is already in progress.');
-  const {rows}=await query('SELECT topic,label FROM (SELECT topic,label,approved_at,id FROM reviewed_examples ORDER BY approved_at DESC,id DESC LIMIT 5000) latest ORDER BY approved_at,id');
+  const {rows}=await query('SELECT topic,label,question,bloom_level FROM (SELECT topic,label,question,bloom_level,approved_at,id FROM reviewed_examples ORDER BY approved_at DESC,id DESC LIMIT 5000) latest ORDER BY approved_at,id');
   if(!rows.length)throw new HttpError(400,'Approve reviewed questions before training.');
   training=true;
   try{
@@ -64,7 +65,7 @@ export async function trainApprovedExamples(){
     const report=await runTrainer(input,output), current=getLocalModelInfo();
     const sameBenchmark=current.independentBenchmark?.splitHash===report.splitHashes?.benchmark;
     const benchmarkFloor=sameBenchmark?current.independentBenchmark.accuracy:report.baselineIndependentBenchmark.accuracy;
-    const promoted=report.reviewedTopicsUsed>0 && report.accuracy>=current.accuracy && report.independentBenchmark.accuracy>=benchmarkFloor;
+    const promoted=report.reviewedTopicsUsed>0 && report.accuracy>=current.accuracy && report.independentBenchmark.accuracy>=benchmarkFloor && report.bloomEvaluation.accuracy>=getBloomInfo().accuracy;
     const status=promoted?'activated':'kept_previous';
     if(promoted){
       const candidate=JSON.parse(await fs.readFile(output,'utf8'));

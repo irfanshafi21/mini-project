@@ -1,3 +1,4 @@
+import { withBloom, startsWithBloomVerb } from '../blooms.js';
 import { Router } from 'express';
 import { z } from 'zod';
 import { query } from '../db.js';
@@ -21,6 +22,7 @@ const snapshotQuestion = z.object({
 }).superRefine(validateObjective);
 const snapshot = z.object({ subject:subject.optional(), title, questions: z.array(snapshotQuestion).min(1).max(50) });
 export async function storePaper(subjectName, paperTitle, questions, metadata = {}) {
+  questions=questions.map(withBloom);
   const totalMarks = questions.reduce((sum,q) => sum + q.marks,0);
   if (totalMarks > 1000) throw new HttpError(400,'A paper may contain at most 1,000 marks.');
   const paper = { ...metadata, subject: subjectName || 'UNASSIGNED', title: paperTitle, questions, totalMarks, requestedMarks: totalMarks, complete: true };
@@ -48,9 +50,10 @@ router.put('/saved/:id', async (req,res) => {
   const previous=(await query('SELECT * FROM saved_papers WHERE id=$1 AND NOT is_deleted',[id])).rows[0];
   if(!previous) throw new HttpError(404,'Stored paper not found.');
   if((previous.subject || undefined)!==b.subject) throw new HttpError(400,'A stored paper must keep its original subject.');
+  b.questions.forEach((q,i)=>{const old=previous.paper.questions[i];if(q.bloomLevel && (old?.bloomSource==='requested-llm' || old?.bloomLevel!==q.bloomLevel) && !startsWithBloomVerb(q.text,q.bloomLevel))throw new HttpError(400,'Question '+(i+1)+' must start with an allowed '+q.bloomLevel+' verb.');});
   const totalMarks=b.questions.reduce((n,q)=>n+q.marks,0);
   if(totalMarks>1000) throw new HttpError(400,'A paper may contain at most 1,000 marks.');
-  const paper={...previous.paper,title:b.title,questions:b.questions,totalMarks,requestedMarks:totalMarks,complete:true};
+  const paper={...previous.paper,title:b.title,questions:b.questions.map(withBloom),totalMarks,requestedMarks:totalMarks,complete:true};
   const {rows}=await query('UPDATE saved_papers SET title=$2,paper=$3::jsonb WHERE id=$1 AND NOT is_deleted RETURNING id,created_at',[id,b.title,JSON.stringify(paper)]);
   if(!rows.length) throw new HttpError(404,'Stored paper not found.');
   res.json({id:rows[0].id,createdAt:rows[0].created_at,paper});
@@ -70,6 +73,6 @@ router.get('/saved/:id', async (req,res) => {
   const id=z.coerce.number().int().positive().parse(req.params.id);
   const { rows } = await query('SELECT * FROM saved_papers WHERE id=$1 AND NOT is_deleted',[id]);
   if(!rows.length) throw new HttpError(404,'Saved paper not found.');
-  const r=rows[0];res.json({id:r.id,createdAt:r.created_at,paper:r.paper});
+  const r=rows[0];res.json({id:r.id,createdAt:r.created_at,paper:{...r.paper,questions:r.paper.questions.map(withBloom)}});
 });
 export default router;

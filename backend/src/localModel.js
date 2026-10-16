@@ -1,4 +1,4 @@
-import { reloadBloomModel } from './blooms.js';
+import { classifyBloom, startsWithBloomVerb, reloadBloomModel } from './blooms.js';
 import fs from 'node:fs';
 import { numericalCandidates } from './numericalQuestions.js';
 import path from 'node:path';
@@ -57,7 +57,7 @@ export function syllabusTopics(text) {
       topic=topic.replace(/\s*[-–—]\s*\d+\s*(hours?|hrs?)\b/ig,'').replace(/^\s*[-•\d.)]+\s*/,'').replace(/\s+\d{1,3}$/, '').trim();
       if(sectionTitle.test(topic))continue;
       if(topic.length<5 || topic.length>220 || !/[a-z]/i.test(topic))continue;
-      if(/^(learning|course|sample|assessment|this is|questions may|overall|illustrative|suggested)/i.test(topic))continue;
+      if(/^(learning|course|sample|assessment|this is|questions may|overall|illustrative|suggested|example values|example inputs|sample values)/i.test(topic))continue;
       const key=topic.toLowerCase();if(!seen.has(key)){seen.add(key);topics.push({topic,unit});}
     }
   };
@@ -91,7 +91,8 @@ const shortPatterns = [
 ];
 function focusedTopic(topic) {
   // A syllabus heading followed by a list is an umbrella, not one short question.
-  return topic.split(':')[0].replace(/\s+concepts?$/i, '').split(/[,;]/)[0].trim();
+  const heading=topic.split('=')[0].split(':')[0].replace(/\s+concepts?$/i, '').trim();
+  return /\bbetween\b/i.test(heading)?heading:heading.split(/[,;]/)[0].trim();
 }
 function markedText(topic, family, marks, index) {
   if (marks === 2) return shortPatterns[index].replace('{t}', focusedTopic(topic));
@@ -107,15 +108,41 @@ function markedText(topic, family, marks, index) {
     `(b) Explain its operation using a labelled diagram or a worked example, as appropriate. (${b} marks)\n` +
     `(c) Analyse its benefits and limitations in a practical computer system. (${c} marks)`;
 }
+// Authored task grammars are constrained by marks and the requested cognitive level.
+// The trained topic classifier selects topic families; the Bloom classifier audits task context.
+const bloomTasks = {
+ K1: ['Define {t}.','List two key terms associated with {t}.','Name one application of {t}.','Recall the main purpose of {t}.','List two characteristics of {t}.','Show one example of {t}.'],
+ K2: ['Explain the purpose of {t} in your own words.','Summarize the central principle of {t}.','Illustrate {t} with one suitable example.','Explain one benefit of {t}.','Outline the main idea of {t}.','Explain how {t} works.'],
+ K3: ['Apply {t} to one practical example of your choice; state the input and result.','Demonstrate how to use {t} in a small worked example.','Construct a worked example using {t}, stating the required inputs.','Apply the steps of {t} to a clearly stated example.','Model a simple practical situation using {t}.','Utilize {t} to solve a small problem of your choice; specify the data.'],
+ K4: ['Analyze the relationship between two components of {t}.','Examine one cause and its effect within {t}.','Distinguish the roles of two elements within {t}.','Analyze one limitation of {t} and its underlying cause.','Inspect the structure of {t} and identify one dependency.','Analyze how changing one assumption affects {t}.'],
+ K5: ['Justify whether {t} is suitable when simplicity is the primary criterion.','Evaluate one limitation of {t} against its intended purpose.','Assess {t} using reliability as an explicit criterion; justify your judgment.','Judge the suitability of {t} for a constrained application of your choice.','Recommend whether to use {t} when resources are limited; justify your choice.','Defend one design choice in {t} using an explicit criterion.'],
+ K6: ['Design one small modification to {t} that reduces complexity.','Create a simple alternative approach to {t}; specify its main change.','Propose one original improvement to {t} for a resource-constrained setting.','Develop a small design using {t} with one explicit constraint.','Formulate a new example application of {t} with a stated objective.','Design an adaptation of {t} for an application of your choice.'],
+};
+function bloomCandidates(topics, slots) {
+ const levels=[...new Set(slots.filter(s=>s.bloomLevel).map(s=>s.bloomLevel))];
+ return [...new Set(slots.map(s=>s.marks))].filter(m=>m>1).flatMap(marks=>topics.flatMap(({topic,unit})=>levels.flatMap(level=>
+  bloomTasks[level].map((pattern,index)=>{
+   let text=pattern.replace('{t}',focusedTopic(topic));
+   if(marks>=5)text+=' '+(marks===5?'Support your response with one relevant example.':marks===10?'Develop your response with a relevant example and clear reasoning.':'Develop a structured response with a worked example or labelled design, explicit assumptions, and justified conclusions.');
+   return {topic:focusedTopic(topic).slice(0,200),unit,marks,bloomLevel:level,bloomSource:'local-model',subtopic:classifyTopic(topic),syllabusReference:topic.slice(0,500),text,pattern:index,questionType:'SHORT',options:[],answer:''};
+  })
+ )));
+}
+
 export const reuseSignature=q=>questionHash(q.reuseKey || `${q.marks}|${q.text.toLowerCase().replace(/what is meant by/g,'define').replace(/\b(describe|discuss|explain|outline|illustrate)\b/g,'explain').replace(/\b\d+(?:\.\d+)?\b/g,'NUMBER').replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim()}`);
 export function generateLocalQuestions(text, slots, previousHashes=[], oneMarkType='MCQ', policy={}) {
   const topics=syllabusTopics(text), used=new Set(previousHashes), chosenHashes=new Set(), questions=[];
   const family=topic=>{const predicted=classifyTopic(topic);return predicted==='numerical'&&!/arithmetic|conversion|ratio|calculation|time|speedup|throughput|addition|subtraction|multiplication|division|performance|number system/i.test(topic)?'concept':predicted;};
-  const candidates=[...new Set(slots.map(s=>s.marks))].filter(m=>m!==1).flatMap(marks=>topics.flatMap(({topic,unit})=>{
+  let candidates=[...new Set(slots.map(s=>s.marks))].filter(m=>m!==1).flatMap(marks=>topics.flatMap(({topic,unit})=>{
     const numeric=numericalCandidates(topic,unit,marks,oneMarkType);
     return numeric.length?numeric:patterns[family(topic)].map((pattern,index)=>({topic:(marks<=5?focusedTopic(topic):topic).slice(0,200),subtopic:classifyTopic(topic),unit,syllabusReference:topic.slice(0,500),text:markedText(topic,family(topic),marks,index),pattern:index,marks}));
   }));
   if(slots.some(s=>s.marks===1)) candidates.push(...objectiveCandidates(topics,oneMarkType).map(q=>({...q,reuseKey:`objective:${q.topic.toLowerCase()}`})),...topics.flatMap(t=>numericalCandidates(t.topic,t.unit,1,oneMarkType)));
+  if(slots.some(s=>s.bloomLevel)){
+    const objectives=candidates.filter(q=>q.marks===1).map(q=>({...q,bloomLevel:q.numericalVariant?'K3':'K1',bloomSource:'local-model',text:q.numericalVariant?'Apply the appropriate method: '+q.text:q.questionType==='FILL_BLANK'?'Recall the term: '+q.text:q.text.replace(/^Identify/, 'Name')}));
+    const numerical=candidates.filter(q=>q.marks>1 && q.numericalVariant).map(q=>({...q,bloomLevel:'K3',bloomSource:'local-model',text:'Apply the appropriate method: '+q.text}));
+    candidates=[...bloomCandidates(topics,slots,oneMarkType),...objectives,...numerical];
+  }
   for(const q of policy.reviewedQuestions || []){
     const source=topics.find(t=>t.topic.toLowerCase().includes(q.topic.replaceAll('_',' ').toLowerCase()));
     if(source && slots.some(s=>s.marks===q.marks) && (q.marks!==1 || q.questionType===oneMarkType))candidates.push({...q,topic:q.topic,unit:source.unit,pattern:0,reviewed:true});
@@ -127,10 +154,10 @@ export function generateLocalQuestions(text, slots, previousHashes=[], oneMarkTy
   for(let i=candidates.length-1;i>0;i--){const j=randomInt(i+1);[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}
   const topicUse=new Map();
   for(const slot of slots){
-    const available=candidates.filter(q=>q.marks===slot.marks && !chosenHashes.has(questionHash(q.text)) && !(q.numericalVariant && used.has(questionHash(q.text))) && !currentSignatures.has(reuseSignature(q)) && (!isOld(q) || repeats<repeatBudget));
-    if(!available.length) throw new HttpError(409,`Not enough fresh ${slot.marks}-mark questions fit the 20% repeat limit. Add supported topics, approve reviewed examples, or request fewer questions.`);
-    const desired=slot.difficulty==='EASY'?0:slot.difficulty==='MEDIUM'?3:6;
-    available.sort((a,b)=>Number(isOld(a))-Number(isOld(b)) || (topicUse.get(a.topic)||0)-(topicUse.get(b.topic)||0) || Math.abs(a.pattern-desired)-Math.abs(b.pattern-desired));
+    const available=candidates.filter(q=>q.marks===slot.marks && (!slot.bloomLevel || q.bloomLevel===slot.bloomLevel && startsWithBloomVerb(q.text,slot.bloomLevel)) && !chosenHashes.has(questionHash(q.text)) && !(q.numericalVariant && used.has(questionHash(q.text))) && !currentSignatures.has(reuseSignature(q)) && (!isOld(q) || repeats<repeatBudget));
+    if(!available.length) throw new HttpError(409,`Not enough fresh ${slot.marks}-mark${slot.bloomLevel?' '+slot.bloomLevel:''} questions fit the 20% repeat limit. Add supported topics, approve reviewed examples, or request fewer questions.`);
+    const desired=slot.difficulty==='EASY'?0:slot.difficulty==='MEDIUM'?2:5;
+    available.sort((a,b)=>Number(!!slot.bloomLevel && classifyBloom(a.text)!==slot.bloomLevel)-Number(!!slot.bloomLevel && classifyBloom(b.text)!==slot.bloomLevel) || Number(isOld(a))-Number(isOld(b)) || (topicUse.get(a.topic)||0)-(topicUse.get(b.topic)||0) || Math.abs(a.pattern-desired)-Math.abs(b.pattern-desired));
     const chosen=available[0],reused=isOld(chosen);if(reused)repeats++;chosenHashes.add(questionHash(chosen.text));currentSignatures.add(reuseSignature(chosen));topicUse.set(chosen.topic,(topicUse.get(chosen.topic)||0)+1);
     questions.push({...chosen,...slot,reused,reuseSignature:reuseSignature(chosen),id:`LOCAL${questions.length+1}`});
   }

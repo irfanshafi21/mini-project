@@ -12,25 +12,37 @@ TOPICS = {
  'numerical': ['binary addition arithmetic','decimal to binary conversion','cache hit ratio calculation','CPU execution time calculation','pipeline speedup calculation','memory address calculation','floating point arithmetic','two complement subtraction','binary to hexadecimal conversion','effective memory access time calculation','instruction throughput calculation','binary multiplication arithmetic','disk access time calculation','number base conversion','cache miss penalty calculation','processor performance calculation'],
 }
 
-def features(text):
+def features(text, settings=None):
     words = re.findall(r'[a-z]+', text.lower())
-    return words + ['#'+word[i:i+3] for word in words for i in range(len(word)-2)]
+    settings = settings or {}
+    weight = settings.get('wordWeight', 1)
+    result = words * weight + ['#'+word[i:i+3] for word in words for i in range(len(word)-2)]
+    if settings.get('bigrams'):
+        result += ['@'+a+' '+b for a,b in zip(words,words[1:])] * weight
+    return result
 
-def train(rows):
+
+def train(rows, settings=None):
+    settings = settings or {}
     labels = sorted(TOPICS)
     counts = {label: Counter() for label in labels}
     docs = Counter()
     for row in rows:
         docs[row['label']] += 1
-        counts[row['label']].update(features(row['topic']))
+        counts[row['label']].update(features(row['topic'],settings))
+    if any(not docs[label] for label in labels):
+        raise ValueError('All four classes need training examples')
     vocab = sorted(set().union(*(set(c) for c in counts.values())))
-    return {'version':1, 'kind':'multinomial-naive-bayes-topic-type', 'labels':labels,
-      'vocabulary':vocab, 'logPrior':{k:math.log(docs[k]/len(rows)) for k in labels},
-      'logLikelihood':{k:{w:math.log((counts[k][w]+1)/(sum(counts[k].values())+len(vocab))) for w in vocab} for k in labels},
+    alpha = settings.get('alpha',1)
+    return {'version':2 if settings else 1, 'kind':'multinomial-naive-bayes-topic-type', 'labels':labels,
+      'featureSettings':settings,
+      'vocabulary':vocab, 'logPrior':{k:math.log(1/len(labels) if settings.get('balancedPrior') else docs[k]/len(rows)) for k in labels},
+      'logLikelihood':{k:{w:math.log((counts[k][w]+alpha)/(sum(counts[k].values())+alpha*len(vocab))) for w in vocab} for k in labels},
       'seed':SEED, 'dataSource':'Hand-authored synthetic topic-type labels; not faculty-reviewed questions'}
 
+
 def predict(model, text):
-    return max(model['labels'],key=lambda k:model['logPrior'][k]+sum(model['logLikelihood'][k].get(w,0) for w in features(text)))
+    return max(model['labels'],key=lambda k:model['logPrior'][k]+sum(model['logLikelihood'][k].get(w,0) for w in features(text,model.get('featureSettings'))))
 
 if __name__ == '__main__':
     parser=argparse.ArgumentParser()

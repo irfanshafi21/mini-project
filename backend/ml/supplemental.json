@@ -1,0 +1,841 @@
+{
+  "train": [
+    {
+      "topic": "Boolean algebra fundamentals",
+      "label": "concept"
+    },
+    {
+      "topic": "Logic gate definitions",
+      "label": "concept"
+    },
+    {
+      "topic": "Database keys and constraints",
+      "label": "concept"
+    },
+    {
+      "topic": "Entity relationship model",
+      "label": "concept"
+    },
+    {
+      "topic": "Normalization concepts",
+      "label": "concept"
+    },
+    {
+      "topic": "Computer bus structure",
+      "label": "concept"
+    },
+    {
+      "topic": "Stack data structure",
+      "label": "concept"
+    },
+    {
+      "topic": "Queue data structure",
+      "label": "concept"
+    },
+    {
+      "topic": "Tree terminology",
+      "label": "concept"
+    },
+    {
+      "topic": "Graph representation",
+      "label": "concept"
+    },
+    {
+      "topic": "Algorithm complexity concepts",
+      "label": "concept"
+    },
+    {
+      "topic": "Probability distribution definitions",
+      "label": "concept"
+    },
+    {
+      "topic": "Random variable fundamentals",
+      "label": "concept"
+    },
+    {
+      "topic": "Vector space concepts",
+      "label": "concept"
+    },
+    {
+      "topic": "Matrix properties",
+      "label": "concept"
+    },
+    {
+      "topic": "Machine learning fundamentals",
+      "label": "concept"
+    },
+    {
+      "topic": "Neural network architecture",
+      "label": "concept"
+    },
+    {
+      "topic": "Activation function definitions",
+      "label": "concept"
+    },
+    {
+      "topic": "Regression model assumptions",
+      "label": "concept"
+    },
+    {
+      "topic": "Classification model concepts",
+      "label": "concept"
+    },
+    {
+      "topic": "Operating system services",
+      "label": "concept"
+    },
+    {
+      "topic": "File system structure",
+      "label": "concept"
+    },
+    {
+      "topic": "Network topology types",
+      "label": "concept"
+    },
+    {
+      "topic": "IP address structure",
+      "label": "concept"
+    },
+    {
+      "topic": "Computer instruction formats",
+      "label": "concept"
+    },
+    {
+      "topic": "Cache organisation basics",
+      "label": "concept"
+    },
+    {
+      "topic": "Semiconductor memory properties",
+      "label": "concept"
+    },
+    {
+      "topic": "Software engineering principles",
+      "label": "concept"
+    },
+    {
+      "topic": "Encryption terminology",
+      "label": "concept"
+    },
+    {
+      "topic": "Transaction isolation concepts",
+      "label": "concept"
+    },
+    {
+      "topic": "Data warehouse architecture",
+      "label": "concept"
+    },
+    {
+      "topic": "Information entropy concepts",
+      "label": "concept"
+    },
+    {
+      "topic": "Breadth first search traversal steps",
+      "label": "process"
+    },
+    {
+      "topic": "Depth first search traversal procedure",
+      "label": "process"
+    },
+    {
+      "topic": "Bubble sort execution steps",
+      "label": "process"
+    },
+    {
+      "topic": "Merge sort algorithm stages",
+      "label": "process"
+    },
+    {
+      "topic": "Binary search procedure",
+      "label": "process"
+    },
+    {
+      "topic": "Stack push operation steps",
+      "label": "process"
+    },
+    {
+      "topic": "Queue insertion procedure",
+      "label": "process"
+    },
+    {
+      "topic": "Database commit operation sequence",
+      "label": "process"
+    },
+    {
+      "topic": "Two phase locking protocol steps",
+      "label": "process"
+    },
+    {
+      "topic": "SQL query execution stages",
+      "label": "process"
+    },
+    {
+      "topic": "TCP connection establishment steps",
+      "label": "process"
+    },
+    {
+      "topic": "DNS lookup procedure",
+      "label": "process"
+    },
+    {
+      "topic": "DHCP address assignment sequence",
+      "label": "process"
+    },
+    {
+      "topic": "File read operation steps",
+      "label": "process"
+    },
+    {
+      "topic": "Page fault handling sequence",
+      "label": "process"
+    },
+    {
+      "topic": "Context switching procedure",
+      "label": "process"
+    },
+    {
+      "topic": "Boot loading stages",
+      "label": "process"
+    },
+    {
+      "topic": "Cache coherence protocol operation",
+      "label": "process"
+    },
+    {
+      "topic": "Instruction fetch operation steps",
+      "label": "process"
+    },
+    {
+      "topic": "Gradient descent update procedure",
+      "label": "process"
+    },
+    {
+      "topic": "Backpropagation algorithm steps",
+      "label": "process"
+    },
+    {
+      "topic": "Decision tree induction stages",
+      "label": "process"
+    },
+    {
+      "topic": "K means clustering iterations",
+      "label": "process"
+    },
+    {
+      "topic": "Neural network training procedure",
+      "label": "process"
+    },
+    {
+      "topic": "Compiler lexical analysis stages",
+      "label": "process"
+    },
+    {
+      "topic": "Garbage collection procedure",
+      "label": "process"
+    },
+    {
+      "topic": "Authentication handshake steps",
+      "label": "process"
+    },
+    {
+      "topic": "Error recovery protocol stages",
+      "label": "process"
+    },
+    {
+      "topic": "Data packet forwarding operation",
+      "label": "process"
+    },
+    {
+      "topic": "Disk scheduling procedure",
+      "label": "process"
+    },
+    {
+      "topic": "Hash table collision resolution steps",
+      "label": "process"
+    },
+    {
+      "topic": "Finite state machine transition procedure",
+      "label": "process"
+    },
+    {
+      "topic": "Array versus linked list",
+      "label": "comparison"
+    },
+    {
+      "topic": "Breadth first versus depth first search",
+      "label": "comparison"
+    },
+    {
+      "topic": "Linear versus binary search",
+      "label": "comparison"
+    },
+    {
+      "topic": "Quick sort versus merge sort",
+      "label": "comparison"
+    },
+    {
+      "topic": "Stack versus heap allocation",
+      "label": "comparison"
+    },
+    {
+      "topic": "B tree versus binary search tree",
+      "label": "comparison"
+    },
+    {
+      "topic": "Supervised versus unsupervised learning",
+      "label": "comparison"
+    },
+    {
+      "topic": "Classification versus regression",
+      "label": "comparison"
+    },
+    {
+      "topic": "Bagging versus boosting",
+      "label": "comparison"
+    },
+    {
+      "topic": "L1 versus L2 regularization",
+      "label": "comparison"
+    },
+    {
+      "topic": "Batch versus stochastic gradient descent",
+      "label": "comparison"
+    },
+    {
+      "topic": "Precision versus recall",
+      "label": "comparison"
+    },
+    {
+      "topic": "Inner join versus outer join",
+      "label": "comparison"
+    },
+    {
+      "topic": "SQL versus NoSQL databases",
+      "label": "comparison"
+    },
+    {
+      "topic": "Clustered versus nonclustered index",
+      "label": "comparison"
+    },
+    {
+      "topic": "Optimistic versus pessimistic locking",
+      "label": "comparison"
+    },
+    {
+      "topic": "Star versus snowflake schema",
+      "label": "comparison"
+    },
+    {
+      "topic": "Symmetric versus asymmetric encryption",
+      "label": "comparison"
+    },
+    {
+      "topic": "IPv4 versus IPv6",
+      "label": "comparison"
+    },
+    {
+      "topic": "Circuit versus packet switching",
+      "label": "comparison"
+    },
+    {
+      "topic": "Hub versus switch",
+      "label": "comparison"
+    },
+    {
+      "topic": "HTTP versus HTTPS",
+      "label": "comparison"
+    },
+    {
+      "topic": "Monolithic versus microkernel architecture",
+      "label": "comparison"
+    },
+    {
+      "topic": "Preemptive versus nonpreemptive scheduling",
+      "label": "comparison"
+    },
+    {
+      "topic": "Multithreading versus multiprocessing",
+      "label": "comparison"
+    },
+    {
+      "topic": "Write through versus write back cache",
+      "label": "comparison"
+    },
+    {
+      "topic": "Big endian versus little endian",
+      "label": "comparison"
+    },
+    {
+      "topic": "Combinational versus sequential circuits",
+      "label": "comparison"
+    },
+    {
+      "topic": "Mealy versus Moore machines",
+      "label": "comparison"
+    },
+    {
+      "topic": "D latch versus D flip flop",
+      "label": "comparison"
+    },
+    {
+      "topic": "Lossless versus lossy compression",
+      "label": "comparison"
+    },
+    {
+      "topic": "Analog versus digital signals",
+      "label": "comparison"
+    },
+    {
+      "topic": "Octal to decimal conversion calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Hexadecimal addition arithmetic",
+      "label": "numerical"
+    },
+    {
+      "topic": "Binary division calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Signed integer range calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Twos complement conversion calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Cache tag bit count calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Cache block index calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Average memory access latency calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Instruction cycle count calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Clock frequency calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Amdahl law speedup calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Disk rotation latency calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Disk transfer rate calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Network transmission delay calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Subnet address range calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Channel capacity calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Checksum arithmetic calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Conditional probability calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Bayes theorem probability calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Sample mean calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Population variance calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Standard deviation calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Matrix determinant calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Matrix multiplication arithmetic",
+      "label": "numerical"
+    },
+    {
+      "topic": "Vector dot product calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Linear regression prediction calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Gradient update calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Classification precision calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Decision tree information gain calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Neural network weighted sum calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Entropy numerical calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Page table memory size calculation",
+      "label": "numerical"
+    }
+  ],
+  "validation": [
+    {
+      "topic": "Database index structure",
+      "label": "concept"
+    },
+    {
+      "topic": "Digital circuit terminology",
+      "label": "concept"
+    },
+    {
+      "topic": "Decision tree fundamentals",
+      "label": "concept"
+    },
+    {
+      "topic": "Computer security concepts",
+      "label": "concept"
+    },
+    {
+      "topic": "Linked list representation",
+      "label": "concept"
+    },
+    {
+      "topic": "Knowledge representation basics",
+      "label": "concept"
+    },
+    {
+      "topic": "Memory cell structure",
+      "label": "concept"
+    },
+    {
+      "topic": "Statistical sampling definitions",
+      "label": "concept"
+    },
+    {
+      "topic": "Topological sorting algorithm steps",
+      "label": "process"
+    },
+    {
+      "topic": "Database checkpoint procedure",
+      "label": "process"
+    },
+    {
+      "topic": "Network congestion control sequence",
+      "label": "process"
+    },
+    {
+      "topic": "Demand paging operation stages",
+      "label": "process"
+    },
+    {
+      "topic": "Tokenization algorithm steps",
+      "label": "process"
+    },
+    {
+      "topic": "Model cross validation procedure",
+      "label": "process"
+    },
+    {
+      "topic": "Interrupt service routine sequence",
+      "label": "process"
+    },
+    {
+      "topic": "Deadlock recovery procedure",
+      "label": "process"
+    },
+    {
+      "topic": "Min heap versus max heap",
+      "label": "comparison"
+    },
+    {
+      "topic": "K means versus hierarchical clustering",
+      "label": "comparison"
+    },
+    {
+      "topic": "OLTP versus OLAP",
+      "label": "comparison"
+    },
+    {
+      "topic": "Public versus private key encryption",
+      "label": "comparison"
+    },
+    {
+      "topic": "Stop and wait versus sliding window",
+      "label": "comparison"
+    },
+    {
+      "topic": "Logical versus physical address",
+      "label": "comparison"
+    },
+    {
+      "topic": "Signed versus unsigned integers",
+      "label": "comparison"
+    },
+    {
+      "topic": "Breadth first and depth first search differences",
+      "label": "comparison"
+    },
+    {
+      "topic": "Decimal to octal conversion calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Cache hit percentage calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "CPU clock cycle duration calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Disk seek average calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Packet serialization time calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Covariance numerical calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Matrix inverse calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Regression squared error calculation",
+      "label": "numerical"
+    }
+  ],
+  "benchmark": [
+    {
+      "topic": "Access control model concepts",
+      "label": "concept"
+    },
+    {
+      "topic": "Database schema terminology",
+      "label": "concept"
+    },
+    {
+      "topic": "Finite automaton definition",
+      "label": "concept"
+    },
+    {
+      "topic": "Heap data structure properties",
+      "label": "concept"
+    },
+    {
+      "topic": "Neural network layer types",
+      "label": "concept"
+    },
+    {
+      "topic": "Probability space fundamentals",
+      "label": "concept"
+    },
+    {
+      "topic": "Computer peripheral categories",
+      "label": "concept"
+    },
+    {
+      "topic": "Compiler symbol table structure",
+      "label": "concept"
+    },
+    {
+      "topic": "Data integrity constraint concepts",
+      "label": "concept"
+    },
+    {
+      "topic": "Microprocessor flag register definitions",
+      "label": "concept"
+    },
+    {
+      "topic": "Wireless network topology concepts",
+      "label": "concept"
+    },
+    {
+      "topic": "Relational algebra terminology",
+      "label": "concept"
+    },
+    {
+      "topic": "AVL tree rotation procedure",
+      "label": "process"
+    },
+    {
+      "topic": "B tree insertion algorithm steps",
+      "label": "process"
+    },
+    {
+      "topic": "Database log recovery stages",
+      "label": "process"
+    },
+    {
+      "topic": "Secure connection handshake sequence",
+      "label": "process"
+    },
+    {
+      "topic": "Operating system shutdown procedure",
+      "label": "process"
+    },
+    {
+      "topic": "Program linker operation stages",
+      "label": "process"
+    },
+    {
+      "topic": "Neural network weight update steps",
+      "label": "process"
+    },
+    {
+      "topic": "A star search algorithm procedure",
+      "label": "process"
+    },
+    {
+      "topic": "Cache write back operation sequence",
+      "label": "process"
+    },
+    {
+      "topic": "Distributed leader election steps",
+      "label": "process"
+    },
+    {
+      "topic": "Image convolution operation procedure",
+      "label": "process"
+    },
+    {
+      "topic": "Instruction retirement pipeline stages",
+      "label": "process"
+    },
+    {
+      "topic": "Adjacency matrix versus adjacency list",
+      "label": "comparison"
+    },
+    {
+      "topic": "Full adder versus half adder",
+      "label": "comparison"
+    },
+    {
+      "topic": "Simple versus multiple regression",
+      "label": "comparison"
+    },
+    {
+      "topic": "Sigmoid versus ReLU activation",
+      "label": "comparison"
+    },
+    {
+      "topic": "Candidate key versus super key",
+      "label": "comparison"
+    },
+    {
+      "topic": "Shared versus exclusive database locks",
+      "label": "comparison"
+    },
+    {
+      "topic": "Distance vector versus link state routing",
+      "label": "comparison"
+    },
+    {
+      "topic": "Virtual circuit versus datagram networks",
+      "label": "comparison"
+    },
+    {
+      "topic": "User threads versus kernel threads",
+      "label": "comparison"
+    },
+    {
+      "topic": "Direct mapped versus set associative cache",
+      "label": "comparison"
+    },
+    {
+      "topic": "Deterministic versus nondeterministic automata",
+      "label": "comparison"
+    },
+    {
+      "topic": "Inorder versus preorder traversal",
+      "label": "comparison"
+    },
+    {
+      "topic": "Hexadecimal to octal conversion calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Binary fixed point addition calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Memory chip capacity calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Cache effective latency calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Processor instruction rate calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Pipeline completion time calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Subnet host count calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Packet propagation delay calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Joint probability calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Vector Euclidean distance calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Confusion matrix recall calculation",
+      "label": "numerical"
+    },
+    {
+      "topic": "Least squares slope calculation",
+      "label": "numerical"
+    }
+  ],
+  "provenance": "Hand-authored balanced synthetic academic topic labels. Independent benchmark fixed before candidate selection; not faculty-validated."
+}

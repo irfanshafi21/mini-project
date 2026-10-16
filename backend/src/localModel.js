@@ -1,9 +1,18 @@
 import fs from 'node:fs';
+import { numericalCandidates } from './numericalQuestions.js';
+import path from 'node:path';
 import { objectiveCandidates } from './objectiveQuestions.js';
 import { createHash, randomInt } from 'node:crypto';
 import { HttpError } from './errors.js';
 
-const model = JSON.parse(fs.readFileSync(new URL('../ml/model.json', import.meta.url), 'utf8'));
+const activePath=process.env.MODEL_RUNTIME_DIR ? path.join(process.env.MODEL_RUNTIME_DIR,'active-model.json') : new URL('../.runtime/active-model.json',import.meta.url);
+let model=JSON.parse(fs.readFileSync(fs.existsSync(activePath)?activePath:new URL('../ml/model.json',import.meta.url),'utf8'));
+export function validateLocalModel(candidate){
+  if(candidate.kind!=='multinomial-naive-bayes-topic-type' || !['concept','process','comparison','numerical'].every(l=>candidate.labels?.includes(l) && Number.isFinite(candidate.logPrior?.[l]) && candidate.logLikelihood?.[l]))throw new Error('Invalid trained model');
+}
+export function reloadLocalModel(candidate){validateLocalModel(candidate);model=candidate;}
+export function getLocalModelInfo(){const r=model.trainingReport || JSON.parse(fs.readFileSync(new URL('../ml/evaluation.json',import.meta.url),'utf8'));return {kind:model.kind,trainedAt:model.trainedAt || null,accuracy:r.accuracy,trainingExamples:r.trainingExamples,testExamples:r.testExamples,reviewedTopicsUsed:r.reviewedTopicsUsed || 0};}
+
 export const questionHash = text => createHash('sha256').update(text.toLowerCase().replace(/\s+/g, ' ').trim()).digest('hex');
 export function classifyTopic(text) {
   const words = text.toLowerCase().match(/[a-z]+/g) || [];
@@ -94,23 +103,32 @@ function markedText(topic, family, marks, index) {
     `(b) Explain its operation using a labelled diagram or a worked example, as appropriate. (${b} marks)\n` +
     `(c) Analyse its benefits and limitations in a practical computer system. (${c} marks)`;
 }
-export function generateLocalQuestions(text, slots, previousHashes=[], oneMarkType='MCQ') {
-  const topics=syllabusTopics(text), used=new Set(previousHashes), questions=[];
+export const reuseSignature=q=>questionHash(q.reuseKey || `${q.marks}|${q.text.toLowerCase().replace(/what is meant by/g,'define').replace(/\b(describe|discuss|explain|outline|illustrate)\b/g,'explain').replace(/\b\d+(?:\.\d+)?\b/g,'NUMBER').replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim()}`);
+export function generateLocalQuestions(text, slots, previousHashes=[], oneMarkType='MCQ', policy={}) {
+  const topics=syllabusTopics(text), used=new Set(previousHashes), chosenHashes=new Set(), questions=[];
   const family=topic=>{const predicted=classifyTopic(topic);return predicted==='numerical'&&!/arithmetic|conversion|ratio|calculation|time|speedup|throughput|addition|subtraction|multiplication|division|performance|number system/i.test(topic)?'concept':predicted;};
-  const candidates=[...new Set(slots.map(s=>s.marks))].filter(m=>m!==1).flatMap(marks=>topics.flatMap(({topic,unit})=>patterns[family(topic)].map((_,index)=>({
-    topic:(marks<=5?focusedTopic(topic):topic).slice(0,200),subtopic:classifyTopic(topic),unit,syllabusReference:topic.slice(0,500),
-    text:markedText(topic,family(topic),marks,index),pattern:index,marks,
-  }))));
-  if(slots.some(s=>s.marks===1)) candidates.push(...objectiveCandidates(topics,oneMarkType));
+  const candidates=[...new Set(slots.map(s=>s.marks))].filter(m=>m!==1).flatMap(marks=>topics.flatMap(({topic,unit})=>{
+    const numeric=numericalCandidates(topic,unit,marks,oneMarkType);
+    return numeric.length?numeric:patterns[family(topic)].map((pattern,index)=>({topic:(marks<=5?focusedTopic(topic):topic).slice(0,200),subtopic:classifyTopic(topic),unit,syllabusReference:topic.slice(0,500),text:markedText(topic,family(topic),marks,index),pattern:index,marks}));
+  }));
+  if(slots.some(s=>s.marks===1)) candidates.push(...objectiveCandidates(topics,oneMarkType).map(q=>({...q,reuseKey:`objective:${q.topic.toLowerCase()}`})),...topics.flatMap(t=>numericalCandidates(t.topic,t.unit,1,oneMarkType)));
+  for(const q of policy.reviewedQuestions || []){
+    const source=topics.find(t=>t.topic.toLowerCase().includes(q.topic.replaceAll('_',' ').toLowerCase()));
+    if(source && slots.some(s=>s.marks===q.marks) && (q.marks!==1 || q.questionType===oneMarkType))candidates.push({...q,topic:q.topic,unit:source.unit,pattern:0,reviewed:true});
+  }
+  const oldSignatures=new Set(policy.previousSignatures || []), currentSignatures=new Set();
+  const repeatBudget=Math.floor(slots.length * Math.min(20,Math.max(0,policy.repeatPercent ?? 20))/100);
+  let repeats=0;
+  const isOld=q=>used.has(questionHash(q.text)) || oldSignatures.has(reuseSignature(q));
   for(let i=candidates.length-1;i>0;i--){const j=randomInt(i+1);[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}
   const topicUse=new Map();
   for(const slot of slots){
-    const available=candidates.filter(q=>q.marks===slot.marks&&!used.has(questionHash(q.text)));
-    if(!available.length) throw new HttpError(409,slot.marks===1 ? 'Not enough unused checked one-mark facts match this syllabus. Add more detailed supported topics, or request fewer one-mark questions.' : `No unused ${slot.marks}-mark question variations remain for this syllabus. Add syllabus topics or expand the local model patterns.`);
+    const available=candidates.filter(q=>q.marks===slot.marks && !chosenHashes.has(questionHash(q.text)) && !(q.numericalVariant && used.has(questionHash(q.text))) && !currentSignatures.has(reuseSignature(q)) && (!isOld(q) || repeats<repeatBudget));
+    if(!available.length) throw new HttpError(409,`Not enough fresh ${slot.marks}-mark questions fit the 20% repeat limit. Add supported topics, approve reviewed examples, or request fewer questions.`);
     const desired=slot.difficulty==='EASY'?0:slot.difficulty==='MEDIUM'?3:6;
-    available.sort((a,b)=>(topicUse.get(a.topic)||0)-(topicUse.get(b.topic)||0) || Math.abs(a.pattern-desired)-Math.abs(b.pattern-desired));
-    const chosen=available[0]; used.add(questionHash(chosen.text));topicUse.set(chosen.topic,(topicUse.get(chosen.topic)||0)+1);
-    questions.push({...chosen,...slot,id:`LOCAL${questions.length+1}`});
+    available.sort((a,b)=>Number(isOld(a))-Number(isOld(b)) || (topicUse.get(a.topic)||0)-(topicUse.get(b.topic)||0) || Math.abs(a.pattern-desired)-Math.abs(b.pattern-desired));
+    const chosen=available[0],reused=isOld(chosen);if(reused)repeats++;chosenHashes.add(questionHash(chosen.text));currentSignatures.add(reuseSignature(chosen));topicUse.set(chosen.topic,(topicUse.get(chosen.topic)||0)+1);
+    questions.push({...chosen,...slot,reused,reuseSignature:reuseSignature(chosen),id:`LOCAL${questions.length+1}`});
   }
   return questions;
 }

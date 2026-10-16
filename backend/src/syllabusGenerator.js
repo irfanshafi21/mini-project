@@ -46,7 +46,7 @@ export async function generateSyllabusPaper(body, { fetchImpl = fetch,
     const text = body.preparedText || await extractSyllabusText(body);
     return { paper: { source:'syllabus',fileName:body.fileName,model:'local-topic-naive-bayes-v1',subject:body.subject,
       requestedMarks:body.totalMarks,totalMarks:body.totalMarks,complete:true,requestedSplit:body.split,
-      questions:generateLocalQuestions(text,slots,body.previousQuestionHashes || [], body.oneMarkType) } };
+      questions:generateLocalQuestions(text,slots,body.previousQuestionHashes || [], body.oneMarkType, {previousSignatures:body.previousSignatures,reviewedQuestions:body.reviewedQuestions}) } };
   }
   if (slots.some(s=>s.marks===1)) {
     const text=body.preparedText || await extractSyllabusText(body);

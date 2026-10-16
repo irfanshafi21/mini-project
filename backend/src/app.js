@@ -8,12 +8,14 @@ import stats from './routes/stats.js';
 import syllabus from './routes/syllabus.js';
 import subjects from './routes/subjects.js';
 import savedPapers from './routes/savedPapers.js';
+import learning from './routes/learning.js';
 
 export const app = express();
 
 app.use(cors());           // lets the React frontend (another port) call this API
 app.use('/api/papers/from-syllabus', express.json({ limit: '7mb' }));
 app.use('/api/papers/saved', express.json({ limit: '256kb' }));
+app.use('/api/model',express.json({limit:'256kb'}));
 app.use(express.json());
 
 app.get('/api/health', async (_req, res) => {
@@ -21,6 +23,7 @@ app.get('/api/health', async (_req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.use('/api/model',learning);
 app.use('/api/questions', questions);
 app.use('/api/subjects', subjects);
 app.use('/api/stats', stats);

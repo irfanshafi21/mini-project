@@ -136,3 +136,6 @@ CREATE TABLE IF NOT EXISTS automatic_learning_jobs (
  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
  report JSONB NOT NULL DEFAULT '{}'::jsonb
 );
+
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS bloom_level TEXT CHECK(bloom_level IN ('K1','K2','K3','K4','K5','K6'));
+ALTER TABLE reviewed_examples ADD COLUMN IF NOT EXISTS bloom_level TEXT CHECK(bloom_level IN ('K1','K2','K3','K4','K5','K6'));

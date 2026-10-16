@@ -37,8 +37,8 @@ export async function createPaperPdf(paper, fontBase64) {
       const wrapped=doc.splitTextToSize(formatQuestion(q),142)
       space(Math.min(wrapped.length*6+6,35));doc.setTextColor(30,46,60)
       doc.text(`${++number}.`,20,y);doc.setFontSize(9);doc.text(`${mark} ${mark===1?'mark':'marks'}`,190,y,{align:'right'});doc.setFontSize(11)
-      for(const line of wrapped) {space(5.2);doc.text(line,29,y);y+=5.2}
-      y+=2
+      for(const line of wrapped) {space(5.8);doc.text(line,29,y);y+=5.8}
+      y+=4
     }
     y+=2
   })

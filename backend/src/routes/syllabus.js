@@ -23,18 +23,17 @@ router.post('/papers/from-syllabus',async(req,res,next)=>{
 router.post('/papers/from-syllabus', async (req, res) => {
   const body = syllabusBody.parse(req.body);
   if(body.subject) await requireRegisteredSubject(body.subject);
-  const local = (process.env.AI_PROVIDER || 'local') === 'local';
   let syllabusHash;
-  if(local) {
+  {
     body.preparedText = await extractSyllabusText(body);
     syllabusHash = questionHash(body.preparedText);
     const history = (await query('SELECT question_hash,signature_hash FROM syllabus_history WHERE subject IS NOT DISTINCT FROM $1 AND syllabus_hash=$2',[body.subject || null,syllabusHash])).rows;
     body.previousQuestionHashes=history.map(r=>r.question_hash);
     body.previousSignatures=history.map(r=>r.signature_hash).filter(Boolean);
-    body.reviewedQuestions=(await query('SELECT question FROM reviewed_examples ORDER BY approved_at DESC LIMIT 500')).rows.map(r=>r.question);
+    body.reviewedQuestions=(await query(`SELECT question FROM reviewed_examples WHERE review_source IN ('faculty','local') ORDER BY approved_at DESC LIMIT 500`)).rows.map(r=>r.question);
   }
   const result = await generateSyllabusPaper(body);
-  if(local) {
+  {
     const questions=result.paper.questions;
     const history=new Set(body.previousQuestionHashes), signatures=new Set(body.previousSignatures);
     const repeated=questions.filter(q=>history.has(questionHash(q.text)) || signatures.has(reuseSignature(q))).length;

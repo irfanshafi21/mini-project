@@ -18,7 +18,7 @@ let training=false;
 router.get('/status',async(_req,res)=>{
   const count=Number((await query('SELECT count(*) AS n FROM reviewed_examples')).rows[0].n);
   const {rows}=await query('SELECT id,status,report,created_at FROM model_training_runs ORDER BY id DESC LIMIT 1');
-  res.json({approvedExamples:count,training,activeModel:getLocalModelInfo(),bloomModel:getBloomInfo(),lastRun:rows[0] || null});
+  res.json({generation:{provider:'local',model:'college-local-classifier-grammar-v2',externalApiRequired:false},approvedExamples:count,training,activeModel:getLocalModelInfo(),bloomModel:getBloomInfo(),lastRun:rows[0] || null});
 });
 router.post('/reviews',async(req,res)=>{
   const b=z.object({paperId:z.number().int().positive(),reviews:z.array(z.object({
@@ -55,11 +55,12 @@ function runTrainer(input,output){
 }
 export async function trainApprovedExamples(){
   if(training)throw new HttpError(409,'A training run is already in progress.');
-  const {rows}=await query('SELECT topic,label,question,bloom_level FROM (SELECT topic,label,question,bloom_level,approved_at,id FROM reviewed_examples ORDER BY approved_at DESC,id DESC LIMIT 5000) latest ORDER BY approved_at,id');
+  const {rows}=await query(`SELECT topic,label,question,bloom_level FROM (SELECT topic,label,question,bloom_level,approved_at,id FROM reviewed_examples WHERE review_source IN ('faculty','local') ORDER BY approved_at DESC,id DESC LIMIT 5000) latest ORDER BY approved_at,id`);
   if(!rows.length)throw new HttpError(400,'Approve reviewed questions before training.');
   training=true;
+  const dir=path.join(runtime,randomUUID());
   try{
-    const dir=path.join(runtime,randomUUID());await fs.mkdir(dir,{recursive:true});
+    await fs.mkdir(dir,{recursive:true});
     const input=path.join(dir,'reviews.json'),output=path.join(dir,'model.json');
     await fs.writeFile(input,JSON.stringify(rows),'utf8');
     const report=await runTrainer(input,output), current=getLocalModelInfo();
@@ -77,7 +78,7 @@ export async function trainApprovedExamples(){
     await query('INSERT INTO model_training_runs(status,report) VALUES($1,$2::jsonb)',[status,JSON.stringify(full)]);
     return {status,report:full};
   }catch(err){await query('INSERT INTO model_training_runs(status,report) VALUES($1,$2::jsonb)',['failed',JSON.stringify({message:err.message})]);throw err;}
-  finally{training=false;}
+  finally{training=false;await fs.rm(dir,{recursive:true,force:true}).catch(()=>{});}
 }
 router.post('/train',async(_req,res)=>res.json(await trainApprovedExamples()));
 router.get('/papers/:id',async(req,res)=>{

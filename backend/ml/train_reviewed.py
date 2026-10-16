@@ -3,6 +3,7 @@ import argparse, json, re
 from pathlib import Path
 from train import train, predict, ROOT
 from collections import Counter
+from train_bloom import train_bloom
 
 def key(text):
     return ' '.join(re.findall(r'[a-z0-9]+',text.replace('_',' ').lower()))
@@ -75,6 +76,9 @@ def train_reviewed(reviews):
       'evaluationKind':'Frozen original holdout; separate validation selection and 48-topic synthetic benchmark',
       'limitations':'Synthetic topic classification only; not faculty-validated, question correctness, difficulty or language-model training. Semantic overlap between related topics can remain.'}
     best['dataSource']='Original plus balanced curated training topics and accepted LLM/faculty labels; validation and test records excluded'
+    bloom,bloom_report=train_bloom(reviews)
+    best['bloomModel']=bloom
+    report['bloomEvaluation']=bloom_report
     best['trainingReport']=report
     return best,report
 

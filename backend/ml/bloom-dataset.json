@@ -1,0 +1,247 @@
+{
+  "train": [
+    {
+      "text": "Define cache memory.",
+      "label": "K1"
+    },
+    {
+      "text": "List the principal elements of database transactions.",
+      "label": "K1"
+    },
+    {
+      "text": "Name the basic components of network routing.",
+      "label": "K1"
+    },
+    {
+      "text": "Recall the meaning of binary arithmetic.",
+      "label": "K1"
+    },
+    {
+      "text": "What is sorting algorithms?",
+      "label": "K1"
+    },
+    {
+      "text": "Match the term for neural networks with its definition.",
+      "label": "K1"
+    },
+    {
+      "text": "Explain how cache memory works in your own words.",
+      "label": "K2"
+    },
+    {
+      "text": "Summarize the central idea of database transactions.",
+      "label": "K2"
+    },
+    {
+      "text": "Illustrate network routing using a familiar example.",
+      "label": "K2"
+    },
+    {
+      "text": "Interpret the meaning of binary arithmetic in context.",
+      "label": "K2"
+    },
+    {
+      "text": "Compare the features of sorting algorithms to explain their differences.",
+      "label": "K2"
+    },
+    {
+      "text": "Classify examples of neural networks by their properties.",
+      "label": "K2"
+    },
+    {
+      "text": "Apply cache memory to solve the supplied practical problem.",
+      "label": "K3"
+    },
+    {
+      "text": "Solve the given numerical problem using database transactions.",
+      "label": "K3"
+    },
+    {
+      "text": "Utilize network routing to calculate the required output for given inputs.",
+      "label": "K3"
+    },
+    {
+      "text": "Make use of binary arithmetic to complete the specified task.",
+      "label": "K3"
+    },
+    {
+      "text": "Construct a solution using the supplied method of sorting algorithms.",
+      "label": "K3"
+    },
+    {
+      "text": "Develop the result by executing the known procedure for neural networks.",
+      "label": "K3"
+    },
+    {
+      "text": "Analyze cache memory to identify causes and relationships.",
+      "label": "K4"
+    },
+    {
+      "text": "Examine the evidence about database transactions and distinguish its underlying parts.",
+      "label": "K4"
+    },
+    {
+      "text": "Distinguish the assumptions responsible for different outcomes in network routing.",
+      "label": "K4"
+    },
+    {
+      "text": "Compare the internal structures of binary arithmetic and explain their relationships.",
+      "label": "K4"
+    },
+    {
+      "text": "Inspect the faulty result of sorting algorithms to locate its cause.",
+      "label": "K4"
+    },
+    {
+      "text": "Categorize the components of neural networks and determine their dependencies.",
+      "label": "K4"
+    },
+    {
+      "text": "Evaluate cache memory against stated criteria and defend your judgment.",
+      "label": "K5"
+    },
+    {
+      "text": "Justify a choice of database transactions using evidence and trade-offs.",
+      "label": "K5"
+    },
+    {
+      "text": "Recommend the most suitable approach to network routing and support your decision.",
+      "label": "K5"
+    },
+    {
+      "text": "Assess the quality of binary arithmetic against the supplied requirements.",
+      "label": "K5"
+    },
+    {
+      "text": "Criticize the proposed approach to sorting algorithms using explicit criteria.",
+      "label": "K5"
+    },
+    {
+      "text": "Compare alternatives for neural networks and judge which best satisfies the constraints.",
+      "label": "K5"
+    },
+    {
+      "text": "Design an original solution for cache memory under the stated constraints.",
+      "label": "K6"
+    },
+    {
+      "text": "Create a new approach to database transactions by combining relevant ideas.",
+      "label": "K6"
+    },
+    {
+      "text": "Propose an original architecture for network routing.",
+      "label": "K6"
+    },
+    {
+      "text": "Formulate a novel method for binary arithmetic and describe its construction.",
+      "label": "K6"
+    },
+    {
+      "text": "Develop a new system for sorting algorithms with a coherent design.",
+      "label": "K6"
+    },
+    {
+      "text": "Build an original model for neural networks rather than executing an existing method.",
+      "label": "K6"
+    }
+  ],
+  "test": [
+    {
+      "text": "Name the basic components of file storage.",
+      "label": "K1"
+    },
+    {
+      "text": "Recall the meaning of CPU instruction processing.",
+      "label": "K1"
+    },
+    {
+      "text": "What is matrix operations?",
+      "label": "K1"
+    },
+    {
+      "text": "Match the term for data security with its definition.",
+      "label": "K1"
+    },
+    {
+      "text": "Illustrate file storage using a familiar example.",
+      "label": "K2"
+    },
+    {
+      "text": "Interpret the meaning of CPU instruction processing in context.",
+      "label": "K2"
+    },
+    {
+      "text": "Compare the features of matrix operations to explain their differences.",
+      "label": "K2"
+    },
+    {
+      "text": "Classify examples of data security by their properties.",
+      "label": "K2"
+    },
+    {
+      "text": "Utilize file storage to calculate the required output for given inputs.",
+      "label": "K3"
+    },
+    {
+      "text": "Make use of CPU instruction processing to complete the specified task.",
+      "label": "K3"
+    },
+    {
+      "text": "Construct a solution using the supplied method of matrix operations.",
+      "label": "K3"
+    },
+    {
+      "text": "Develop the result by executing the known procedure for data security.",
+      "label": "K3"
+    },
+    {
+      "text": "Distinguish the assumptions responsible for different outcomes in file storage.",
+      "label": "K4"
+    },
+    {
+      "text": "Compare the internal structures of CPU instruction processing and explain their relationships.",
+      "label": "K4"
+    },
+    {
+      "text": "Inspect the faulty result of matrix operations to locate its cause.",
+      "label": "K4"
+    },
+    {
+      "text": "Categorize the components of data security and determine their dependencies.",
+      "label": "K4"
+    },
+    {
+      "text": "Recommend the most suitable approach to file storage and support your decision.",
+      "label": "K5"
+    },
+    {
+      "text": "Assess the quality of CPU instruction processing against the supplied requirements.",
+      "label": "K5"
+    },
+    {
+      "text": "Criticize the proposed approach to matrix operations using explicit criteria.",
+      "label": "K5"
+    },
+    {
+      "text": "Compare alternatives for data security and judge which best satisfies the constraints.",
+      "label": "K5"
+    },
+    {
+      "text": "Propose an original architecture for file storage.",
+      "label": "K6"
+    },
+    {
+      "text": "Formulate a novel method for CPU instruction processing and describe its construction.",
+      "label": "K6"
+    },
+    {
+      "text": "Develop a new system for matrix operations with a coherent design.",
+      "label": "K6"
+    },
+    {
+      "text": "Build an original model for data security rather than executing an existing method.",
+      "label": "K6"
+    }
+  ],
+  "provenance": "Synthetic contextual tasks following the college K1-K6 mapping; test topic families separated from training. Not faculty validated."
+}

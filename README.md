@@ -637,3 +637,25 @@ The curated training pool now contains 176 topics: 44 per class across computing
 Nine Naive Bayes configurations are selected using only a separate 32-topic validation set. Features support word weighting, word pairs and character trigrams, smoothing, and equal class priors. Python training and JavaScript inference share the same feature rules and are checked for prediction parity.
 
 The original 16-topic test remains unchanged. A separately fixed 48-topic synthetic benchmark reports old/new performance on the same records. Training excludes exact-normalized topics from both tests and the validation set; report hashes identify those splits. On the bundled curated-only model, the original score remains 13/16 (81.25%), while the expanded benchmark improves from 39/48 (81.25%) to 47/48 (97.92%). Do not compare the new benchmark score directly to an old score from a different test. These hand-authored synthetic sets can share related concepts and are not a faculty-validated estimate of deployment accuracy. Bloom's-level prediction is not included in this upgrade.
+
+
+## College Bloom levels (K1-K6)
+
+| Code | Cognitive level | Example permitted opening |
+| --- | --- | --- |
+| K1 | Remember | Define, List, Recall |
+| K2 | Understand | Explain, Illustrate, Summarize |
+| K3 | Apply | Apply, Solve, Utilize |
+| K4 | Analyze | Analyze, Distinguish, Examine |
+| K5 | Evaluate | Evaluate, Justify, Recommend |
+| K6 | Create | Design, Create, Propose |
+
+The complete college verb lists are stored in `backend/ml/bloom-verbs.json`, transcribed from the supplied chart. A shared verb such as Compare can belong to several levels; the cognitive task and context determine its level.
+
+When a mark category has a nonzero question count, six K1-K6 fields appear below the marks controls. Allocate exactly that many questions. For ten 2-mark questions, K1=2, K2=5 and K3=3 is valid; 2+5+4 is eleven and is rejected. Each mark category has its own allocation. Bloom level is separate from marks and easy/medium/hard difficulty.
+
+Explicit Bloom-specific syllabus generation uses the configured API LLM even when ordinary generation is local. Java still plans the marks/difficulty slots. The writer must start each question with a verb from the requested college column and produce the corresponding cognitive task, not merely replace a verb. The backend verifies counts, level metadata, opening verbs, formats and objective answers. An independent LLM teacher review checks cognitive levels before a Bloom-specific paper is shown, with one bounded rewrite attempt. Accepted saved papers also enter background learning. Semantic correctness is not mathematically guaranteed by a keyword check.
+
+Question-bank generation matches the requested marks, difficulty and K level without silently substituting another level. Existing bank entries receive provisional local-model classifications during `npm run db:init`; teachers can correct them. The manual picker filters by K level. K labels survive question-bank storage, paper editing/retrieval, PDF, print and TXT export. A missing bank category produces a shortfall message.
+
+A separate six-class Naive Bayes classifier is trained by `python backend/ml/train_bloom.py`. Its seed data contains 36 synthetic training questions and 24 topic-separated test questions, with shared wording templates. This is a small development check, not a reliable educational-accuracy claim. Automatic accepted LLM reviews supply contextual Bloom labels for subsequent training alongside topic-classifier learning. Exact normalized Bloom test questions and contradictory duplicate labels are excluded. Activation requires the existing topic checks and nondecreasing Bloom test accuracy. No manual approval is required. The trained Bloom classifier labels tasks; it is not a fine-tuned generative LLM.

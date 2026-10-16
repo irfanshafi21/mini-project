@@ -1,3 +1,4 @@
+import { LEVELS } from './blooms'
 import ReviewLearning from './ReviewLearning'
 import { useEffect, useState } from 'react'
 import PaperEditor from './PaperEditor'
@@ -14,7 +15,7 @@ export function SubjectQuestions({ apiUrl, subject }) {
   return <QuestionPicker key={subject} apiUrl={apiUrl} subject={subject} />
 }
 function QuestionPicker({ apiUrl, subject, selected, toggle }) {
-  const [page, setPage] = useState(1), [unit, setUnit] = useState(''), [marks, setMarks] = useState(''), [search, setSearch] = useState('')
+  const [page, setPage] = useState(1), [unit, setUnit] = useState(''), [marks, setMarks] = useState(''), [bloom,setBloom]=useState(''), [search, setSearch] = useState('')
   const [data, setData] = useState({ items: [], total: 0 }), [error, setError] = useState(''), [loading, setLoading] = useState(false), [retry, setRetry] = useState(0)
   useEffect(() => {
     const controller = new AbortController()
@@ -23,15 +24,16 @@ function QuestionPicker({ apiUrl, subject, selected, toggle }) {
     if(subject.trim()) params.set('subject',subject.trim())
     if (unit) params.set('unit', unit)
     if (marks) params.set('marks', marks)
+    if(bloom)params.set('bloomLevel',bloom)
     if (search.trim()) params.set('q', search.trim())
     call(apiUrl, `/questions?${params}`, null, controller.signal).then(d => { setData(d); setError('') })
       .catch(err => { if (err.name !== 'AbortError') setError(err.message) })
       .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
-  }, [apiUrl, subject, page, unit, marks, search, retry])
+  }, [apiUrl, subject, page, unit, marks, bloom, search, retry])
   const filter = setter => e => { setter(e.target.value); setPage(1) }
-  return <div className="subject-question-table"><div className="filter-bar"><input aria-label="Search subject questions" placeholder="Search questions" maxLength="200" value={search} onChange={filter(setSearch)} /><select aria-label="Question unit" value={unit} onChange={filter(setUnit)}><option value="">All units</option>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>Unit {n}</option>)}</select><select aria-label="Question marks" value={marks} onChange={filter(setMarks)}><option value="">All marks</option>{[1, 2, 5, 10, 16].map(n => <option key={n} value={n}>{n} marks</option>)}</select></div>
-    {error ? <div role="alert"><p className="error">{error}</p><button className="secondary" onClick={() => setRetry(n => n + 1)}>Retry</button></div> : loading ? <p role="status">Loading questions...</p> : <><div className="table-scroll"><table><caption>{(subject || 'All subjects').replaceAll('_', ' ')} — {data.total} stored questions</caption><thead><tr>{toggle && <th scope="col">Select</th>}<th scope="col">Code</th><th scope="col">Question</th><th scope="col">Unit</th><th scope="col">Marks</th><th scope="col">Difficulty</th></tr></thead><tbody>{data.items.map(q => <tr key={q.id} className={selected?.some(s => s.id === q.id) ? 'selected-row' : ''}>{toggle && <td><input type="checkbox" aria-label={`Select ${q.code}`} checked={selected.some(s => s.id === q.id)} disabled={selected.length >= 50 && !selected.some(s => s.id === q.id)} onChange={() => toggle(q)} /></td>}<td>{q.code}</td><td>{formatQuestion(q)}</td><td>{q.unit}</td><td>{q.marks}</td><td>{q.difficulty.toLowerCase()}</td></tr>)}</tbody></table></div>{!data.total && <p className="muted">No matching questions. Add questions to this subject first.</p>}<div className="pagination"><button className="secondary" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous questions</button><span>Page {page}</span><button className="secondary" disabled={page * 20 >= data.total} onClick={() => setPage(p => p + 1)}>Next questions</button></div></>}
+  return <div className="subject-question-table"><div className="filter-bar"><input aria-label="Search subject questions" placeholder="Search questions" maxLength="200" value={search} onChange={filter(setSearch)} /><select aria-label="Question unit" value={unit} onChange={filter(setUnit)}><option value="">All units</option>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>Unit {n}</option>)}</select><select aria-label="Question marks" value={marks} onChange={filter(setMarks)}><option value="">All marks</option>{[1, 2, 5, 10, 16].map(n => <option key={n} value={n}>{n} marks</option>)}</select><select aria-label="Question K level" value={bloom} onChange={filter(setBloom)}><option value="">All K levels</option>{Object.entries(LEVELS).map(([k,n])=><option key={k} value={k}>{k} - {n}</option>)}</select></div>
+    {error ? <div role="alert"><p className="error">{error}</p><button className="secondary" onClick={() => setRetry(n => n + 1)}>Retry</button></div> : loading ? <p role="status">Loading questions...</p> : <><div className="table-scroll"><table><caption>{(subject || 'All subjects').replaceAll('_', ' ')} — {data.total} stored questions</caption><thead><tr>{toggle && <th scope="col">Select</th>}<th scope="col">Code</th><th scope="col">Question</th><th scope="col">Unit</th><th scope="col">Marks</th><th scope="col">Difficulty</th><th scope="col">K level</th></tr></thead><tbody>{data.items.map(q => <tr key={q.id} className={selected?.some(s => s.id === q.id) ? 'selected-row' : ''}>{toggle && <td><input type="checkbox" aria-label={`Select ${q.code}`} checked={selected.some(s => s.id === q.id)} disabled={selected.length >= 50 && !selected.some(s => s.id === q.id)} onChange={() => toggle(q)} /></td>}<td>{q.code}</td><td>{formatQuestion(q)}</td><td>{q.unit}</td><td>{q.marks}</td><td>{q.difficulty.toLowerCase()}</td><td>{q.bloomLevel}</td></tr>)}</tbody></table></div>{!data.total && <p className="muted">No matching questions. Add questions to this subject first.</p>}<div className="pagination"><button className="secondary" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous questions</button><span>Page {page}</span><button className="secondary" disabled={page * 20 >= data.total} onClick={() => setPage(p => p + 1)}>Next questions</button></div></>}
   </div>
 }
 export default function ManualPaper({ apiUrl, subjects, onGenerated }) {

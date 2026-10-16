@@ -1,3 +1,4 @@
+import { LEVELS } from './blooms'
 import { useEffect, useRef, useState } from 'react'
 import SyllabusPaper from './SyllabusPaper'
 import { formatQuestion } from './paperText'
@@ -7,7 +8,7 @@ import './App.css'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 const pretty = s => String(s || '').replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
-const blank = { subject: '', unit: '1', topic: '', subtopic: '', difficulty: 'EASY', marks: '5', text: '',questionType:'SHORT',options:[],answer:'' }
+const blank = { subject: '', unit: '1', topic: '', subtopic: '', difficulty: 'EASY', marks: '5', text: '',questionType:'SHORT',options:[],answer:'',bloomLevel:'' }
 async function request(path, options = {}) {
   const r = await fetch(API + path, options), data = await r.json()
   if (!r.ok) throw new Error(data.details?.map(d => `${pretty(d.field)}: ${d.message}`).join(' | ') || data.error)
@@ -23,7 +24,7 @@ function Editor({ question, subjects, close, saved }) {
   const change = e => setForm(f => ({ ...f, [e.target.name]: e.target.value, ...(e.target.name==='marks'?{questionType:Number(e.target.value)===1?'MCQ':'SHORT',options:Number(e.target.value)===1?['','','','']:[],answer:''}:{}), ...(e.target.name==='questionType'?{options:e.target.value==='MCQ'?['','','','']:[],answer:''}:{}) }))
   async function save(e) {
     e.preventDefault(); setBusy(true); setError('')
-    try { await request(question ? `/questions/${question.id}` : '/questions', { method: question ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, unit: Number(form.unit), marks: Number(form.marks) }) }); saved(question ? 'Question updated.' : 'Question added to your bank.'); close() }
+    try { await request(question ? `/questions/${question.id}` : '/questions', { method: question ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form,bloomLevel:form.bloomLevel || undefined, unit: Number(form.unit), marks: Number(form.marks) }) }); saved(question ? 'Question updated.' : 'Question added to your bank.'); close() }
     catch (err) { setError(err.message === 'Failed to fetch' ? 'Cannot reach the API. Please try again.' : err.message) } finally { setBusy(false) }
   }
   return <dialog ref={ref} className="editor-dialog" onCancel={e => { if (busy) e.preventDefault(); else close() }} aria-labelledby="editor-title"><div className="section-heading"><div><span className="eyebrow">YOUR QUESTION BANK</span><h2 id="editor-title">{question ? 'Edit question' : 'Add question'}</h2></div><button className="icon-button" onClick={close} disabled={busy} aria-label="Close question editor">X</button></div><form onSubmit={save}><fieldset disabled={busy}>
@@ -31,7 +32,7 @@ function Editor({ question, subjects, close, saved }) {
     <div className="form-row">{['topic', 'subtopic'].map(name => <label className="field" key={name}><span>{pretty(name)}</span><input name={name} required maxLength="60" value={form[name]} onChange={change} placeholder={name === 'topic' ? 'e.g. Trees' : 'e.g. Binary search trees'} /></label>)}</div>
     <div className="form-row"><label className="field"><span>Difficulty</span><select name="difficulty" value={form.difficulty} onChange={change}>{['EASY', 'MEDIUM', 'HARD'].map(l => <option key={l} value={l}>{pretty(l)}</option>)}</select></label><label className="field"><span>Marks</span><input name="marks" type="number" min="1" max="100" required value={form.marks} onChange={change} /></label></div>
     {Number(form.marks)===1 && <><label className="field"><span>1-mark question type</span><select name="questionType" value={form.questionType==='SHORT'?'MCQ':form.questionType} onChange={change}><option value="MCQ">Multiple choice</option><option value="FILL_BLANK">Fill in the blanks</option></select></label>{form.questionType==='MCQ' && <><div className="form-row">{form.options.map((o,i)=><label className="field" key={i}><span>Option {String.fromCharCode(65+i)}</span><input required maxLength="300" value={o} onChange={e=>setForm(f=>({...f,options:f.options.map((v,j)=>j===i?e.target.value:v),answer:f.answer===o?e.target.value:f.answer}))} /></label>)}</div><label className="field"><span>Correct answer</span><select required name="answer" value={form.answer} onChange={change}><option value="">Choose the correct option</option>{form.options.map((o,i)=><option key={i} value={o}>{String.fromCharCode(65+i)}. {o}</option>)}</select></label></>}{form.questionType==='FILL_BLANK' && <label className="field"><span>Correct answer</span><input required name="answer" maxLength="300" value={form.answer} onChange={change} /></label>}</>}
-    <label className="field"><span>Question</span><textarea name="text" required rows="4" maxLength="2000" value={form.text} onChange={change} placeholder="Write a clear, complete question..." /></label>{error && <p className="error" role="alert">{error}</p>}<div className="form-footer"><button type="button" className="secondary" onClick={close}>Cancel</button><button className="primary">{busy ? 'Saving...' : 'Save question'}</button></div>
+    <label className="field"><span>Bloom level</span><select name="bloomLevel" value={form.bloomLevel || ''} onChange={change}><option value="">Automatic classification</option>{Object.entries(LEVELS).map(([k,n])=><option key={k} value={k}>{k} - {n}</option>)}</select></label><label className="field"><span>Question</span><textarea name="text" required rows="4" maxLength="2000" value={form.text} onChange={change} placeholder="Write a clear, complete question..." /></label>{error && <p className="error" role="alert">{error}</p>}<div className="form-footer"><button type="button" className="secondary" onClick={close}>Cancel</button><button className="primary">{busy ? 'Saving...' : 'Save question'}</button></div>
   </fieldset></form></dialog>
 }
 function SubjectEditor({ close, saved }) {

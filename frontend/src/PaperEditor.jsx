@@ -11,7 +11,7 @@ export default function PaperEditor({ apiUrl, result, onSaved }) {
   async function save(e) {
     e.preventDefault();setBusy(true);setError('')
     try {
-      const response=await fetch(`${apiUrl}/papers/saved${result.id?'/'+result.id:''}`,{method:result.id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:result.paper.subject,title:plainText(draft.title),questions:draft.questions.map(q=>({...q,unit:q.unit||1,marks:Number(q.marks),text:plainText(q.text)}))})})
+      const response=await fetch(`${apiUrl}/papers/saved${result.id?'/'+result.id:''}`,{method:result.id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:result.paper.subject==='UNASSIGNED'?undefined:result.paper.subject,title:plainText(draft.title),questions:draft.questions.map(q=>({...q,unit:q.unit||1,marks:Number(q.marks),text:plainText(q.text)}))})})
       const saved=await response.json()
       if(!response.ok) throw new Error(saved.details?.map(d=>d.message).join(' | ') || saved.error || 'Could not save your edits.')
       onSaved(saved);setDraft(null)

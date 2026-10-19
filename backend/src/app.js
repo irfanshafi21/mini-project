@@ -20,7 +20,8 @@ app.use(express.json());
 
 app.get('/api/health', async (_req, res) => {
   await query('SELECT 1');
-  res.json({ status: 'ok' });
+  const aiProvider = (process.env.AI_PROVIDER || 'local').toLowerCase();
+  res.json({ status: 'ok', aiProvider, model: aiProvider === 'groq' ? process.env.GROQ_MODEL || null : 'college-local-classifier-grammar-v2' });
 });
 
 app.use('/api/model',learning);

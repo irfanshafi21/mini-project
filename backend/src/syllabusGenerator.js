@@ -4,6 +4,7 @@ import { HttpError } from './errors.js';
 import { normalizeName, markCountsSchema, validMarkPattern, bloomCountsSchema, validBloomCounts } from './validation.js';
 import { planPaper } from './javaCore.js';
 import { extractSyllabusText, generateLocalQuestions } from './localModel.js';
+import { generateGroqQuestions } from './groqQuestionGenerator.js';
 export { planPaper } from './javaCore.js';
 
 export const syllabusBody = z.object({
@@ -29,10 +30,13 @@ export const syllabusBody = z.object({
 export async function generateSyllabusPaper(body, { bankQuestions = [] } = {}) {
   const text=body.preparedText || await extractSyllabusText(body);
   const slots=assignBloomSlots(await planPaper(body.totalMarks,body.count,body.split,body.markCounts),body.bloomCounts);
-  const questions=generateLocalQuestions(text,slots,body.previousQuestionHashes || [],body.oneMarkType,{
-    previousSignatures:body.previousSignatures,reviewedQuestions:body.reviewedQuestions,units:body.units,chapters:body.chapters,bankQuestions,questionStyle:body.questionStyle,
-  });
+  const provider=(process.env.AI_PROVIDER || 'local').toLowerCase();
+  const questions=provider==='groq'
+    ? await generateGroqQuestions({body,text,slots,bankQuestions})
+    : generateLocalQuestions(text,slots,body.previousQuestionHashes || [],body.oneMarkType,{
+      previousSignatures:body.previousSignatures,reviewedQuestions:body.reviewedQuestions,units:body.units,chapters:body.chapters,bankQuestions,questionStyle:body.questionStyle,
+    });
   return {paper:{source:'syllabus',fileName:body.fileName,subject:body.subject,
     requestedMarks:body.totalMarks,totalMarks:body.totalMarks,complete:true,requestedSplit:body.split,
-    bloomCounts:body.bloomCounts,model:'college-local-classifier-grammar-v2',questions}};
+    bloomCounts:body.bloomCounts,model:provider==='groq'?process.env.GROQ_MODEL || 'groq': 'college-local-classifier-grammar-v2',questions}};
 }

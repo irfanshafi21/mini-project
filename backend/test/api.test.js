@@ -44,6 +44,8 @@ test('health check', async () => {
   const r = await call('GET', '/api/health');
   assert.equal(r.status, 200);
   assert.equal(r.body.status, 'ok');
+  assert.equal(r.body.aiProvider, (process.env.AI_PROVIDER || 'local').toLowerCase());
+  assert.equal(r.body.model, r.body.aiProvider === 'groq' ? process.env.GROQ_MODEL || null : 'college-local-classifier-grammar-v2');
 });
 
 test('adding questions assigns numbers automatically (Q101, Q102, ...) and normalizes names', async () => {

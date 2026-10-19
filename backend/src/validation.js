@@ -76,6 +76,7 @@ export const paperBody = z
     count: z.number().int().min(0).max(50).default(0),
     markCounts: markCountsSchema.optional(),
     bloomCounts:bloomCountsSchema.optional(),
+    questionStyle:z.enum(['MIXED','THEORY','PROBLEM_SOLVING','PROGRAMMING_SQL']).default('MIXED'),
     oneMarkType: z.enum(['MCQ','FILL_BLANK']).default('MCQ'),
     split: z
       .object({

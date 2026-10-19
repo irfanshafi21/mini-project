@@ -41,19 +41,31 @@
   ],
   "K3": [
     "Apply",
+    "Calculate",
     "Build",
     "Choose",
+    "Compute",
     "Construct",
+    "Dequeue",
+    "Delete",
     "Develop",
+    "Execute",
     "Experiment with",
+    "Insert",
     "Identify",
     "Interview",
     "Make use of",
     "Model",
     "Organize",
+    "Perform",
     "Plan",
+    "Pop",
+    "Push",
     "Select",
     "Solve",
+    "Sort",
+    "Trace",
+    "Traverse",
     "Utilize"
   ],
   "K4": [
@@ -65,6 +77,7 @@
     "Conclusion",
     "Contrast",
     "Discover",
+    "Debug",
     "Dissect",
     "Distinguish",
     "Divide",
@@ -131,6 +144,7 @@
     "Design",
     "Develop",
     "Discuss",
+    "Implement",
     "Elaborate",
     "Estimate",
     "Formulate",
@@ -151,6 +165,7 @@
     "Solve",
     "Suppose",
     "Test",
-    "Theory"
+    "Theory",
+    "Write"
   ]
 }

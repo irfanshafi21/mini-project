@@ -9,8 +9,10 @@ export { planPaper } from './javaCore.js';
 export const syllabusBody = z.object({
   subject: z.string().trim().max(60).optional().transform(v => v ? normalizeName(v) : undefined),
   oneMarkType:z.enum(['MCQ','FILL_BLANK']).default('MCQ'),
+  questionStyle:z.enum(['MIXED','THEORY','PROBLEM_SOLVING','PROGRAMMING_SQL']).default('MIXED'),
   unit: z.number().int().min(1).max(5).default(1),
-  units: z.array(z.number().int().min(1).max(5)).min(1).max(5).transform(values=>[...new Set(values)]).optional(),
+  units: z.array(z.number().int().min(1).max(5)).min(1).max(5).transform(values => [...new Set(values)]).optional(),
+  chapters: z.array(z.string().trim().min(1).max(200)).min(1).max(50).optional(),
   fileName: z.string().min(1).max(200),
   mimeType: z.enum(['application/pdf', 'text/plain']),
   data: z.string().min(1).max(7_000_000).regex(/^[A-Za-z0-9+/]+={0,2}$/),
@@ -24,13 +26,13 @@ export const syllabusBody = z.object({
   .refine(b => b.markCounts || (b.count > 0 && b.totalMarks >= b.count && b.totalMarks <= b.count * 100),
     { message: 'Total marks must allow 1–100 marks per question', path: ['totalMarks'] }).refine(validBloomCounts,{message:'K1-K6 counts must match each mark category.',path:['bloomCounts']}).refine(validMarkPattern, { message: 'Question counts must total the requested marks and match the question count (or use 0 for automatic).', path: ['markCounts'] });
 
-export async function generateSyllabusPaper(body) {
+export async function generateSyllabusPaper(body, { bankQuestions = [] } = {}) {
   const text=body.preparedText || await extractSyllabusText(body);
   const slots=assignBloomSlots(await planPaper(body.totalMarks,body.count,body.split,body.markCounts),body.bloomCounts);
   const questions=generateLocalQuestions(text,slots,body.previousQuestionHashes || [],body.oneMarkType,{
-    previousSignatures:body.previousSignatures,reviewedQuestions:body.reviewedQuestions,units:body.units,
+    previousSignatures:body.previousSignatures,reviewedQuestions:body.reviewedQuestions,units:body.units,chapters:body.chapters,bankQuestions,questionStyle:body.questionStyle,
   });
   return {paper:{source:'syllabus',fileName:body.fileName,subject:body.subject,
     requestedMarks:body.totalMarks,totalMarks:body.totalMarks,complete:true,requestedSplit:body.split,
-    bloomCounts:body.bloomCounts,selectedUnits:body.units || null,model:'college-local-rag-bm25-grammar-v1',questions}};
+    bloomCounts:body.bloomCounts,model:'college-local-classifier-grammar-v2',questions}};
 }

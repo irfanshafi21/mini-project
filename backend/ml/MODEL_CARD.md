@@ -1,37 +1,28 @@
-# Local question-generation models
+# Our local question-generation ML system
 
-This project does not use a hosted AI service or a downloaded foundation model. Python trains compact Naive Bayes classifiers, and JavaScript uses the saved weights. Question wording still comes from authored task grammars, checked objective facts and numerical factories. The classifier does not learn to write arbitrary new prose like an LLM.
+No pretrained language model or external AI service is used. Python trains our own topic-type and Bloom-task Naive Bayes classifiers; JavaScript performs inference from the saved weights. Question writing is constrained composition from authored grammars, curated objective facts and numerical factories. It is not a learned free-form neural language model.
 
-## Training from the supplied exam archive
+## Data and measured results
 
-`train_from_archive.py` reads the user's ZIP in place and uses only the GATE Computer Science papers. The text-based 2022 paper supplies training examples; 2023 is held out by year. The archive's 2020–21 CS papers do not provide enough extractable question text for this run. The syllabus PDF is useful as topic reference but does not contain labeled question examples.
+The bundled topic model uses 176 curated training examples, with a separate 32-topic validation set for choosing feature settings. It scores 13/16 (81.25%) on the original synthetic topic holdout and 47/48 (97.92%) on the expanded synthetic benchmark. The Bloom model starts with 36 authored training examples and scores 24/24 on a small synthetic holdout with shared wording templates. These figures measure classification only. They do not measure question correctness, syllabus relevance, realistic difficulty or faculty acceptance.
 
-The archive has no Bloom labels. To make a small candidate dataset, the trainer labels only questions containing a unique action verb from the college's `bloom-verbs.json` chart. The archive added 45 weakly labeled 2022 questions to 36 authored examples. It found 46 weakly labeled 2023 questions for the held-out check. GATE's multiple-choice wording yielded no clear K2 training examples and very few K3/K4/K6 examples.
+## Generation and bounds
 
-On those chart-derived 2023 labels, the previous classifier reached 19.6% accuracy and 0.135 macro-F1; the archive-trained candidate reached 73.9% accuracy and 0.250 macro-F1. This is agreement with the verb-based labels, not validated Bloom-level accuracy. The labels are imbalanced and are not faculty annotations. The paper set is small, so these numbers should not be used to claim academic correctness. The built-in 24-question synthetic benchmark reaches 24/24 when the clear opening-verb rule is applied; that benchmark checks that the app respects the selected K level, not that a question is educationally sound.
+Java plans marks/difficulty slots. Extracted syllabus topics produce candidate tasks scoped to marks and the requested K1–K6 allocation. Learned Bloom predictions rank candidates. Opening verbs must match the college list. MCQ/blank generation requires supported checked facts or numerical factories; unavailable K/mark combinations fail clearly. Repetition is checked through normalised hashes and known signatures, with a 20% historical pattern budget rounded down. This is a finite candidate system, not an unlimited paraphrase model.
 
-The source ZIP and extracted question text are not copied into this repository. The training report contains counts and aggregate metrics only. To reproduce training on Windows from the `backend` folder:
+## Training after generation
 
-```powershell
-python -m pip install -r ml/requirements-training.txt
-python ml/train_from_archive.py --archive "C:\Users\YOUR_NAME\Downloads\All_Past_Exam_Papers_with_Syllabi.zip" --integrate
-```
+Locally generated examples can become pseudo-labelled training records when structural checks pass and the model agrees with the assigned K level. Manual/faculty examples require their own review path. New local training excludes historical cloud-labelled records. Held-out rows and conflicting labels are excluded. Candidates activate only when the configured classification checks do not regress; the previous model otherwise remains active.
 
-The trainer evaluates the new weights before promotion. It leaves the current model intact if the held-out macro-F1 or the authored benchmark check regresses. `archive-evaluation.json` records the run. The selected model is saved in both `bloom-model.json` and the embedded `bloomModel` in `model.json`.
+Self-training is not independent validation and cannot guarantee improving accuracy. Classifier agreement is not proof of correct subject knowledge. Real faculty-labelled data, a separate real-question evaluation set and periodic question-quality audits remain necessary. The runtime model is in ignored `.runtime/active-model.json`; training reports are stored in PostgreSQL.
 
-## Generation limits and validation
+## Files
 
-Java plans marks and difficulty slots. Syllabus topics are expanded through authored grammars; Bloom task predictions rank candidates, and selected opening verbs are checked against the college chart. MCQ and fill-in-the-blank generation needs checked facts or numerical factories. Repetition checking uses normalized hashes and known signatures with the configured 20% historical pattern budget. This is a finite local candidate system, not an unlimited paraphrase model.
+- `dataset.json`, `supplemental.json`: topic train/validation/test records.
+- `bloom-dataset.json`, `bloom-verbs.json`: cognitive-task examples and college verbs.
+- `train_reviewed.py`: current balanced trainer and evaluation/promotion inputs.
+- `train_bloom.py`: Bloom training implementation.
+- `model.json`, `bloom-model.json`, `evaluation.json`: locally trained weights and reproducible synthetic evaluation.
+- `train.py`: underlying topic feature extraction and baseline trainer. Running its command-line entry point rebuilds the smaller original baseline, not the expanded current model.
 
-Automatically generated examples and chart-inferred labels are not independent validation. Faculty-labelled questions, a separate real-paper evaluation set and subject-matter review are required to establish educational accuracy. Numerical answers and technical correctness need their own tests.
-
-The runtime classifier now recognizes an unambiguous college-chart task verb after common prompt lead-ins such as "Using the diagram," or "Given the input values,". Shared verbs and questions without a clear task opener still use the trained text classifier. This improves rule coverage for those phrased prompts; it does not establish a higher real-world accuracy score.
-
-## Model files
-
-- `dataset.json`, `supplemental.json`: topic classifier's authored training, validation and synthetic evaluation data.
-- `bloom-dataset.json`, `bloom-verbs.json`: authored Bloom tasks and the college's verb chart.
-- `train.py`, `train_bloom.py`, `train_reviewed.py`: topic and Bloom training routines.
-- `train_from_archive.py`: guarded GATE CS PDF extraction, weak-label training and held-out evaluation.
-- `requirements-training.txt`: PDF text extraction dependency used only when training from an archive.
-- `model.json`, `bloom-model.json`, `evaluation.json`, `archive-evaluation.json`: trained weights and aggregate reports.
+No Python libraries outside the standard library are required.

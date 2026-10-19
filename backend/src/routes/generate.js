@@ -7,6 +7,7 @@ import { HttpError } from '../errors.js';
 import { toApi } from '../mapper.js';
 import { generatePaper } from '../javaCore.js';
 import { autoBody, paperBody } from '../validation.js';
+import { classifySourceQuestionStyle } from '../localModel.js';
 
 import { requireRegisteredSubject, recordGeneratedPaper } from './subjects.js';
 
@@ -33,7 +34,9 @@ router.post('/papers/generate', async (req, res) => {
   if (b.topic) add('topic = $?', b.topic);
   if (b.subtopic) add('subtopic = $?', b.subtopic);
 
-  const { rows } = await query(`SELECT * FROM questions WHERE ${where.join(' AND ')}`, params);
+  let { rows } = await query(`SELECT * FROM questions WHERE ${where.join(' AND ')}`, params);
+  if(b.questionStyle!=='MIXED') rows=rows.filter(row=>classifySourceQuestionStyle(row.text)===b.questionStyle);
+  if(!rows.length) throw new HttpError(409,`No ${b.questionStyle==='PROGRAMMING_SQL'?'programming or SQL':b.questionStyle==='PROBLEM_SOLVING'?'problem-solving':'theory'} questions match the selected subject, units, and topic.`);
   if (!rows.length) throw new HttpError(404, 'No questions available for this unit/topic');
 
   let result;

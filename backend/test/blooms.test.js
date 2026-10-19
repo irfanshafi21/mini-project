@@ -22,6 +22,15 @@ test('Bloom classification uses task context for shared verbs',()=>{
  assert.equal(classifyBloom('Compare the internal structures of cache memory and explain their relationships.'),'K4');
  assert.equal(classifyBloom('Compare alternatives for cache memory and judge which best satisfies the constraints.'),'K5');
 });
+test('clear opening college verbs preserve the selected Bloom level',()=>{
+ const examples={K1:'Define cache memory.',K2:'Summarize cache memory in your own words.',K3:'Apply cache memory to the supplied example.',K4:'Analyze the cache behaviour.',K5:'Evaluate the cache design against the criteria.',K6:'Create a cache design for the stated constraints.'};
+ for(const [level,text] of Object.entries(examples))assert.equal(classifyBloom(text),level,text);
+});
+test('Bloom classifier recognizes clear task verbs after common prompt lead-ins',()=>{
+ assert.equal(classifyBloom('Using the graph, Analyze the relationship between the two results.'),'K4');
+ assert.equal(classifyBloom('Based on the example, Summarize how cache memory works.'),'K2');
+ assert.equal(classifyBloom('Given the input values, Solve the problem using the stated method.'),'K3');
+});
 test('our own generator supports all K levels with approved opening words',async()=>{
  const slots=BLOOM_LEVELS.map(bloomLevel=>({marks:2,difficulty:'EASY',bloomLevel}));
  const questions=await generateBloomQuestions('Unit 1: Cache memory',slots,[],'MCQ');

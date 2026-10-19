@@ -6,7 +6,28 @@ export const BLOOM_VERBS=JSON.parse(fs.readFileSync(new URL('../ml/bloom-verbs.j
 let model=JSON.parse(fs.readFileSync(new URL('../ml/bloom-model.json',import.meta.url),'utf8'));
 export function reloadBloomModel(candidate){if(candidate?.labels?.join(',')===BLOOM_LEVELS.join(','))model=candidate;}
 export function getBloomInfo(){return model.report;}
+function uniqueOpeningVerbLevel(text){
+ let clean=String(text || '').trim().replace(/^\([a-z]\)\s*/i,'');
+ // Remove common, explicit context lead-ins while preserving the actual
+ // instruction that follows them (for example, "Using the diagram, Analyze...").
+ clean=clean.replace(/^(?:using|based on|given|from|according to|with|refer to)\b[^,;:]{0,120}[,;:]\s*/i,'');
+ const owners=new Map();
+ for(const level of BLOOM_LEVELS)for(const verb of BLOOM_VERBS[level]){
+  const key=verb.toLowerCase();owners.set(key,[...(owners.get(key)||[]),level]);
+ }
+ // Only trust an unambiguous verb at the start of the task. Shared verbs such
+ // as "compare" fall through to the contextual model.
+ for(const [verb,levels] of [...owners].sort((a,b)=>b[0].length-a[0].length)){
+  if(levels.length===1 && new RegExp('^'+verb.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?:\\b|\\s)','i').test(clean))return levels[0];
+ }
+ return undefined;
+}
 export function classifyBloom(text){
+ // Generated questions start with their selected college verb. Also accept a
+ // short lead-in before an unambiguous task verb; shared verbs such as
+ // "compare" remain context-classified by the trained model.
+ const ruleLevel=uniqueOpeningVerbLevel(text);
+ if(ruleLevel)return ruleLevel;
  const words=String(text || '').toLowerCase().match(/[a-z]+/g) || [];
  const features=[...words,...words.slice(1).map((w,i)=>'@'+words[i]+' '+w)];
  return BLOOM_LEVELS.map(level=>({level,score:model.prior[level]+features.reduce((sum,w)=>sum+(model.weights[level][w] || 0),0)})).sort((a,b)=>b.score-a.score)[0].level;

@@ -20,11 +20,11 @@ A college examination workspace built with **React + Vite**, **Node.js + Express
 
 **React UI** → **Express API** → **PostgreSQL + Java + Local ML** → **Examination paper**
 
-[Explore](#a-look-inside) · [Install & run](#run-on-your-laptop) · [Learn from scratch](#learn-the-project-from-scratch) · [Architecture](#system-architecture) · [Code walkthrough](#code-walkthrough) · [Local ML](#how-our-own-model-works) · [Viva](#viva-and-project-explanation)
+[Explore](#a-look-inside) · [Workflow](#the-workflow-at-a-glance) · [Install & run](#run-on-your-laptop) · [Learn from scratch](#learn-the-project-from-scratch) · [Architecture](#system-architecture) · [Code walkthrough](#code-walkthrough) · [Local ML](#how-our-own-model-works) · [Viva](#viva-and-project-explanation)
 
 </div>
 
-> **Current generation is fully local:** no hosted AI provider, external AI key, Ollama installation, or pretrained language-model download is needed. The project uses trained classifiers, authored task grammars, checked objective facts, and numerical problem generators. It is not a neural LLM trained from scratch.
+> **Current generation is fully local:** no hosted AI provider, external AI key, Ollama installation, or pretrained language-model download is needed. Syllabus generation uses local BM25 retrieval to find relevant passages from the uploaded syllabus, then grounded question templates, trained classifiers, checked objective facts, and numerical problem generators. This is retrieval-grounded local generation, not a neural LLM trained from scratch.
 
 <table>
 <tr>
@@ -45,6 +45,7 @@ A college examination workspace built with **React + Vite**, **Node.js + Express
 | [Installation](#run-on-your-laptop) | [Training visualised](#training-and-inference-visualised) | [Troubleshooting](#troubleshooting) |
 | [Everyday workflow](#everyday-workflow) | [Database relationships](#database-relationships) | [Viva questions](#viva-and-project-explanation) |
 | [Marks and sections](#marks-question-counts-and-sections) | [API routes](#useful-api-routes) | [Project boundaries](#project-boundaries) |
+| [Request visual](#system-architecture) | [Local generation visual](#training-and-inference-visualised) | [Data map](#where-the-data-is-stored) |
 
 </details>
 
@@ -67,29 +68,55 @@ A college examination workspace built with **React + Vite**, **Node.js + Express
 | **Stored papers** | Retrieve saved paper snapshots, edit their contents and download them again. |
 | **Exports** | Download a PDF or TXT paper, or print from the browser. Student exports omit teacher answer fields. |
 
-The interface combines light blue and warm neutral colours with an academic layout: a dedicated desktop sidebar, clear page headings, consistent cards and controls, and compact mobile navigation. The paper studio includes aligned mark fields, six K-level controls and live count summaries. No application login is included.
+The interface uses a calm academic palette with light blue surfaces, warm paper accents, a dedicated workspace sidebar, responsive navigation, clear question cards and a focused paper studio. Mark counts update live, Bloom allocation is shown by K1–K6, and saved papers can be reopened for review. No application login is included.
+
+## The workflow at a glance
+
+From the first source to a paper you can retrieve later, each stage has a clear role. The graphic below is a high-resolution vector image, so labels stay sharp when zoomed.
+
+<img src="docs/images/readme-flow.svg" alt="Four-step workflow from choosing questions and structuring marks to local generation, review, saving and export" width="100%" />
+
+<table>
+<tr>
+<td width="25%" align="center"><strong>01 · CHOOSE</strong><br/>Pick bank questions, select saved questions manually, or upload a syllabus.</td>
+<td width="25%" align="center"><strong>02 · STRUCTURE</strong><br/>Set units, marks, difficulty and the desired Bloom-level distribution.</td>
+<td width="25%" align="center"><strong>03 · PREPARE</strong><br/>Local retrieval and constrained generation create a structured draft.</td>
+<td width="25%" align="center"><strong>04 · REVIEW</strong><br/>Edit, save, retrieve, print or export the completed paper.</td>
+</tr>
+</table>
 
 ## A look inside
 
 ### 01 / The academic workspace
 
-A dedicated sidebar, subject filters and a focused paper-creation area.
+A subject-centred workspace for browsing the question bank, checking saved content and opening the paper builder.
 
-[![Academic workspace — open original image](docs/images/academic-dashboard.png)](docs/images/academic-dashboard.png)
+<img src="docs/images/readme-workspace.svg" alt="Illustrated preview of the Question Bank academic workspace" width="100%" />
 
-### 02 / Build your assessment
+### 02 / Build an assessment
 
-Allocate question counts by marks, then distribute them across K1–K6.
+Choose a question source, select syllabus units, set marks and allocate questions across Bloom levels K1–K6.
 
-[![Marks and Bloom allocation — open original image](docs/images/local-bloom-builder.png)](docs/images/local-bloom-builder.png)
+<img src="docs/images/readme-builder.svg" alt="Illustrated preview of the assessment builder and Bloom-level controls" width="100%" />
 
-### 03 / The finished paper
+### 03 / Retrieve and review a paper
 
-Bloom labels appear beside each question. Marks remain in section headings and the paper total.
+Generated papers can be saved, reopened, printed and exported. Bloom labels communicate the intended cognitive level.
 
-[![Question paper — open original image](docs/images/question-paper-blooms.png)](docs/images/question-paper-blooms.png)
+<img src="docs/images/readme-paper.svg" alt="Illustrated preview of a generated paper with mark sections and Bloom labels" width="100%" />
 
-<sub>Actual application screenshots. Click any image to view the original at full resolution. Data varies by installation.</sub>
+<sub>These are crisp, scalable vector illustrations of the main screens, created for this README. They are not live screenshots; actual subjects and questions vary by installation.</sub>
+
+<details>
+<summary>View original captured application screenshots</summary>
+
+<br />
+
+| Academic workspace | Assessment builder | Generated paper |
+| --- | --- | --- |
+| [Open original](docs/images/academic-dashboard.png) | [Open original](docs/images/local-bloom-builder.png) | [Open original](docs/images/question-paper-blooms.png) |
+
+</details>
 
 <br/>
 
@@ -160,7 +187,7 @@ flowchart TD
   B --> E[Upload syllabus PDF or TXT]
   D --> F[Set marks, units, difficulty and K counts]
   E --> G[Extract topic and unit text locally]
-  G --> H[Our trained classifiers and constrained generator]
+  G --> H[Local BM25 retrieval and constrained question generator]
   F --> I[Validate and assemble paper]
   H --> I
   C --> I
@@ -195,6 +222,20 @@ flowchart TB
 ```
 
 The browser calls Express directly using `VITE_API_URL`. The current Vite configuration does **not** define a backend proxy. Express owns database access and starts Java/Python subprocesses when their work is needed. Java is not a second web server; Python training is not a separately hosted API.
+
+<img src="docs/images/readme-request-flow.svg" alt="Detailed visual of a React request moving through Express to PostgreSQL and Java logic, then returning as a JSON response" width="100%" />
+
+### What each layer does during one click
+
+| Step | What happens | Why the boundary matters |
+| --- | --- | --- |
+| **1. React reads the form** | Controlled inputs keep the selected subject, units, marks, difficulty and K-level counts in component state. | The preview and automatic totals stay in sync with what the user entered. |
+| **2. The browser sends a request** | The page uses `fetch` to call an endpoint under `VITE_API_URL`, sending JSON and, for syllabus generation, the uploaded document data. | The browser only needs to know the API contract; it does not need database credentials. |
+| **3. Express validates and routes** | Middleware parses the body, route handlers validate input and call the correct generation, subject, question or saved-paper service. | Invalid requests get a clear error response before they reach SQL or core logic. |
+| **4. The backend coordinates work** | `pg` executes parameterised PostgreSQL queries. When needed, Node starts the Java planner or invokes local JavaScript generation and Python training code. | Each part has one job: HTTP, persistence, slot planning or model learning. |
+| **5. JSON returns to React** | Express returns the paper or an error with an appropriate status. React updates the preview, list or message. PDF output is assembled in the browser. | The interface can display useful validation messages and does not become responsible for backend state. |
+
+To trace a real feature, start at its button in `frontend/src`, find the request URL, search for that route in `backend/src/routes`, and follow the database/helper calls from there. This is a practical way to learn full-stack code: follow one user action rather than trying to memorise every file.
 
 | Layer | Responsibility | Why it fits |
 | --- | --- | --- |
@@ -233,6 +274,8 @@ sequenceDiagram
   UI-->>User: Browser-generated PDF
   Note over API,DB: Background local learning runs separately from display
 ```
+
+For a bank-only paper, upload and retrieval are skipped: Express asks the Java planner for slots and selects eligible saved questions. For manual selection, the browser sends the chosen question IDs and the backend validates them before building the saved paper. Each route returns a paper object that the frontend can pass to its preview and export controls.
 
 ## Marks, question counts and sections
 
@@ -278,7 +321,7 @@ A separate six-class Naive Bayes model learns **K1–K6** from complete question
 
 ### 3. Generate within controlled question patterns
 
-Java plans marks and difficulty slots. The generator combines extracted syllabus topics with authored, mark-bounded tasks. For explicit K allocations, it uses the corresponding cognitive task grammar and ranks candidates using the trained Bloom classifier. Checked fact collections supply objective questions; supported numerical factories generate inputs, correct answers and variations.
+Java plans marks and difficulty slots. For syllabus papers, users can select one or more units or keep all units selected. Generation filters both extracted topics and retrieval passages to those units before creating questions. A local BM25 retriever ranks evidence from the uploaded file for each topic; the retrieved passage is kept with its question as the syllabus reference. The local generator then combines that grounded topic with authored, mark-bounded task grammars. For explicit K allocations, it uses the corresponding cognitive task grammar and ranks candidates using the trained Bloom classifier. Checked fact collections supply objective questions; supported numerical factories generate inputs, correct answers and variations. Retrieval improves syllabus grounding, but the templates do not have the open-ended language ability of a generative LLM.
 
 A two-mark question asks a focused task. Longer questions request appropriately expanded reasoning, examples or designs. Some general application tasks explicitly ask the student to supply a small example; they are not solved numerical questions with hidden inputs.
 
@@ -289,6 +332,15 @@ A two-mark question asks a focused task. Longer questions request appropriately 
 History is scoped to the subject and normalised syllabus fingerprint. Generation prefers unused text and checks known normalised question patterns. At most **20%** historical repeats are permitted, rounded down; papers with fewer than five questions allow zero. Supported numerical variants change their values, while still counting as the same underlying pattern.
 
 The candidate pool is finite. If it cannot satisfy the requested marks/K counts within the repeat budget, generation returns a clear shortfall. This is not a universal semantic-paraphrase detector. Deliberate manual reuse of bank questions is allowed.
+
+#### BM25 in this project, in plain language
+
+BM25 is a text-search ranking method. It splits each syllabus passage and topic into tokens, ignores a small list of very common words, and gives more value to terms that help distinguish one passage from another. A topic such as *K-means centroid clustering* should rank a passage that discusses K-means and centroids ahead of a generic course introduction. The implementation also considers passage length so that a long paragraph does not win simply because it contains more words. A small same-unit bonus can prefer evidence from the requested unit.
+
+The retriever indexes the uploaded syllabus in memory for the current generation request. It does not download an embedding model, call a hosted vector database or retain the uploaded file as a stored syllabus. The selected passage is attached to the candidate as its syllabus reference, helping generation stay grounded and making the source easier to inspect. BM25 can only retrieve evidence present in the uploaded text; unclear or missing syllabus content still limits the questions it can support.
+
+> [!NOTE]
+> **RAG here means retrieval plus constrained generation.** BM25 retrieves relevant source text, and authored question patterns use that evidence. The app does not run a neural text-generation model, and retrieval by itself does not prove that every question is factually or pedagogically correct.
 
 ### 5. Retrain locally
 
@@ -302,6 +354,10 @@ The Python trainer excludes held-out records and conflicting labels, evaluates t
 
 **Training builds probabilities. Inference uses them. Generation also needs authored task rules.**
 
+The following diagram separates the retrieval, classification, wording and validation steps. This distinction matters: BM25 searches the uploaded text; the small trained classifiers estimate topic family and Bloom level; authored patterns create question candidates; validation checks that the result follows the requested structure.
+
+<img src="docs/images/readme-model-pipeline.svg" alt="Color-coded local syllabus generation stages: extract, filter units, retrieve with BM25, classify, generate with local patterns and validate" width="100%" />
+
 ```mermaid
 flowchart LR
   subgraph TRAIN["Training · Python"]
@@ -313,11 +369,12 @@ flowchart LR
     E -->|"No"| G["Keep previous model"]
   end
   subgraph RUN["Inference and generation · JavaScript"]
-    H["New syllabus topics"] --> I["Load learned probabilities"]
+    H["Extracted syllabus topics"] --> J["BM25 retrieves matching passages locally"]
     F -.-> I
-    I --> J["Classify topic family and rank Bloom tasks"]
-    J --> K["Controlled grammar + checked facts + numerical factories"]
-    K --> L["Validate counts, prefixes and reuse budget"]
+    I["Load trained topic and Bloom classifiers"] --> L["Classify topic family and rank Bloom tasks"]
+    J --> K["Ground controlled task templates in retrieved context"]
+    K --> L
+    L --> M["Validate counts, prefixes and reuse budget"]
   end
 ```
 
@@ -384,6 +441,16 @@ Saving a paper does **not** automatically add its questions to the reusable bank
 
 A subject gets a safe, generated PostgreSQL **LIST partition** beneath the shared `questions` parent. Queries against the parent retrieve all subjects. The `subject_storage` view shows partition names. Editing a saved paper changes its snapshot, not the original bank question.
 
+<img src="docs/images/readme-data-map.svg" alt="Color-coded overview of subjects, the shared partitioned questions table, saved paper snapshots, syllabus history and local learning records" width="100%" />
+
+### How to think about the records
+
+The **question bank** is reusable source material: each question belongs to a registered subject and may carry a unit, topic, mark value, difficulty, answer format and Bloom label. Deleting a question is a soft delete, so the application can restore it rather than immediately losing its row. A subject partition is a PostgreSQL storage detail; API calls still query the shared `questions` parent and filter by subject.
+
+A **saved paper** is a snapshot of the assessment at the moment it was generated or saved. It keeps its own wording and settings, so later edits to bank questions do not rewrite an older paper. That is why a saved paper can be retrieved even after its source question changes. Adding generated questions to the reusable bank is a separate, explicit action.
+
+The **learning records** serve another purpose. `automatic_learning_jobs` tracks background work for each paper, `reviewed_examples` stores eligible labelled examples, and `model_training_runs` stores reports. These records support traceability; they are not themselves question-bank entries and do not guarantee that model quality improved. The source paper remains saved even if optional training fails.
+
 ## Database relationships
 
 The diagram shows selected logical relationships, not every schema column. Subject partitions share the `questions` parent rather than duplicating bank data.
@@ -432,6 +499,8 @@ erDiagram
 ```
 
 The question primary key is the composite **(id, subject)**. `model_training_runs` stores run-level JSON reports separately; there is no invented foreign-key relationship from that table to an individual example. `subject_storage` is a view for finding safe physical partition names.
+
+Read the data map from left to right: subjects provide a registered destination; the shared question parent stores reusable content; saved-paper JSON stores an assessment snapshot. The physical subject partitions sit under the shared question parent. Syllabus history helps enforce the repeat policy, while the learning queue and review records make optional local training traceable to the paper that produced it. Foreign keys connect records and check constraints limit valid values. Application-level validation gives the user a useful message; database constraints provide a final safeguard if a request reaches persistence.
 
 > [!IMPORTANT]
 > A paper snapshot, a bank question and a training example serve different purposes. Deleting or editing one does not mean every other representation has changed.
@@ -747,7 +816,16 @@ Changing numbers still counts as reusing the same known numerical pattern. Topic
 <details>
 <summary><strong>08 · Python training: how weights are rebuilt</strong></summary>
 
-[train.py](backend/ml/train.py) provides topic feature extraction, Naive Bayes training and prediction. [train_bloom.py](backend/ml/train_bloom.py) trains the six-class cognitive-task model. [train_reviewed.py](backend/ml/train_reviewed.py) combines eligible examples, excludes held-out/conflicting rows, selects a configuration and produces evaluation reports.
+[train.py](backend/ml/train.py) provides topic feature extraction, Naive Bayes training and prediction. [train_bloom.py](backend/ml/train_bloom.py) trains the six-class cognitive-task model. [train_reviewed.py](backend/ml/train_reviewed.py) combines eligible examples, excludes held-out/conflicting rows, selects a configuration and produces evaluation reports. [train_from_archive.py](backend/ml/train_from_archive.py) reads the supplied GATE CS past-paper ZIP locally, trains from 2022 examples, and keeps 2023 questions held out for evaluation. It does not copy the source PDFs or extracted questions into the repository.
+
+To repeat the archive training on Windows, open a terminal in `backend` and run:
+
+```powershell
+python -m pip install -r ml/requirements-training.txt
+python ml/train_from_archive.py --archive "C:\Users\YOUR_NAME\Downloads\All_Past_Exam_Papers_with_Syllabi.zip" --integrate
+```
+
+The archive does not include faculty-assigned Bloom levels. Training labels are inferred from unambiguous verbs in the college chart, so the evaluation measures agreement with that verb rule, not educational quality. See [MODEL_CARD.md](backend/ml/MODEL_CARD.md) and [archive-evaluation.json](backend/ml/archive-evaluation.json) for the dataset limits and held-out results.
 
 [automaticLearning.js](backend/src/automaticLearning.js) performs local eligibility checks and processes queued papers. [routes/learning.js](backend/src/routes/learning.js) launches Python, evaluates the returned report, and either activates the candidate or keeps the current model.
 

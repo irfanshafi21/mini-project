@@ -11,9 +11,19 @@ test('Java plans exact marks and rounded counts, including small papers', async 
   assert.deepEqual((await planPaper(25, 5, body.split)).map(q => q.difficulty), ['EASY', 'EASY', 'MEDIUM', 'MEDIUM', 'HARD']);
 });
 test('validates upload metadata, marks and split', () => {
-  for (const change of [{ mimeType: 'application/exe' }, { totalMarks: 2 }, { count: 51 }, { split: { easy: 50, medium: 50, hard: 50 } }, { data: 'bad!' }]) {
+  for (const change of [{ mimeType: 'application/exe' }, { totalMarks: 2 }, { count: 51 }, { split: { easy: 50, medium: 50, hard: 50 } }, { data: 'bad!' }, {units:[]}, {units:[0]}]) {
     assert.equal(syllabusBody.safeParse({ ...body, ...change }).success, false);
   }
+});
+
+test('syllabus generation is restricted to the selected units',async()=>{
+ const syllabus='Unit 1: Binary search trees and AVL rotations.\nUnit 2: Bayes theorem and conditional probability.\nUnit 3: K-means clustering and centroid updates.';
+ const input={...body,data:Buffer.from(syllabus).toString('base64'),units:[2],totalMarks:5,count:1,markCounts:{5:1}};
+ const result=await generateSyllabusPaper(input);
+ assert.deepEqual(result.paper.selectedUnits,[2]);
+ assert.ok(result.paper.questions.every(q=>q.unit===2));
+ assert.ok(result.paper.questions.every(q=>/Bayes|probability/i.test(q.syllabusReference)));
+ await assert.rejects(generateSyllabusPaper({...input,units:[5]}),e=>e.status===400);
 });
 
 test('invalid PDFs fail locally and generation never uses fetch',async()=>{

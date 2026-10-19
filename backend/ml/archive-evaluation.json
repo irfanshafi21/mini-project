@@ -1,0 +1,282 @@
+{
+  "source": "User-supplied archive; GATE Computer Science papers only",
+  "trainingPaperYear": 2022,
+  "heldOutPaperYear": 2023,
+  "extractedQuestionCounts": {
+    "2022": 55,
+    "2023": 50
+  },
+  "weakLabelCounts": {
+    "2022": {
+      "K1": 38,
+      "K2": 0,
+      "K3": 1,
+      "K4": 0,
+      "K5": 6,
+      "K6": 0
+    },
+    "2023": {
+      "K1": 31,
+      "K2": 0,
+      "K3": 2,
+      "K4": 5,
+      "K5": 7,
+      "K6": 1
+    }
+  },
+  "baselineHeldOut": {
+    "examples": 46,
+    "accuracy": 0.1956521739130435,
+    "macroF1": 0.13500924027239816,
+    "labels": {
+      "K1": 31,
+      "K2": 0,
+      "K3": 2,
+      "K4": 5,
+      "K5": 7,
+      "K6": 1
+    },
+    "confusionMatrix": {
+      "K1": {
+        "K1": 5,
+        "K2": 3,
+        "K3": 7,
+        "K4": 4,
+        "K5": 9,
+        "K6": 3
+      },
+      "K2": {
+        "K1": 0,
+        "K2": 0,
+        "K3": 0,
+        "K4": 0,
+        "K5": 0,
+        "K6": 0
+      },
+      "K3": {
+        "K1": 0,
+        "K2": 0,
+        "K3": 1,
+        "K4": 1,
+        "K5": 0,
+        "K6": 0
+      },
+      "K4": {
+        "K1": 1,
+        "K2": 0,
+        "K3": 2,
+        "K4": 1,
+        "K5": 0,
+        "K6": 1
+      },
+      "K5": {
+        "K1": 1,
+        "K2": 1,
+        "K3": 2,
+        "K4": 0,
+        "K5": 2,
+        "K6": 1
+      },
+      "K6": {
+        "K1": 0,
+        "K2": 1,
+        "K3": 0,
+        "K4": 0,
+        "K5": 0,
+        "K6": 0
+      }
+    }
+  },
+  "candidateHeldOut": {
+    "examples": 46,
+    "accuracy": 0.7391304347826086,
+    "macroF1": 0.25,
+    "labels": {
+      "K1": 31,
+      "K2": 0,
+      "K3": 2,
+      "K4": 5,
+      "K5": 7,
+      "K6": 1
+    },
+    "confusionMatrix": {
+      "K1": {
+        "K1": 30,
+        "K2": 0,
+        "K3": 0,
+        "K4": 0,
+        "K5": 1,
+        "K6": 0
+      },
+      "K2": {
+        "K1": 0,
+        "K2": 0,
+        "K3": 0,
+        "K4": 0,
+        "K5": 0,
+        "K6": 0
+      },
+      "K3": {
+        "K1": 2,
+        "K2": 0,
+        "K3": 0,
+        "K4": 0,
+        "K5": 0,
+        "K6": 0
+      },
+      "K4": {
+        "K1": 5,
+        "K2": 0,
+        "K3": 0,
+        "K4": 0,
+        "K5": 0,
+        "K6": 0
+      },
+      "K5": {
+        "K1": 3,
+        "K2": 0,
+        "K3": 0,
+        "K4": 0,
+        "K5": 4,
+        "K6": 0
+      },
+      "K6": {
+        "K1": 1,
+        "K2": 0,
+        "K3": 0,
+        "K4": 0,
+        "K5": 0,
+        "K6": 0
+      }
+    }
+  },
+  "authoredSyntheticBenchmarkWithCollegeVerbRule": {
+    "examples": 24,
+    "accuracy": 1.0,
+    "macroF1": 1.0,
+    "labels": {
+      "K1": 4,
+      "K2": 4,
+      "K3": 4,
+      "K4": 4,
+      "K5": 4,
+      "K6": 4
+    },
+    "confusionMatrix": {
+      "K1": {
+        "K1": 4,
+        "K2": 0,
+        "K3": 0,
+        "K4": 0,
+        "K5": 0,
+        "K6": 0
+      },
+      "K2": {
+        "K1": 0,
+        "K2": 4,
+        "K3": 0,
+        "K4": 0,
+        "K5": 0,
+        "K6": 0
+      },
+      "K3": {
+        "K1": 0,
+        "K2": 0,
+        "K3": 4,
+        "K4": 0,
+        "K5": 0,
+        "K6": 0
+      },
+      "K4": {
+        "K1": 0,
+        "K2": 0,
+        "K3": 0,
+        "K4": 4,
+        "K5": 0,
+        "K6": 0
+      },
+      "K5": {
+        "K1": 0,
+        "K2": 0,
+        "K3": 0,
+        "K4": 0,
+        "K5": 4,
+        "K6": 0
+      },
+      "K6": {
+        "K1": 0,
+        "K2": 0,
+        "K3": 0,
+        "K4": 0,
+        "K5": 0,
+        "K6": 4
+      }
+    }
+  },
+  "baselineAuthoredSyntheticBenchmarkWithCollegeVerbRule": {
+    "examples": 24,
+    "accuracy": 1.0,
+    "macroF1": 1.0,
+    "labels": {
+      "K1": 4,
+      "K2": 4,
+      "K3": 4,
+      "K4": 4,
+      "K5": 4,
+      "K6": 4
+    },
+    "confusionMatrix": {
+      "K1": {
+        "K1": 4,
+        "K2": 0,
+        "K3": 0,
+        "K4": 0,
+        "K5": 0,
+        "K6": 0
+      },
+      "K2": {
+        "K1": 0,
+        "K2": 4,
+        "K3": 0,
+        "K4": 0,
+        "K5": 0,
+        "K6": 0
+      },
+      "K3": {
+        "K1": 0,
+        "K2": 0,
+        "K3": 4,
+        "K4": 0,
+        "K5": 0,
+        "K6": 0
+      },
+      "K4": {
+        "K1": 0,
+        "K2": 0,
+        "K3": 0,
+        "K4": 4,
+        "K5": 0,
+        "K6": 0
+      },
+      "K5": {
+        "K1": 0,
+        "K2": 0,
+        "K3": 0,
+        "K4": 0,
+        "K5": 4,
+        "K6": 0
+      },
+      "K6": {
+        "K1": 0,
+        "K2": 0,
+        "K3": 0,
+        "K4": 0,
+        "K5": 0,
+        "K6": 4
+      }
+    }
+  },
+  "promoted": true,
+  "labeling": "Only unambiguous action verbs from the college verb chart; ambiguous or unlabeled prompts are omitted.",
+  "limitations": "This ZIP contains no faculty Bloom annotations. Weak labels reproduce the verb chart and must not be presented as educational accuracy. Some PDF pages contain no extractable text. The original archive and question text are not copied to the project."
+}

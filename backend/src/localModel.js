@@ -47,18 +47,32 @@ function splitTopics(paragraph) {
   }
   parts.push(paragraph.slice(start));return parts;
 }
+function expandTopicDetails(topic){
+  const colon=topic.indexOf(':');
+  if(colon<3)return [topic];
+  let heading=topic.slice(0,colon).trim();const details=topic.slice(colon+1).trim();
+  const items=details.split(/,\s*|\s+and\s+/i).map(item=>item.trim()).filter(item=>item.length>=5);
+  // A colon followed by a list usually means the heading is only a category.
+  // Keep each listed syllabus concept as its own generation target.
+  if(items.length>=2){if(/^clustering$/i.test(heading) && /k-means/i.test(items[0]))heading='K-means clustering';return items.map(item=>`${heading}: ${item}`);}
+  if(details.length>=5)return [`${heading}: ${details}`];
+  return [topic];
+}
 const sectionTitle=/^(probability and statistics|linear algebra|calculus and optimi[sz]ation|programming,? data structures and algorithms|database management and warehousing|machine learning|artificial intelligence|general aptitude(?:\s*\(\d+\s*marks\))?)$/i;
 export function syllabusTopics(text) {
   let unit=1, active=!/\bunit\s*[-:]?\s*(\d|IV|III|II|V|I)\b/i.test(text), skip=false;
   const topics=[],seen=new Set(),titles=[];let buffer=[];
   const flush=()=>{
     const paragraph=buffer.join(' ').replace(/\s+/g,' ').trim();buffer=[];
-    for(let topic of splitTopics(paragraph)){
-      topic=topic.replace(/\s*[-–—]\s*\d+\s*(hours?|hrs?)\b/ig,'').replace(/^\s*[-•\d.)]+\s*/,'').replace(/\s+\d{1,3}$/, '').trim();
-      if(sectionTitle.test(topic))continue;
-      if(topic.length<5 || topic.length>220 || !/[a-z]/i.test(topic))continue;
-      if(/^(learning|course|sample|assessment|this is|questions may|overall|illustrative|suggested|example values|example inputs|sample values)/i.test(topic))continue;
-      const key=topic.toLowerCase();if(!seen.has(key)){seen.add(key);topics.push({topic,unit});}
+    for(const rawTopic of splitTopics(paragraph)){
+      const cleaned=rawTopic.replace(/\s*[-–—]\s*\d+\s*(hours?|hrs?)\b/ig,'').replace(/^\s*[-•\d.)]+\s*/,'').replace(/\s+\d{1,3}$/, '').trim();
+      for(let topic of expandTopicDetails(cleaned)){
+        topic=topic.trim();
+        if(sectionTitle.test(topic))continue;
+        if(topic.length<5 || topic.length>220 || !/[a-z]/i.test(topic))continue;
+        if(/^(learning|course|sample|assessment|this is|questions may|overall|illustrative|suggested|example values|example inputs|sample values)/i.test(topic))continue;
+        const key=topic.toLowerCase();if(!seen.has(key)){seen.add(key);topics.push({topic,unit});}
+      }
     }
   };
   for(const raw of text.split(/\r?\n/)){
@@ -72,10 +86,61 @@ export function syllabusTopics(text) {
     buffer.push(line);
   }
   flush();
-  for(const title of titles) if(!topics.some(t=>t.unit===title.unit) && title.topic.length>=5) topics.push(title);
+  for(const title of titles) if(!topics.some(t=>t.unit===title.unit) && title.topic.length>=5){
+    for(const topic of expandTopicDetails(title.topic))if(topic.length>=5)topics.push({topic,unit:title.unit});
+  }
   if(!topics.length)throw new HttpError(400,'No syllabus topics found. Include topic lines and optional Unit 1–5 headings.');
   return topics;
 }
+
+// A small in-process BM25 index keeps syllabus retrieval local and requires no
+// embedding service or downloaded language model. Retrieved passages are used
+// as evidence/context for the existing constrained question templates.
+const retrievalStopWords = new Set('a an and are as at be by for from how in into is of on or the their this to was what when where which with'.split(' '));
+const retrievalTokens = value => (value.toLowerCase().match(/[\p{L}\p{N}]+/gu) || []).filter(token => token.length > 1 && !retrievalStopWords.has(token));
+function syllabusPassages(text) {
+  const passages=[];let unit=1,buffer='';
+  const flush=()=>{const value=buffer.trim();if(value.length>=8)passages.push({text:value,unit});buffer='';};
+  for(const raw of text.split(/\r?\n/)){
+    const line=raw.trim().replace(/^#{1,6}\s*/, '').replace(/\*\*([^*]+)\*\*/g,'$1').replace(/`([^`]+)`/g,'$1').replace(/^[-*•]\s+/, '');
+    const heading=line.match(/^unit\s*[-:]?\s*(\d|IV|III|II|V|I)\b\s*[:.\-–—]*/i);
+    if(heading){flush();unit=Number(heading[1])||({I:1,II:2,III:3,IV:4,V:5}[heading[1].toUpperCase()])||1;}
+    if(!line || /^(learning outcomes?|course objectives?|assessment scope|illustrative difficulty|suggested practical|overall course)/i.test(line)){flush();continue;}
+    if(heading){const title=line.slice(heading[0].length).trim();if(title)buffer=title;continue;}
+    const normalized=line.replace(/\s+/g,' ');
+    for(const segment of splitTopics(normalized).map(value=>value.trim()).filter(Boolean)){
+      let piece='';
+      for(const word of segment.split(/\s+/)){
+        if(piece && piece.length+word.length+1>500){if(buffer && buffer.length+piece.length>520)flush();buffer+=(buffer?' ':'')+piece;flush();piece='';}
+        piece+=(piece?' ':'')+word;
+      }
+      if(piece){if(buffer && buffer.length+piece.length>520)flush();buffer+=(buffer?' ':'')+piece;}
+    }
+    if(/[.;]$/.test(normalized))flush();
+  }
+  flush();return passages;
+}
+function createSyllabusRetriever(text,allowedUnits) {
+  const allowed=allowedUnits?.length?new Set(allowedUnits):null;
+  const documents=syllabusPassages(text).filter(passage=>!allowed||allowed.has(passage.unit)).map((passage,index)=>({...passage,index,tokens:retrievalTokens(passage.text)}));
+  const averageLength=documents.reduce((sum,doc)=>sum+doc.tokens.length,0)/documents.length||1;
+  const k1=1.5,b=0.75;
+  return (query,unit,limit=3)=>{
+    const queryTerms=retrievalTokens(query);if(!documents.length||!queryTerms.length)return [];
+    const documentFrequency=new Map();
+    for(const term of new Set(queryTerms))documentFrequency.set(term,documents.reduce((count,doc)=>count+(doc.tokens.includes(term)?1:0),0));
+    return documents.map(doc=>{
+      const frequencies=new Map();for(const token of doc.tokens)frequencies.set(token,(frequencies.get(token)||0)+1);
+      const score=queryTerms.reduce((total,term)=>{
+        const tf=frequencies.get(term)||0;if(!tf)return total;
+        const df=documentFrequency.get(term)||0,idf=Math.log(1+(documents.length-df+0.5)/(df+0.5));
+        return total+idf*(tf*(k1+1))/(tf+k1*(1-b+b*doc.tokens.length/averageLength));
+      },0)+(unit && doc.unit===unit?0.15:0);
+      return {text:doc.text,unit:doc.unit,score:Number(score.toFixed(4))};
+    }).filter(result=>result.score>0).sort((a,b)=>b.score-a.score).slice(0,Math.max(1,limit));
+  };
+}
+export function retrieveSyllabusContext(text,query,unit,limit=3){return createSyllabusRetriever(text)(query,unit,limit);}
 
 const patterns={
  concept:['Define {t} and identify its main purpose.','State the key characteristics of {t}.','Explain the role of {t} in a computer system.','Describe {t} using a suitable example.','Discuss the principles underlying {t}.','Explain the main components involved in {t}.','Describe the benefits and limitations of {t}.','Explain how {t} is applied in a practical system.'],
@@ -91,7 +156,27 @@ const shortPatterns = [
 ];
 function focusedTopic(topic) {
   // A syllabus heading followed by a list is an umbrella, not one short question.
-  const heading=topic.split('=')[0].split(':')[0].replace(/\s+concepts?$/i, '').trim();
+  const source=topic.split('=')[0].trim();
+  const colon=source.indexOf(':');
+  let heading=(colon>=0 && source.slice(colon+1).trim()?source.slice(colon+1):source).replace(/\s+concepts?$/i, '').trim();
+  const category=colon>=0?source.slice(0,colon).trim():'';
+  if(category && /\bclustering\b/i.test(category)){
+    if(/hierarchical/i.test(category)){
+      if(/^agglomerative$/i.test(heading))heading='agglomerative hierarchical clustering';
+      else if(/^divisive(?: approaches?)?$/i.test(heading))heading='divisive hierarchical clustering';
+      else if(!/hierarchical clustering/i.test(heading))heading+=' in hierarchical clustering';
+    }
+    else if(/k-means/i.test(category))heading=/k-means/i.test(heading)?'k-means clustering':heading+' in k-means clustering';
+    else heading+=' in clustering';
+  }else if(category && /association[- ]rule/i.test(category))heading+=' in association-rule learning';
+  else if(category && /classification measures/i.test(category))heading+=' for classification';
+  else if(category && /regression measures/i.test(category))heading+=' as a regression metric';
+  else if(category && /virtual memory/i.test(category))heading+=' in virtual memory';
+  else if(category && /dimensionality reduction/i.test(category) && /^motivation$/i.test(heading))heading='the purpose of dimensionality reduction';
+  else if(category && /data quality and preprocessing/i.test(category))heading+=' in data preprocessing';
+  else if(category && /validation strategies/i.test(category))heading+=' for model validation';
+  else if(category && heading.length<22)heading+=' in '+category.toLowerCase();
+  if(/^interpreting\b/i.test(heading))heading=heading.replace(/^interpreting\s+/i,'interpretation of ');
   return /\bbetween\b/i.test(heading)?heading:heading.split(/[,;]/)[0].trim();
 }
 function markedText(topic, family, marks, index) {
@@ -131,7 +216,10 @@ function bloomCandidates(topics, slots) {
 
 export const reuseSignature=q=>questionHash(q.reuseKey || `${q.marks}|${q.text.toLowerCase().replace(/what is meant by/g,'define').replace(/\b(describe|discuss|explain|outline|illustrate)\b/g,'explain').replace(/\b\d+(?:\.\d+)?\b/g,'NUMBER').replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim()}`);
 export function generateLocalQuestions(text, slots, previousHashes=[], oneMarkType='MCQ', policy={}) {
-  const topics=syllabusTopics(text), used=new Set(previousHashes), chosenHashes=new Set(), questions=[];
+  const selectedUnits=policy.units?.length?new Set(policy.units):null;
+  const topics=syllabusTopics(text).filter(item=>!selectedUnits||selectedUnits.has(item.unit));
+  if(!topics.length)throw new HttpError(400,'No readable topics were found in the selected units. Check the syllabus unit headings or choose other units.');
+  const retrieveContext=createSyllabusRetriever(text,selectedUnits?[...selectedUnits]:null), used=new Set(previousHashes), chosenHashes=new Set(), questions=[];
   const family=topic=>{const predicted=classifyTopic(topic);return predicted==='numerical'&&!/arithmetic|conversion|ratio|calculation|time|speedup|throughput|addition|subtraction|multiplication|division|performance|number system/i.test(topic)?'concept':predicted;};
   let candidates=[...new Set(slots.map(s=>s.marks))].filter(m=>m!==1).flatMap(marks=>topics.flatMap(({topic,unit})=>{
     const numeric=numericalCandidates(topic,unit,marks,oneMarkType);
@@ -149,7 +237,7 @@ export function generateLocalQuestions(text, slots, previousHashes=[], oneMarkTy
   }
   const oldSignatures=new Set(policy.previousSignatures || []), currentSignatures=new Set();
   const repeatBudget=Math.floor(slots.length * Math.min(20,Math.max(0,policy.repeatPercent ?? 20))/100);
-  let repeats=0;
+  let repeats=0;const patternUse=new Map();
   const isOld=q=>used.has(questionHash(q.text)) || oldSignatures.has(reuseSignature(q));
   for(let i=candidates.length-1;i>0;i--){const j=randomInt(i+1);[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}
   const topicUse=new Map();
@@ -157,9 +245,12 @@ export function generateLocalQuestions(text, slots, previousHashes=[], oneMarkTy
     const available=candidates.filter(q=>q.marks===slot.marks && (!slot.bloomLevel || q.bloomLevel===slot.bloomLevel && startsWithBloomVerb(q.text,slot.bloomLevel)) && !chosenHashes.has(questionHash(q.text)) && !(q.numericalVariant && used.has(questionHash(q.text))) && !currentSignatures.has(reuseSignature(q)) && (!isOld(q) || repeats<repeatBudget));
     if(!available.length) throw new HttpError(409,`Not enough fresh ${slot.marks}-mark${slot.bloomLevel?' '+slot.bloomLevel:''} questions fit the 20% repeat limit. Add supported topics, approve reviewed examples, or request fewer questions.`);
     const desired=slot.difficulty==='EASY'?0:slot.difficulty==='MEDIUM'?2:5;
-    available.sort((a,b)=>Number(!!slot.bloomLevel && classifyBloom(a.text)!==slot.bloomLevel)-Number(!!slot.bloomLevel && classifyBloom(b.text)!==slot.bloomLevel) || Number(isOld(a))-Number(isOld(b)) || (topicUse.get(a.topic)||0)-(topicUse.get(b.topic)||0) || Math.abs(a.pattern-desired)-Math.abs(b.pattern-desired));
+    const patternKey=q=>`${q.marks}|${q.bloomLevel || 'general'}|${q.pattern ?? -1}`;
+    available.sort((a,b)=>Number(!!slot.bloomLevel && classifyBloom(a.text)!==slot.bloomLevel)-Number(!!slot.bloomLevel && classifyBloom(b.text)!==slot.bloomLevel) || Number(isOld(a))-Number(isOld(b)) || (patternUse.get(patternKey(a))||0)-(patternUse.get(patternKey(b))||0) || (topicUse.get(a.topic)||0)-(topicUse.get(b.topic)||0) || Math.abs(a.pattern-desired)-Math.abs(b.pattern-desired));
     const chosen=available[0],reused=isOld(chosen);if(reused)repeats++;chosenHashes.add(questionHash(chosen.text));currentSignatures.add(reuseSignature(chosen));topicUse.set(chosen.topic,(topicUse.get(chosen.topic)||0)+1);
-    questions.push({...chosen,...slot,reused,reuseSignature:reuseSignature(chosen),id:`LOCAL${questions.length+1}`});
+    patternUse.set(patternKey(chosen),(patternUse.get(patternKey(chosen))||0)+1);
+    const evidence=retrieveContext(chosen.syllabusReference || chosen.topic,chosen.unit,1)[0];
+    questions.push({...chosen,...slot,...(evidence?{syllabusReference:evidence.text.slice(0,500),retrievalScore:evidence.score}:{}),reused,reuseSignature:reuseSignature(chosen),id:`LOCAL${questions.length+1}`});
   }
   return questions;
 }

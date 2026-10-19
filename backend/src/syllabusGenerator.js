@@ -10,6 +10,7 @@ export const syllabusBody = z.object({
   subject: z.string().trim().max(60).optional().transform(v => v ? normalizeName(v) : undefined),
   oneMarkType:z.enum(['MCQ','FILL_BLANK']).default('MCQ'),
   unit: z.number().int().min(1).max(5).default(1),
+  units: z.array(z.number().int().min(1).max(5)).min(1).max(5).transform(values=>[...new Set(values)]).optional(),
   fileName: z.string().min(1).max(200),
   mimeType: z.enum(['application/pdf', 'text/plain']),
   data: z.string().min(1).max(7_000_000).regex(/^[A-Za-z0-9+/]+={0,2}$/),
@@ -27,9 +28,9 @@ export async function generateSyllabusPaper(body) {
   const text=body.preparedText || await extractSyllabusText(body);
   const slots=assignBloomSlots(await planPaper(body.totalMarks,body.count,body.split,body.markCounts),body.bloomCounts);
   const questions=generateLocalQuestions(text,slots,body.previousQuestionHashes || [],body.oneMarkType,{
-    previousSignatures:body.previousSignatures,reviewedQuestions:body.reviewedQuestions,
+    previousSignatures:body.previousSignatures,reviewedQuestions:body.reviewedQuestions,units:body.units,
   });
   return {paper:{source:'syllabus',fileName:body.fileName,subject:body.subject,
     requestedMarks:body.totalMarks,totalMarks:body.totalMarks,complete:true,requestedSplit:body.split,
-    bloomCounts:body.bloomCounts,model:'college-local-classifier-grammar-v2',questions}};
+    bloomCounts:body.bloomCounts,selectedUnits:body.units || null,model:'college-local-rag-bm25-grammar-v1',questions}};
 }

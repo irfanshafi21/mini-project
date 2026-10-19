@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { classifyTopic, generateLocalQuestions, syllabusTopics, questionHash, reuseSignature } from '../src/localModel.js';
+import { classifyTopic, generateLocalQuestions, syllabusTopics, questionHash, reuseSignature, retrieveSyllabusContext } from '../src/localModel.js';
 
 test('local model predicts learned topic families and reads numeric/roman units', () => {
   assert.equal(classifyTopic('binary addition arithmetic'),'numerical');
@@ -22,13 +22,20 @@ test('local generation changes questions and reports finite-capacity exhaustion 
   assert.throws(()=>generateLocalQuestions('Unit 1: CPU registers\nUnit 3: Virtual memory',slots,all.map(q=>questionHash(q.text)),'MCQ',{previousSignatures:all.map(reuseSignature)}),e=>e.status===409);
 });
 
+test('easy questions rotate prompt templates instead of reusing one generic opener',()=>{
+ const text='Unit 1: Unsupervised learning\nk-means clustering. PCA. Support in association-rule learning. Precision and recall. Cross-validation. Hierarchical clustering.';
+ const questions=generateLocalQuestions(text,Array.from({length:6},()=>({marks:2,difficulty:'EASY'})));
+ assert.ok(new Set(questions.map(q=>q.text.split(/\s+/)[0].toLowerCase())).size>=3);
+});
+
 
 test('Q103 regression: marks constrain scope independently of difficulty', () => {
   const syllabus='Unit 4: Virtual memory concepts: pages, frames, page tables, translation lookaside buffer and page faults.';
   for (const difficulty of ['EASY','MEDIUM','HARD']) {
     const [short]=generateLocalQuestions(syllabus,[{marks:2,difficulty}]);
-    assert.equal(short.topic,'Virtual memory');
-    assert.ok(!/pages|frames|page tables|lookaside|and|diagram|analyse/i.test(short.text));
+    assert.match(short.topic,/^(pages|frames|page tables|translation lookaside buffer|page faults) in virtual memory$/i);
+    assert.match(short.text,new RegExp(short.topic,'i'));
+    assert.ok(!/diagram|analyse/i.test(short.text));
     assert.ok(short.text.split(/\s+/).length<=10);
   }
   for(const marks of [10,16]) {
@@ -49,10 +56,32 @@ test('syllabus formatting is removed and unit headings do not replace actual top
   assert.ok(questions.every(q=>!/[#*`]/.test(q.text)));
 });
 
+test('colon headings keep detailed syllabus items as question-generation targets',()=>{
+ const source='Unit III: Clustering: k-means algorithm, initialization, convergence and selection of the number of clusters.';
+ const topics=syllabusTopics(source);
+ assert.ok(topics.some(t=>t.topic==='K-means clustering: k-means algorithm'));
+ const [question]=generateLocalQuestions(source,[{marks:2,difficulty:'EASY'}]);
+ assert.match(question.text,/k-means/i);
+ assert.doesNotMatch(question.text,/Define Clustering\./i);
+});
+
 
 test('PDF bullet headings and page numbers do not become question topics', () => {
   const extracted=syllabusTopics('Probability and Statistics • Bayes theorem • Conditional expectation and variance. Artificial Intelligence • Search. Cross-validation (LOO; k-fold). Singular value decomposition (SVD) 3');
   assert.deepEqual(extracted.map(t=>t.topic),['Bayes theorem','Conditional expectation and variance','Search','Cross-validation (LOO; k-fold)','Singular value decomposition (SVD)']);
+});
+
+test('local BM25 retrieval grounds questions in the matching syllabus passage and unit',()=>{
+ const syllabus='Unit 1: Probability and Statistics\nBayes theorem updates prior probabilities using evidence and a likelihood.\nUnit 2: Machine Learning\nK-means clustering assigns samples to the nearest centroid and updates centroids iteratively.';
+ const result=retrieveSyllabusContext(syllabus,'k-means centroid clustering',2,2);
+ assert.ok(result.length>0);
+ assert.match(result[0].text,/nearest centroid/i);
+ assert.equal(result[0].unit,2);
+ const [question]=generateLocalQuestions(syllabus,[{marks:2,difficulty:'EASY'}]);
+ assert.ok(question.syllabusReference);
+ assert.ok(question.retrievalScore>0);
+ assert.match(question.syllabusReference,/Bayes|probabilit|centroid|k-means/i);
+ assert.equal(question.unit,/Bayes|probabilit/i.test(question.syllabusReference)?1:2);
 });
 
 

@@ -571,6 +571,7 @@ textarea { resize: vertical; }
  .brand { margin:8px 0 48px; }
  .nav-caption { margin:0 14px 16px; }
  .sidebar nav { display:flex;flex-direction:column; }
+ .sidebar nav { margin-bottom:18px; }
  .nav-item { justify-content:flex-start;padding:13px 14px;text-align:left; }
  .sidebar-note { margin-top:auto;margin-bottom:24px; }
  .sidebar-footer { padding-inline:7px; }

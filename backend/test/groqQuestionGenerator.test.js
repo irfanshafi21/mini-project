@@ -37,12 +37,13 @@ test('Groq structured generation maps questions to the requested syllabus slot',
     assert.equal(request.model, 'openai/gpt-oss-20b');
     assert.ok(request.messages[1].content.includes('Never write phrases'));
     assert.ok(request.response_format.json_schema.schema.properties.questions.items.properties.openingVerb.enum.includes('Assess'));
-    assert.ok(request.response_format.json_schema.schema.properties.questions.items.properties.topic.enum.includes(topic));
+    assert.equal('topic' in request.response_format.json_schema.schema.properties.questions.items.properties, false);
+    assert.ok(request.messages[1].content.includes(`Unit 1: ${topic}`));
     assert.equal('solution' in request.response_format.json_schema.schema.properties.questions.items.properties, false);
-    assert.match(request.messages[1].content, /Never write an explanation, answer, worked solution/);
+    assert.match(request.messages[1].content, /Never include an explanation, answer, worked solution/);
     assert.equal(result[0].answer, '');
     assert.equal('solution' in result[0], false);
-    assert.deepEqual(request.response_format.json_schema.schema.properties.questions.items.properties.questionType.enum, ['SHORT']);
+    assert.equal('questionType' in request.response_format.json_schema.schema.properties.questions.items.properties, false);
     assert.match(result[0].text, /^Apply calculate the current/);
   } finally {
     globalThis.fetch = oldFetch;
@@ -129,7 +130,7 @@ test('Ollama uses local structured outputs and applies the same syllabus and mat
     assert.ok(request.options.num_predict <= 8000);
     assert.equal(request.format.type, 'object');
     assert.equal(result[0].bloomSource, 'ollama');
-    assert.deepEqual(request.format.properties.questions.items.properties.questionType.enum, ['SHORT']);
+    assert.equal('questionType' in request.format.properties.questions.items.properties, false);
     assert.equal('solution' in request.format.properties.questions.items.properties, false);
     assert.match(result[0].text, /^Apply calculate the current/);
   } finally {
@@ -171,12 +172,12 @@ test('Ollama explains when structured output was cut off at its token limit', as
   }
 });
 
-test('Ollama splits large papers into batches of ten and preserves the requested count', async () => {
+test('Ollama keeps papers up to twenty questions in one batch and preserves larger-paper counts', async () => {
   const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
   process.env.OLLAMA_MODEL = 'qwen3.5:4b';
   let calls = 0;
   globalThis.fetch = async () => {
-    const size = calls++ === 0 ? 10 : 1;
+    const size = calls++ === 0 ? 20 : 1;
     const question = { ...valid.questions[0], marks: 2, bloomLevel: 'K1', openingVerb: 'Define',
       questionCore: 'the Ohm law.', text: undefined, answer: '' };
     return { ok: true, json: async () => ({ message: { content: JSON.stringify({ questions: Array.from({ length: size }, () => question) }) } }) };
@@ -184,11 +185,11 @@ test('Ollama splits large papers into batches of ten and preserves the requested
   try {
     const result = await generateOllamaQuestions({
       body: { ...body, questionStyle: 'THEORY' }, text: `Unit 1: ${topic}.`,
-      slots: Array.from({ length: 11 }, () => ({ marks: 2, difficulty: 'EASY', bloomLevel: 'K1' })),
+      slots: Array.from({ length: 21 }, () => ({ marks: 2, difficulty: 'EASY', bloomLevel: 'K1' })),
     });
     assert.equal(calls, 2);
-    assert.equal(result.length, 11);
-    assert.equal(result[10].id, 'OLLAMA11');
+    assert.equal(result.length, 21);
+    assert.equal(result[20].id, 'OLLAMA21');
   } finally {
     globalThis.fetch = oldFetch;
     if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
@@ -210,26 +211,28 @@ test('Ollama rejects problem-solving output when theory-only mode is selected', 
   }
 });
 
-test('Ollama mixed mode requires both theory and a numerical problem when supported', async () => {
+test('Ollama mixed mode allows conceptual K3 maths and still requires a numerical problem', async () => {
   const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
   process.env.OLLAMA_MODEL = 'qwen3.5:4b';
   let request;
-  const theory = {
-    ...valid.questions[0], openingVerb: 'Explain', questionCore: 'the relationship between voltage, current and resistance in Ohm law',
-    marks: 2, bloomLevel: 'K2', answer: '',
+  const conceptualK3 = {
+    ...valid.questions[0], openingVerb: 'Apply',
+    questionCore: 'Ohm law to predict how current changes when resistance increases while voltage remains constant.',
+    bloomLevel: 'K3', answer: '',
   };
   globalThis.fetch = async (_url, init) => {
     request = JSON.parse(init.body);
-    return { ok: true, json: async () => ({ message: { content: JSON.stringify({ questions: [valid.questions[0], theory] }) } }) };
+    return { ok: true, json: async () => ({ message: { content: JSON.stringify({ questions: [conceptualK3, valid.questions[0]] }) } }) };
   };
   try {
     const result = await generateOllamaQuestions({
       body: { ...body, questionStyle: 'MIXED' }, text: `Unit 1: ${topic}.`,
-      slots: [slots[0], { marks: 2, difficulty: 'EASY', bloomLevel: 'K2' }],
+      slots: [slots[0], slots[0]],
     });
     assert.equal(result.length, 2);
+    assert.match(result[0].text, /^Apply/);
     assert.ok(request.messages[1].content.includes('Mixed mode:'));
-    assert.deepEqual(request.format.properties.questions.items.properties.questionType.enum, ['SHORT']);
+    assert.equal('questionType' in request.format.properties.questions.items.properties, false);
   } finally {
     globalThis.fetch = oldFetch;
     if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;

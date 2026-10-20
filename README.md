@@ -559,9 +559,20 @@ Edit `backend/.env`:
 ```dotenv
 DATABASE_URL=postgresql://postgres:YOUR_DATABASE_PASSWORD@localhost:5432/questionbank
 PORT=4000
+AI_PROVIDER=ollama
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=qwen3.5:9b
 ```
 
-Replace the password locally; URL-encode special characters when used in a connection URL. Then run:
+Replace the password locally; URL-encode special characters when used in a connection URL. For local AI generation, install [Ollama for Windows](https://ollama.com/download/windows), then download the selected model once:
+
+```powershell
+ollama pull qwen3.5:9b
+```
+
+The Qwen 3.5 9B model is about 6.6–7.6 GB. Ollama serves it locally at `http://127.0.0.1:11434`; generation speed depends on available RAM and GPU, and may be slower without a dedicated GPU. If your computer struggles, try a smaller model such as `qwen3.5:4b`. The backend uses Ollama's JSON-schema output and then checks syllabus terms, Bloom level, generic wording and numerical working. These checks improve quality but cannot guarantee 100% correctness; review generated papers before an exam. To use Groq instead, set `AI_PROVIDER=groq` and configure `GROQ_API_KEY` and `GROQ_MODEL` in the private `.env` file.
+
+Then run:
 
 ```powershell
 npm.cmd run db:init

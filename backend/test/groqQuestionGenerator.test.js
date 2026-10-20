@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { generateGroqQuestions } from '../src/groqQuestionGenerator.js';
+import { generateGroqQuestions, generateOllamaQuestions } from '../src/groqQuestionGenerator.js';
 
 const body = {
   subject: 'Physics', questionStyle: 'PROBLEM_SOLVING', oneMarkType: 'MCQ',
@@ -65,5 +65,51 @@ test('Groq retries invalid math once, then reports quality issues instead of acc
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = oldKey;
     if (oldModel === undefined) delete process.env.GROQ_MODEL; else process.env.GROQ_MODEL = oldModel;
+  }
+});
+
+test('Groq rejects template filler and requires a real worked numerical problem', async () => {
+  const oldFetch = globalThis.fetch, oldKey = process.env.GROQ_API_KEY, oldModel = process.env.GROQ_MODEL;
+  process.env.GROQ_API_KEY = 'unit-test-key'; process.env.GROQ_MODEL = 'openai/gpt-oss-20b';
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls++;
+    const invalid = structuredClone(valid);
+    invalid.questions[0].questionCore = 'Develop your response with a relevant example and clear reasoning.';
+    invalid.questions[0].solution = 'The answer is 2.';
+    return { ok: true, json: async () => ({ choices: [{ message: { content: JSON.stringify(invalid) } }] }) };
+  };
+  try {
+    await assert.rejects(generateGroqQuestions({ body, text: `Unit 1: ${topic}.`, slots }), /failed quality checks/);
+    assert.equal(calls, 2);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = oldKey;
+    if (oldModel === undefined) delete process.env.GROQ_MODEL; else process.env.GROQ_MODEL = oldModel;
+  }
+});
+
+test('Ollama uses local structured outputs and applies the same syllabus and math checks', async () => {
+  const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL, oldUrl = process.env.OLLAMA_BASE_URL;
+  process.env.OLLAMA_MODEL = 'qwen3.5:9b'; process.env.OLLAMA_BASE_URL = 'http://127.0.0.1:11434/';
+  let requestUrl, request;
+  globalThis.fetch = async (url, init) => {
+    requestUrl = url;
+    request = JSON.parse(init.body);
+    return { ok: true, json: async () => ({ message: { content: JSON.stringify(valid) } }) };
+  };
+  try {
+    const result = await generateOllamaQuestions({ body, text: `Unit 1: ${topic}.`, slots });
+    assert.equal(requestUrl, 'http://127.0.0.1:11434/api/chat');
+    assert.equal(request.model, 'qwen3.5:9b');
+    assert.equal(request.stream, false);
+    assert.equal(request.think, false);
+    assert.equal(request.format.type, 'object');
+    assert.equal(result[0].bloomSource, 'ollama');
+    assert.match(result[0].text, /^Calculate the current/);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
+    if (oldUrl === undefined) delete process.env.OLLAMA_BASE_URL; else process.env.OLLAMA_BASE_URL = oldUrl;
   }
 });

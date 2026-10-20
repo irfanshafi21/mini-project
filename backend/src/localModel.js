@@ -259,19 +259,18 @@ function topicProblemCandidates(topics,slots) {
 // Authored task grammars are constrained by marks and the requested cognitive level.
 // The trained topic classifier selects topic families; the Bloom classifier audits task context.
 const bloomTasks = {
- K1: ['Define {t}.','List two key terms associated with {t}.','Name one application of {t}.','Recall the main purpose of {t}.','List two characteristics of {t}.','Show one example of {t}.'],
- K2: ['Explain the purpose of {t} in your own words.','Summarize the central principle of {t}.','Illustrate {t} with one suitable example.','Explain one benefit of {t}.','Outline the main idea of {t}.','Explain how {t} works.'],
- K3: ['Apply {t} to one practical example of your choice; state the input and result.','Demonstrate how to use {t} in a small worked example.','Construct a worked example using {t}, stating the required inputs.','Apply the steps of {t} to a clearly stated example.','Model a simple practical situation using {t}.','Utilize {t} to solve a small problem of your choice; specify the data.'],
+ K1: ['Define {t}.','List two key terms associated with {t}.','Name one application of {t}.','Recall the main purpose of {t}.','List two characteristics of {t}.','Select the standard notation used for {t}.'],
+ K2: ['Explain the purpose of {t}.','Summarize the central principle of {t}.','Describe the main stages of {t}.','Explain one benefit of {t}.','Outline the main idea of {t}.','Explain how {t} works.'],
+ K3: ['Apply {t} to the supplied values and show each step.','Demonstrate the procedure for {t} using the given input.','Calculate the requested result using {t} and show the substitution.','Apply the steps of {t} to the specified data.','Determine the output of {t} for the stated input.','Solve the stated problem using {t} and show the method.'],
  K4: ['Analyze the relationship between two components of {t}.','Examine one cause and its effect within {t}.','Distinguish the roles of two elements within {t}.','Analyze one limitation of {t} and its underlying cause.','Inspect the structure of {t} and identify one dependency.','Analyze how changing one assumption affects {t}.'],
- K5: ['Justify whether {t} is suitable when simplicity is the primary criterion.','Evaluate one limitation of {t} against its intended purpose.','Assess {t} using reliability as an explicit criterion; justify your judgment.','Judge the suitability of {t} for a constrained application of your choice.','Recommend whether to use {t} when resources are limited; justify your choice.','Defend one design choice in {t} using an explicit criterion.'],
- K6: ['Design one small modification to {t} that reduces complexity.','Create a simple alternative approach to {t}; specify its main change.','Propose one original improvement to {t} for a resource-constrained setting.','Develop a small design using {t} with one explicit constraint.','Formulate a new example application of {t} with a stated objective.','Design an adaptation of {t} for an application of your choice.'],
+ K5: ['Justify whether {t} is suitable when simplicity is the primary criterion.','Evaluate one limitation of {t} against its intended purpose.','Assess {t} using reliability as an explicit criterion; justify your judgment.','Judge the suitability of {t} for the stated application.','Recommend whether to use {t} when resources are limited; justify the decision.','Defend one design choice in {t} using an explicit criterion.'],
+ K6: ['Design one small modification to {t} that reduces complexity.','Create a simple alternative approach to {t}; specify its main change.','Propose one original improvement to {t} for a resource-constrained setting.','Develop a small design using {t} with one explicit constraint.','Formulate an implementation plan for {t} that meets the stated objective.','Design an adaptation of {t} for the specified application.'],
 };
 function bloomCandidates(topics, slots) {
  const levels=[...new Set(slots.filter(s=>s.bloomLevel).map(s=>s.bloomLevel))];
   return [...new Set(slots.map(s=>s.marks))].filter(m=>m>1).flatMap(marks=>topics.flatMap(({topic,unit})=>levels.flatMap(level=>
   bloomTasks[level].map((pattern,index)=>{
    let text=pattern.replace('{t}',focusedTopic(topic));
-   if(marks>=5)text+=' '+(marks===5?'Support your response with one relevant example.':marks===10?'Develop your response with a relevant example and clear reasoning.':'Develop a structured response with a worked example or labelled design, explicit assumptions, and justified conclusions.');
     return {topic:focusedTopic(topic).slice(0,200),unit,marks,bloomLevel:level,bloomSource:'local-model',subtopic:classifyTopic(topic),syllabusReference:topic,text,pattern:index,questionType:'SHORT',options:[],answer:''};
   })
  )));

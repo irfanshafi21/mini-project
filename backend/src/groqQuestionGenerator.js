@@ -15,8 +15,8 @@ const questionOpeningVerbs = {
   K6: ['Adapt', 'Build', 'Combine', 'Compile', 'Compose', 'Construct', 'Create', 'Design', 'Develop', 'Implement', 'Formulate', 'Improve', 'Invent', 'Modify', 'Originate', 'Plan', 'Propose', 'Solve', 'Write'],
 };
 const mathTopic = /\b(math(?:ematics)?|algebra|equation|calculus|integral|integration|differentiat(?:ion|e)|matrix|matrices|determinant|probability|statistics|numerical method|number system|boolean algebra|logic design|circuit|ohm|voltage|current|resistance|force|motion|kinematic|stress|strain|thermodynamic|heat transfer|pressure|fluid mechanics|beam|scheduling|subnet|network address|entropy|information gain|gini|feature scaling|normalization|normalisation|standardization|standardisation|distance|regression|gradient descent|loss function)\b/i;
-const mathTask = /\b(calculate|compute|solve|evaluate|find|determine|derive|simplify|differentiate|integrate|trace|convert|estimate|prove)\b/i;
-const bannedGenericWording = /\b(?:of your choice|your own example|own example|relevant example|support your response|as an example of your choice|an application of your choice|a practical example of your choice)\b/i;
+const mathTask = /\b(apply|calculate|compute|solve|evaluate|find|determine|derive|simplify|differentiate|integrate|trace|convert|estimate|prove)\b/i;
+const bannedGenericWording = /\b(?:of your choice|your own example|own example|relevant example|support your response|develop your response|clear reasoning|as an example of your choice|an application of your choice|a practical example of your choice|give (?:one|an?) (?:relevant |suitable )?example|provide (?:one|an?) (?:relevant |suitable )?example|with (?:one|an?) relevant example)\b/i;
 const stopWords = new Set(['about','after','against','along','among','based','before','between','during','from','into','over','through','under','using','with','within','your','what','which','that','this','their','there','these','those','such','main','basic','introduction','concept','concepts','topic','unit']);
 
 const normalize = value => String(value || '').toLowerCase().normalize('NFKC').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
@@ -36,7 +36,10 @@ function selectTopics(text, body) {
 }
 
 function subtopicsFor(topic) {
-  const parts = [topic, ...topic.split(/[:;,.]+/g)];
+  const segments = topic
+    .split(/[:;,.]+/g)
+    .flatMap(part => part.split(/\s+(?:is|are|was|were|relates? to|related to|related by|refers? to|consists? of|includes?|uses?|using)\s+/i));
+  const parts = [topic, ...segments];
   for (const part of [...parts]) parts.push(...part.split(/\s+(?:and|or)\s+|\s*\/\s*/i));
   return [...new Set(parts.map(part => part.trim().replace(/^[-–—\s]+|[-–—\s]+$/g, '')).filter(part => part.length >= 4 && part.length <= 120))];
 }
@@ -103,7 +106,9 @@ function checkQuestions(questions, slots, topics, body, selectedUnits) {
     if (!q.solution?.trim()) failures.push(`Question ${index + 1} is missing a concise solution or marking guide.`);
     const syllabusTopic = source?.topic || q.topic || '';
     if (source && mathTopic.test(syllabusTopic) && q.bloomLevel === 'K3' && body.questionStyle !== 'THEORY') {
-      if (!mathTask.test(q.text) || !/\d/.test(q.text) || !/\d/.test(q.solution)) failures.push(`Math question ${index + 1} must be a solvable numerical problem with supplied values and a worked answer.`);
+      const suppliedValues = q.text.match(/\d+(?:\.\d+)?/g) || [];
+      const workedSteps = /[=×÷*/+\-]/.test(q.solution) && (q.solution.match(/\d+(?:\.\d+)?/g) || []).length >= 2;
+      if (!mathTask.test(q.text) || suppliedValues.length < 2 || !workedSteps) failures.push(`Math question ${index + 1} must state at least two usable values and include a worked calculation with an operation and numeric result.`);
     }
   }
   if (remaining.length) failures.push('Some requested marks/Bloom slots are missing.');
@@ -117,7 +122,7 @@ function makePrompt({ body, slots, topics, bankQuestions, failures }) {
     `Subject: ${body.subject || 'Use the supplied topic names'}\nQuestion style: ${body.questionStyle}\nOne-mark format: ${body.oneMarkType}\nSelected units: ${unitList.join(', ')}\n\n` +
     `Return exactly one question for every slot and preserve its marks, difficulty, and Bloom level. Copy the exact source topic into topic and syllabusReference. Set subtopic to the exact technical term or phrase from that source. Every meaningful word in that phrase must appear in the questionCore, using the same terminology and spelling as the syllabus. Set openingVerb to one allowed verb for the assigned Bloom level; the application will place it at the start of the question. questionCore must be grammatical immediately after that verb. Match response depth to marks. Each item must be a natural, complete university exam question, not a generic template.\n\n` +
     `Never write phrases such as “of your choice”, “your own example”, “one relevant example”, or “support your response”. Do not ask students to invent a topic, example, application, inputs, or scenario. Give a specific question. Avoid vague criteria without naming the syllabus concept being evaluated, and do not append repeated boilerplate to stems.\n\n` +
-    `When a selected syllabus subtopic is mathematical or numerical and the Bloom level calls for application/problem solving, create a genuine numerical sum: state all required values and units in the question, use a formula or method that belongs to the syllabus, and provide a worked solution with the correct result. You may choose simple values to make the exercise self-contained, but must not invent a formula or introduce an unrelated application. Check the calculation before returning it. K1/K2 slots may test the named mathematical concept or formula instead of asking for a calculation. For non-numerical subjects, do not force a calculation. Use questionType SHORT except one-mark questions, where use ${body.oneMarkType}. MCQs must have four plausible distinct options and exactly one correct option; the answer must match one option exactly. Fill-in blanks must contain ____ and the answer must fill it exactly. Include a concise answer and marking guide for every item.\n\n` +
+    `Before writing, map each question to one specific syllabus subtopic, using the syllabus's exact technical terminology. Prefer coverage of distinct listed subtopics before repeating one. When a selected subtopic is mathematical or numerical and the Bloom level calls for application/problem solving, create a genuine numerical sum: provide at least two concrete values, include units where applicable, ask for a calculation, and provide a worked solution showing the formula, substitution, operation and numeric result. Check the arithmetic. Do not substitute a definition or generic explanation for a requested sum. Do not invent a formula or unrelated application. K1/K2 slots may test the named mathematical concept or formula instead. For non-numerical subjects, do not force a calculation. Use questionType SHORT except one-mark questions, where use ${body.oneMarkType}. MCQs must have four plausible distinct options and exactly one correct option; the answer must match one option exactly. Fill-in blanks must contain ____ and the answer must fill it exactly. Include a concise answer and marking guide for every item.\n\n` +
     `Syllabus topics and allowed subtopic phrases (choose a subtopic only from the phrase list shown under its topic):\n${topics.map(item => `Unit ${item.unit}: ${item.topic}\n  Allowed syllabus phrases: ${subtopicsFor(item.topic).join(' | ')}`).join('\n')}\n\n` +
     `Mathematics/numerical topics in scope:\n${mathTopics.map(item => `Unit ${item.unit}: ${item.topic}`).join('\n') || '(none)'}\n\n` +
     `Existing stored questions for style and coverage reference only (do not copy verbatim):\n${bankQuestions.slice(0, 30).map(q => `Unit ${q.unit} | ${q.marks} marks | ${q.text}`).join('\n') || '(none)'}\n\n` +
@@ -125,9 +130,40 @@ function makePrompt({ body, slots, topics, bankQuestions, failures }) {
     (failures?.length ? `\nPrevious validation failed. Correct every issue: ${failures.join(' ')}\n` : '');
 }
 
-async function callGroq(prompt, units, questionCount, signal) {
+async function callProvider(prompt, units, questionCount, signal, provider) {
+  const model = provider === 'ollama' ? process.env.OLLAMA_MODEL || 'qwen3.5:9b' : process.env.GROQ_MODEL;
+  if (provider === 'ollama') {
+    const baseUrl = (process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/+$/, '');
+    let response;
+    try {
+      response = await fetch(`${baseUrl}/api/chat`, {
+        method: 'POST', signal, headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: 'You are a careful university examiner. Return only syllabus-grounded question data matching the JSON schema. Never invent syllabus facts.' },
+            { role: 'user', content: prompt },
+          ],
+          stream: false,
+          think: false,
+          format: schemaFor(units),
+          options: { temperature: 0.15, num_predict: Math.min(16000, 2400 + questionCount * 320) },
+        }),
+      });
+    } catch (error) {
+      if (error.name === 'AbortError' || error.name === 'TimeoutError') throw error;
+      throw new HttpError(503, `Cannot reach Ollama at ${baseUrl}. Start Ollama and make sure ${model} is installed.`);
+    }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      if (response.status === 404) throw new HttpError(503, `Ollama model ${model} is not installed. Run ollama pull ${model} and try again.`);
+      throw new HttpError(502, `Ollama question generation failed (HTTP ${response.status}).`);
+    }
+    const content = data.message?.content;
+    if (typeof content !== 'string') throw new HttpError(502, 'Ollama returned an empty question response. Try again.');
+    try { return JSON.parse(content); } catch { throw new HttpError(502, 'Ollama returned unreadable question data. Try again.'); }
+  }
   const key = process.env.GROQ_API_KEY;
-  const model = process.env.GROQ_MODEL;
   if (!key) throw new HttpError(503, 'Groq is selected but GROQ_API_KEY is not configured in backend/.env.');
   if (!model) throw new HttpError(503, 'Groq is selected but GROQ_MODEL is not configured in backend/.env.');
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -161,14 +197,22 @@ async function callGroq(prompt, units, questionCount, signal) {
 }
 
 export async function generateGroqQuestions({ body, text, slots, bankQuestions = [] }) {
+  return generateQuestionsWithProvider({ body, text, slots, bankQuestions, provider: 'groq' });
+}
+
+export async function generateOllamaQuestions({ body, text, slots, bankQuestions = [] }) {
+  return generateQuestionsWithProvider({ body, text, slots, bankQuestions, provider: 'ollama' });
+}
+
+async function generateQuestionsWithProvider({ body, text, slots, bankQuestions, provider }) {
   const topics = selectTopics(text, body);
   const selectedUnits = [...new Set(topics.map(item => item.unit))];
   let failures = [];
   for (let attempt = 0; attempt < 2; attempt++) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 90000);
+      const timeout = setTimeout(() => controller.abort(), provider === 'ollama' ? 300000 : 90000);
     try {
-      const response = await callGroq(makePrompt({ body, slots, topics, bankQuestions, failures }), topics, slots.length, controller.signal);
+      const response = await callProvider(makePrompt({ body, slots, topics, bankQuestions, failures }), topics, slots.length, controller.signal, provider);
       const preparedQuestions = response.questions?.map(q => ({ ...q, text: `${q.openingVerb || ''} ${q.questionCore || ''}`.trim() }));
       failures = checkQuestions(preparedQuestions, slots, topics, body, selectedUnits);
       if (!failures.length) return preparedQuestions.map((q, index) => {
@@ -176,13 +220,13 @@ export async function generateGroqQuestions({ body, text, slots, bankQuestions =
         const storedQuestion = { ...q };
         delete storedQuestion.openingVerb;
         delete storedQuestion.questionCore;
-        return { ...storedQuestion, topic: topic.topic, subtopic: q.subtopic.slice(0, 200), bloomSource: 'groq', id: `GROQ${index + 1}` };
+        return { ...storedQuestion, topic: topic.topic, subtopic: q.subtopic.slice(0, 200), bloomSource: provider, id: `${provider.toUpperCase()}${index + 1}` };
       });
     } catch (error) {
       if (error instanceof HttpError) throw error;
-      if (error.name === 'AbortError' || error.name === 'TimeoutError') throw new HttpError(504, 'Groq question generation timed out. Reduce the question count and try again.');
-      throw new HttpError(502, 'Could not connect to Groq. Check the internet connection and try again.');
+      if (error.name === 'AbortError' || error.name === 'TimeoutError') throw new HttpError(504, `${provider === 'ollama' ? 'Ollama' : 'Groq'} question generation timed out. Reduce the question count and try again.`);
+      throw new HttpError(502, `Could not connect to ${provider === 'ollama' ? 'Ollama' : 'Groq'}. Check the service and try again.`);
     } finally { clearTimeout(timeout); }
   }
-  throw new HttpError(502, `Groq returned questions that failed quality checks: ${failures.slice(0, 4).join(' ')}`);
+  throw new HttpError(502, `${provider === 'ollama' ? 'Ollama' : 'Groq'} returned questions that failed quality checks: ${failures.slice(0, 4).join(' ')}`);
 }

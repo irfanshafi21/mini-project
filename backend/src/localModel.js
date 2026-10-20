@@ -53,6 +53,8 @@ function splitTopics(paragraph) {
   parts.push(paragraph.slice(start));return parts;
 }
 const sectionTitle=/^(probability and statistics|linear algebra|calculus and optimi[sz]ation|programming,? data structures and algorithms|database management and warehousing|machine learning|artificial intelligence|general aptitude(?:\s*\(\d+\s*marks\))?)$/i;
+const nonSyllabusSection=/^(?:(?:recommended|suggested|prescribed|course)\s+)*(?:(?:text|reference|course|recommended|suggested|prescribed)\s+)*(?:books?|texts?|references?|readings?|bibliography|learning\s+resources|course\s+resources)(?:\s*(?:\/|&|and)\s*(?:(?:text|reference|recommended|suggested|prescribed)\s+)*(?:books?|texts?|references?|readings?))*\s*[:：-]?\s*$/i;
+const bibliographicMetadata=/^(?:author(?:s)?|publisher|edition|isbn|doi|publication(?:\s+details?)?|book\s+title|title\s+of\s+(?:the\s+)?book|textbook|reference\s+book|recommended\s+book)\s*[:：-]/i;
 const projectInstructionNoise=/\b(?:developer prompt|system prompt|user request|project requirements?|project instructions?|critical requirements|testing instructions?|regression test|test suite|error message|ui labels?|upload instructions?|prompt examples?|question paper generator|preserve existing features|do not (?:modify|change|remove|replace|assume|silently|blindly|invent)|run (?:the )?(?:existing )?(?:tests|test suite|build)|click to browse|drop your syllabus|choose your syllabus|generate (?:the )?question paper|add to question bank|the uploaded file|work directly on my existing|final verification and report|inspect the existing implementation first|implement subject-aware question generation|support question-type selection|generate genuine problem-solving questions|fix retrieval filtering and validation|prevent irrelevant questions|handle insufficient questions|inspect model training|add regression tests)\b/i;
 function isProjectInstruction(text){return projectInstructionNoise.test(String(text||'')) || /^(?:error|warning|note to (?:the )?(?:user|developer))\s*:/i.test(String(text||'').trim()) || /^(?:#{1,6}\s*)?(?:\d+\.\s*)?(?:inspect|implement|support|generate|fix|prevent|handle|run|add|report)\b/i.test(String(text||'').trim()) && /\b(?:existing implementation|question generation|question-type|engineering subjects|regression tests|the test suite|final verification|existing project)\b/i.test(String(text||''));}
 export function syllabusTopics(text) {
@@ -62,6 +64,7 @@ export function syllabusTopics(text) {
     const paragraph=buffer.join('\n').trim();buffer=[];
     for(let topic of splitTopics(paragraph)){
       if(isProjectInstruction(topic))continue;
+      if(bibliographicMetadata.test(topic))continue;
       const structured=looksStructured(topic);
       if(!structured) topic=topic.replace(/\s*[-–—]\s*\d+\s*(hours?|hrs?)\b/ig,'').replace(/^\s*[-•\d.)]+\s*/,'').replace(/\s+\d{1,3}$/, '').replace(/\s+/g,' ').trim();
       if(sectionTitle.test(topic))continue;
@@ -74,7 +77,8 @@ export function syllabusTopics(text) {
     const line=raw.trim().replace(/^#{1,6}\s*/, '').replace(/\*\*([^*]+)\*\*/g,'$1').replace(/`([^`]+)`/g,'$1').replace(/^[-*•]\s+/, '');
     const heading=line.match(/^unit\s*[-:]?\s*(\d|IV|III|II|V|I)\b\s*[:.\-–—]*/i);
     if(heading){flush();unit=Number(heading[1])||({I:1,II:2,III:3,IV:4,V:5}[heading[1].toUpperCase()]);if(!unit||unit>5)unit=1;active=true;skip=false;const title=line.slice(heading[0].length).replace(/\s*[-–—]\s*\d+\s*(hours?|hrs?)\b/ig,'');if(title)titles.push({topic:title.replace(/[.]+$/, '').trim(),unit});continue;}
-    if(/^(learning outcomes?|course objectives?|assessment scope|illustrative difficulty|suggested practical|overall course)/i.test(line)){flush();skip=true;continue;}
+    if(nonSyllabusSection.test(line) || /^(learning outcomes?|course objectives?|assessment scope|illustrative difficulty|suggested practical|overall course)/i.test(line)){flush();skip=true;continue;}
+    if(bibliographicMetadata.test(line)){flush();continue;}
     if(isProjectInstruction(line)){flush();continue;}
     if(!line){if(!skip)flush();continue;}
     if(!active||skip||/^--|sample syllabus|^page\b/i.test(line))continue;

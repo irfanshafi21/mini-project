@@ -70,6 +70,29 @@ A college examination workspace built with **React + Vite**, **Node.js + Express
 
 The interface uses a calm academic palette with light blue surfaces, warm paper accents, a dedicated workspace sidebar, responsive navigation, clear question cards and a focused paper studio. Mark counts update live, Bloom allocation is shown by K1–K6, and saved papers can be reopened for review. No application login is included.
 
+## Syllabus question styles
+
+When building a paper from an uploaded syllabus, choose the kind of questions the paper should contain:
+
+| Style | What it asks the generator to produce |
+| --- | --- |
+| **Theory only** | Conceptual questions grounded in the selected syllabus units. It filters out calculations and worked numerical exercises. |
+| **Sums / problem solving only** | Calculations, derivations, worked problems or other procedural questions when the selected units support them. |
+| **Mixed theory and problem solving** | A combination of conceptual and supported numerical/procedural questions. The generator aims to include both when the syllabus contains suitable problem-solving material and the paper has room for at least two questions. |
+
+The selection is sent with syllabus-generation requests as `questionStyle` (`THEORY`, `PROBLEM_SOLVING` or `MIXED`). It applies to syllabus-based generation; question-bank and manual-selection papers keep their own question-selection flow. Unit selection still limits the source material. The generator excludes book/reference metadata and uses syllabus passages as evidence, so a textbook title or author is not treated as examinable content. If a syllabus unit contains no supported numerical material, the app should not invent a sum just to fill the selected style.
+
+```mermaid
+flowchart LR
+  A[Upload syllabus] --> B[Choose units]
+  B --> C{Choose style}
+  C -->|Theory| D[Grounded conceptual questions]
+  C -->|Sums| E[Supported calculations and procedures]
+  C -->|Mixed| F[Both, when source topics support them]
+  D --> G[Validate and review paper]
+  E --> G
+  F --> G
+```
 ## The workflow at a glance
 
 From the first source to a paper you can retrieve later, each stage has a clear role. The graphic below is a high-resolution vector image, so labels stay sharp when zoomed.

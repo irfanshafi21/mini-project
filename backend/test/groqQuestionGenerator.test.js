@@ -13,8 +13,8 @@ const valid = { questions: [{
   topic,
   subtopic: 'current', syllabusReference: topic,
   unit: 1,
-  openingVerb: 'Calculate',
-  questionCore: 'the current through a 6 Ω resistor connected to a 12 V source using Ohm’s law. Show your calculation.',
+  openingVerb: 'Solve',
+  questionCore: 'for the current through a 6 Ω resistor connected to a 12 V source using Ohm’s law. Show your calculation.',
   marks: 5, difficulty: 'EASY', bloomLevel: 'K3', bloomSource: 'groq',
   questionType: 'SHORT', options: [], answer: '2 A', solution: 'I = V/R = 12/6 = 2 A.',
 }] };
@@ -38,7 +38,8 @@ test('Groq structured generation maps questions to the requested syllabus slot',
     assert.ok(request.messages[1].content.includes('Never write phrases'));
     assert.ok(request.response_format.json_schema.schema.properties.questions.items.properties.openingVerb.enum.includes('Assess'));
     assert.ok(request.response_format.json_schema.schema.properties.questions.items.properties.topic.enum.includes(topic));
-    assert.match(result[0].text, /^Calculate the current/);
+    assert.deepEqual(request.response_format.json_schema.schema.properties.questions.items.properties.questionType.enum, ['SHORT']);
+    assert.match(result[0].text, /^Solve for the current/);
   } finally {
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = oldKey;
@@ -106,10 +107,53 @@ test('Ollama uses local structured outputs and applies the same syllabus and mat
     assert.equal(request.think, false);
     assert.equal(request.format.type, 'object');
     assert.equal(result[0].bloomSource, 'ollama');
-    assert.match(result[0].text, /^Calculate the current/);
+    assert.deepEqual(request.format.properties.questions.items.properties.questionType.enum, ['SHORT']);
+    assert.match(result[0].text, /^Solve for the current/);
   } finally {
     globalThis.fetch = oldFetch;
     if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
     if (oldUrl === undefined) delete process.env.OLLAMA_BASE_URL; else process.env.OLLAMA_BASE_URL = oldUrl;
+  }
+});
+
+test('Ollama rejects problem-solving output when theory-only mode is selected', async () => {
+  const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
+  process.env.OLLAMA_MODEL = 'qwen3.5:4b';
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ message: { content: JSON.stringify(valid) } }) });
+  try {
+    await assert.rejects(
+      generateOllamaQuestions({ body: { ...body, questionStyle: 'THEORY' }, text: `Unit 1: ${topic}.`, slots }),
+      /must be theory only/,
+    );
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
+  }
+});
+
+test('Ollama mixed mode requires both theory and a numerical problem when supported', async () => {
+  const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
+  process.env.OLLAMA_MODEL = 'qwen3.5:4b';
+  let request;
+  const theory = {
+    ...valid.questions[0], openingVerb: 'Explain', questionCore: 'the role of current in Ohm law',
+    marks: 2, bloomLevel: 'K2', answer: 'Current is the rate of charge flow.',
+    solution: 'Current describes the rate at which charge flows through a conductor.',
+  };
+  globalThis.fetch = async (_url, init) => {
+    request = JSON.parse(init.body);
+    return { ok: true, json: async () => ({ message: { content: JSON.stringify({ questions: [valid.questions[0], theory] }) } }) };
+  };
+  try {
+    const result = await generateOllamaQuestions({
+      body: { ...body, questionStyle: 'MIXED' }, text: `Unit 1: ${topic}.`,
+      slots: [slots[0], { marks: 2, difficulty: 'EASY', bloomLevel: 'K2' }],
+    });
+    assert.equal(result.length, 2);
+    assert.ok(request.messages[1].content.includes('Mixed mode:'));
+    assert.deepEqual(request.format.properties.questions.items.properties.questionType.enum, ['SHORT']);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
   }
 });

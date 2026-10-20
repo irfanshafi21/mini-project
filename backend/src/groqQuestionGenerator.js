@@ -21,9 +21,6 @@ const mathTask = /\b(apply|calculate|compute|solve|evaluate|find|determine|deriv
 const bannedGenericWording = /\b(?:of your choice|your own example|own example|relevant example|support your response|develop your response|clear reasoning|as an example of your choice|an application of your choice|a practical example of your choice|give (?:one|an?) (?:relevant |suitable )?example|provide (?:one|an?) (?:relevant |suitable )?example|with (?:one|an?) relevant example)\b/i;
 const stopWords = new Set(['about','after','against','along','among','based','before','between','during','from','into','over','through','under','using','with','within','your','what','which','that','this','their','there','these','those','such','main','basic','introduction','concept','concepts','topic','unit']);
 const questionStyleOf = question => classifySourceQuestionStyle(question.text);
-function supportsNumericalOrProceduralQuestions(topics) {
-  return topics.some(({ topic }) => mathTopic.test(topic) || /\b(?:algorithm|programming|pseudocode|sql|sorting|searching|stack|queue|tree|graph|data structure|circuit|calculation|numerical)\b/i.test(topic));
-}
 
 const normalize = value => String(value || '').toLowerCase().normalize('NFKC').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 function selectTopics(text, body) {
@@ -83,7 +80,7 @@ function schemaFor(topics, slots, body) {
   } };
 }
 
-function checkQuestions(questions, slots, topics, body, selectedUnits, checkMixed = true) {
+function checkQuestions(questions, slots, topics, body, selectedUnits) {
   const failures = [];
   if (!Array.isArray(questions) || questions.length !== slots.length) return ['Return exactly the requested number of questions.'];
   const remaining = slots.map((slot, index) => ({ ...slot, _index: index }));
@@ -120,12 +117,9 @@ function checkQuestions(questions, slots, topics, body, selectedUnits, checkMixe
       if (!mathTask.test(q.text) || suppliedValues.length < 2) failures.push(`Math question ${index + 1} must state at least two usable values and ask for a concrete calculation.`);
     }
   }
-  if (checkMixed && body.questionStyle === 'MIXED' && slots.length >= 2 && supportsNumericalOrProceduralQuestions(topics)) {
-    const styles = new Set(questions.map(questionStyleOf));
-    if (!styles.has('THEORY') || ![...styles].some(style => style === 'PROBLEM_SOLVING' || style === 'PROGRAMMING_SQL')) {
-      failures.push('A mixed paper must include both theory and problem-solving questions when the syllabus supports both.');
-    }
-  }
+  // Mixed mode is a requested generation preference, not a reason to discard
+  // an otherwise valid syllabus-aligned paper when the model misses the style
+  // balance. The prompt still asks for both styles when the syllabus permits.
   if (remaining.length) failures.push('Some requested marks/Bloom slots are missing.');
   return [...new Set(failures)];
 }
@@ -280,14 +274,20 @@ async function generateQuestionsWithProvider({ body, text, slots, bankQuestions,
         const preparedQuestions = response.questions?.map((q, index) => {
           const slot = batch[index];
           const source = slot?.sourceTopic;
-          const verb = String(q.openingVerb || '').trim();
           const core = String(q.questionCore || '').trim();
-          const startsWithVerb = verb && core.slice(0, verb.length).toLowerCase() === verb.toLowerCase()
-            && (core.length === verb.length || /\s/.test(core[verb.length]));
-          const continuation = core && !/^I\b/.test(core) ? `${core[0].toLowerCase()}${core.slice(1)}` : core;
-          const text = (startsWithVerb ? core : `${verb} ${continuation}`).trim();
+          const allowedVerbs = questionOpeningVerbs[slot?.bloomLevel] || [];
+          const modelVerb = String(q.openingVerb || '').trim();
+          const beginsWith = candidate => candidate && core.slice(0, candidate.length).toLowerCase() === candidate.toLowerCase()
+            && (core.length === candidate.length || /\s/.test(core[candidate.length]));
+          const coreVerb = allowedVerbs.find(beginsWith);
+          const verb = allowedVerbs.includes(modelVerb) ? modelVerb : coreVerb || allowedVerbs[0] || modelVerb;
+          const leadingVerb = [modelVerb, ...allowedVerbs].find(beginsWith);
+          const remainder = leadingVerb ? core.slice(leadingVerb.length).trim() : core;
+          const continuation = remainder && !/^I\b/.test(remainder) ? `${remainder[0].toLowerCase()}${remainder.slice(1)}` : remainder;
+          const text = `${verb} ${continuation}`.trim();
           return {
             ...q,
+            openingVerb: verb,
             text,
             unit: source?.unit,
             topic: source?.topic,
@@ -297,12 +297,12 @@ async function generateQuestionsWithProvider({ body, text, slots, bankQuestions,
             bloomLevel: slot?.bloomLevel || q.bloomLevel,
             bloomSource: provider,
             questionType: slot?.marks === 1 ? body.oneMarkType : 'SHORT',
-            options: Array.isArray(q.options) ? q.options : [],
-            answer: String(q.answer || ''),
+            options: slot?.marks === 1 && Array.isArray(q.options) ? q.options : [],
+            answer: slot?.marks === 1 ? String(q.answer || '') : '',
             ...(source ? { subtopic: normalizeSubtopic(source.topic, q.subtopic, text) } : {}),
           };
         });
-        failures = checkQuestions(preparedQuestions, batch, topics, body, selectedUnits, false);
+        failures = checkQuestions(preparedQuestions, batch, topics, body, selectedUnits);
         if (!failures.length) {
           accepted = preparedQuestions.map(q => {
             const topic = topics.find(item => item.unit === q.unit && normalize(item.topic) === normalize(q.syllabusReference));

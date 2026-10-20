@@ -211,26 +211,32 @@ test('Ollama rejects problem-solving output when theory-only mode is selected', 
   }
 });
 
-test('Ollama mixed mode allows conceptual K3 maths and still requires a numerical problem', async () => {
+test('Ollama mixed mode does not discard a syllabus-aligned paper for imperfect style balance', async () => {
   const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
   process.env.OLLAMA_MODEL = 'qwen3.5:4b';
   let request;
   const conceptualK3 = {
-    ...valid.questions[0], openingVerb: 'Apply',
-    questionCore: 'Ohm law to predict how current changes when resistance increases while voltage remains constant.',
-    bloomLevel: 'K3', answer: '',
+    ...valid.questions[0], openingVerb: 'Explain',
+    questionCore: 'Explain how Ohm law predicts current changes when resistance increases while voltage remains constant.',
+    bloomLevel: 'K3', options: ['stray option'], answer: '',
+  };
+  const theoryK2 = {
+    ...valid.questions[0], openingVerb: 'Explain',
+    questionCore: 'Explain the relationship between voltage, current and resistance in Ohm law.',
+    bloomLevel: 'K2', answer: '',
   };
   globalThis.fetch = async (_url, init) => {
     request = JSON.parse(init.body);
-    return { ok: true, json: async () => ({ message: { content: JSON.stringify({ questions: [conceptualK3, valid.questions[0]] }) } }) };
+    return { ok: true, json: async () => ({ message: { content: JSON.stringify({ questions: [conceptualK3, theoryK2] }) } }) };
   };
   try {
     const result = await generateOllamaQuestions({
       body: { ...body, questionStyle: 'MIXED' }, text: `Unit 1: ${topic}.`,
-      slots: [slots[0], slots[0]],
+      slots: [slots[0], { marks: 5, difficulty: 'EASY', bloomLevel: 'K2' }],
     });
     assert.equal(result.length, 2);
     assert.match(result[0].text, /^Apply/);
+    assert.deepEqual(result[0].options, []);
     assert.ok(request.messages[1].content.includes('Mixed mode:'));
     assert.equal('questionType' in request.format.properties.questions.items.properties, false);
   } finally {

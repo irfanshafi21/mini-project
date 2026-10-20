@@ -52,6 +52,20 @@ function subtopicsFor(topic) {
   return (phrases.length > 1 ? phrases : [topic, ...phrases]).slice(0, 5);
 }
 
+function normalizeSubtopic(topic, candidate, question) {
+  const allowed = subtopicsFor(topic);
+  if (allowed.some(value => normalize(value) === normalize(candidate))) return candidate;
+  const candidateWords = new Set(normalize(candidate).split(' ').filter(word => word.length > 3 && !stopWords.has(word)));
+  const questionWords = new Set(normalize(question).split(' ').filter(word => word.length > 3 && !stopWords.has(word)));
+  return allowed
+    .map((value, index) => {
+      const words = normalize(value).split(' ').filter(word => word.length > 3 && !stopWords.has(word));
+      const score = words.reduce((total, word) => total + (candidateWords.has(word) ? 3 : 0) + (questionWords.has(word) ? 1 : 0), 0) / Math.max(words.length, 1);
+      return { value, index, score };
+    })
+    .sort((a, b) => b.score - a.score || a.index - b.index)[0]?.value || topic;
+}
+
 function schemaFor(topics, slots, body) {
   const topicNames = [...new Set(topics.map(item => item.topic))];
   const subtopicNames = [...new Set(topics.flatMap(item => subtopicsFor(item.topic)))];
@@ -91,15 +105,6 @@ function checkQuestions(questions, slots, topics, body, selectedUnits, checkMixe
     const source = topics.find(item => item.unit === q.unit && normalize(item.topic) === normalize(q.syllabusReference));
     if (!source) failures.push(`Question ${index + 1} must cite one exact topic from the selected syllabus units.`);
     if (source && normalize(q.topic) !== normalize(source.topic)) failures.push(`Question ${index + 1} must preserve the exact syllabus topic terminology.`);
-    if (source) {
-      const subtopic = normalize(q.subtopic);
-      const allowedSubtopics = subtopicsFor(source.topic).map(normalize);
-      if (!subtopic || !allowedSubtopics.includes(subtopic)) failures.push(`Question ${index + 1} must use an exact subtopic phrase from its syllabus topic.`);
-      const words = subtopic.split(' ').filter(word => word.length > 3 && !stopWords.has(word));
-      const question = normalize(q.text);
-      const missingTerms = words.filter(word => !question.includes(word));
-      if (missingTerms.length) failures.push(`Question ${index + 1} must explicitly use the named syllabus subtopic terminology: ${missingTerms.join(', ')}.`);
-    }
     if (bannedGenericWording.test(q.text)) failures.push(`Question ${index + 1} contains generic wording. Write a specific question using the syllabus terminology; do not ask students to invent an example or application.`);
     if (!body.subject && !selectedUnits.includes(q.unit)) failures.push(`Question ${index + 1} is outside the uploaded syllabus scope.`);
     if (!bloomLevels.includes(q.bloomLevel) || (q.openingVerb && !questionOpeningVerbs[q.bloomLevel]?.includes(q.openingVerb)) || !startsWithBloomVerb(q.text, q.bloomLevel)) failures.push(`Question ${index + 1} must start with an appropriate verb for its assigned Bloom level.`);
@@ -273,7 +278,9 @@ async function generateQuestionsWithProvider({ body, text, slots, bankQuestions,
           const startsWithVerb = verb && core.slice(0, verb.length).toLowerCase() === verb.toLowerCase()
             && (core.length === verb.length || /\s/.test(core[verb.length]));
           const continuation = core && !/^I\b/.test(core) ? `${core[0].toLowerCase()}${core.slice(1)}` : core;
-          return { ...q, text: (startsWithVerb ? core : `${verb} ${continuation}`).trim() };
+          const text = (startsWithVerb ? core : `${verb} ${continuation}`).trim();
+          const source = topics.find(item => item.unit === q.unit && normalize(item.topic) === normalize(q.syllabusReference));
+          return { ...q, text, ...(source ? { subtopic: normalizeSubtopic(source.topic, q.subtopic, text) } : {}) };
         });
         failures = checkQuestions(preparedQuestions, batch, topics, body, selectedUnits, false);
         if (!failures.length) {

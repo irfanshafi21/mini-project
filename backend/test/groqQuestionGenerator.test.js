@@ -51,6 +51,23 @@ test('Groq structured generation maps questions to the requested syllabus slot',
   }
 });
 
+test('a question is kept when it is on-topic but does not repeat the exact subtopic wording', async () => {
+  const oldFetch = globalThis.fetch, oldKey = process.env.GROQ_API_KEY, oldModel = process.env.GROQ_MODEL;
+  process.env.GROQ_API_KEY = 'unit-test-key'; process.env.GROQ_MODEL = 'openai/gpt-oss-20b';
+  const onTopic = structuredClone(valid);
+  onTopic.questions[0].questionCore = 'a resistor of 10 Ω carrying a current of 2 A; calculate the voltage across it.';
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ choices: [{ message: { content: JSON.stringify(onTopic) } }] }) });
+  try {
+    const result = await generateGroqQuestions({ body, text: `Unit 1: ${topic}.`, slots });
+    assert.match(result[0].text, /resistor of 10 Ω/);
+    assert.equal(result[0].subtopic, 'Ohm law');
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = oldKey;
+    if (oldModel === undefined) delete process.env.GROQ_MODEL; else process.env.GROQ_MODEL = oldModel;
+  }
+});
+
 test('Groq retries invalid math once, then reports quality issues instead of accepting it', async () => {
   const oldFetch = globalThis.fetch, oldKey = process.env.GROQ_API_KEY, oldModel = process.env.GROQ_MODEL;
   process.env.GROQ_API_KEY = 'unit-test-key'; process.env.GROQ_MODEL = 'openai/gpt-oss-20b';

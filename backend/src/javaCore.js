@@ -33,7 +33,7 @@ function runCore(mode, total, count, split, pool = [], markCounts) {
     });
     child.stderr.resume();
     child.on('close', code => {
-      if (code === 2) return finish(new HttpError(400, 'Cannot build this marks pattern. Use a total achievable with 1, 2, 5, 10 or 16 marks, at most 50 questions, and check bank availability.'));
+      if (code === 2) return finish(new HttpError(400, 'Cannot build this marks pattern. Use a total achievable with 1, 2, 5, 10 or 16 marks, at most 100 questions, and check bank availability.'));
       if (code !== 0) return finish(new HttpError(503, 'Java core failed. Check your JDK installation and paper parameters.'));
       try { finish(null, JSON.parse(output)); }
       catch { finish(new HttpError(502, 'Java core returned an invalid result')); }

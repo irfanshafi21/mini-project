@@ -18,7 +18,7 @@ export const syllabusBody = z.object({
   mimeType: z.enum(['application/pdf', 'text/plain']),
   data: z.string().min(1).max(7_000_000).regex(/^[A-Za-z0-9+/]+={0,2}$/),
   totalMarks: z.number().int().min(1).max(1000),
-  count: z.number().int().min(0).max(50),
+  count: z.number().int().min(0).max(100),
   markCounts: markCountsSchema.optional(),
   bloomCounts:bloomCountsSchema.optional(),
   split: z.object({ easy: z.number().min(0).max(100), medium: z.number().min(0).max(100), hard: z.number().min(0).max(100) }),

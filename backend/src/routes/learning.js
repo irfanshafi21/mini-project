@@ -22,9 +22,9 @@ router.get('/status',async(_req,res)=>{
 });
 router.post('/reviews',async(req,res)=>{
   const b=z.object({paperId:z.number().int().positive(),reviews:z.array(z.object({
-    index:z.number().int().min(0).max(49),label,text:z.string().max(2000),marks:z.number().int(),
+    index:z.number().int().min(0).max(99),label,text:z.string().max(2000),marks:z.number().int(),
     options:z.array(z.string()).max(4).default([]),answer:z.string().default(''),
-  })).min(1).max(50)}).parse(req.body);
+  })).min(1).max(100)}).parse(req.body);
   if(new Set(b.reviews.map(r=>r.index)).size!==b.reviews.length)throw new HttpError(400,'Review each question once.');
   const paper=(await query('SELECT paper FROM saved_papers WHERE id=$1 AND NOT is_deleted',[b.paperId])).rows[0]?.paper;
   if(!paper)throw new HttpError(404,'Stored paper not found. Save your paper edits first.');

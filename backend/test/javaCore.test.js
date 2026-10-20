@@ -20,3 +20,13 @@ test('Java validates paper parameters and Node reports an unavailable runtime', 
   try { await assert.rejects(planPaper(25, 5, split), e => e.status === 503 && /Install JDK/.test(e.message)); }
   finally { if (original === undefined) delete process.env.JAVA_COMMAND; else process.env.JAVA_COMMAND = original; }
 });
+
+test('Java plans a 100-question paper without exceeding marks or difficulty totals', async () => {
+  const plan = await planPaper(100, 100, { easy: 50, medium: 30, hard: 20 }, { 1: 100 });
+  assert.equal(plan.length, 100);
+  assert.equal(plan.reduce((sum, item) => sum + item.marks, 0), 100);
+  assert.deepEqual(
+    Object.fromEntries(['EASY', 'MEDIUM', 'HARD'].map(level => [level, plan.filter(item => item.difficulty === level).length])),
+    { EASY: 50, MEDIUM: 30, HARD: 20 },
+  );
+});

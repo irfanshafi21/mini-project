@@ -32,15 +32,7 @@ router.post('/papers/from-syllabus', async (req, res) => {
     body.previousSignatures=history.map(r=>r.signature_hash).filter(Boolean);
     body.reviewedQuestions=(await query(`SELECT question FROM reviewed_examples WHERE review_source IN ('faculty','local') ORDER BY approved_at DESC LIMIT 500`)).rows.map(r=>r.question);
   }
-  const units=body.units || [1,2,3,4,5];
-  const bankQuestions=body.subject
-    ? (await query('SELECT * FROM questions WHERE subject=$1 AND unit=ANY($2::smallint[]) AND NOT is_deleted',[body.subject,units])).rows.map(row=>({
-      id:row.id,code:`Q${row.id}`,subject:row.subject,unit:row.unit,topic:row.topic,subtopic:row.subtopic,
-      difficulty:row.difficulty,marks:row.marks,text:row.text,bloomLevel:row.bloom_level,bloomSource:row.bloom_level?'assigned':'local-model',
-      questionType:row.question_type || 'SHORT',options:row.options || [],answer:row.answer || '',
-    }))
-    : [];
-  const result = await generateSyllabusPaper(body,{bankQuestions});
+  const result = await generateSyllabusPaper(body);
   {
     const questions=result.paper.questions;
     const history=new Set(body.previousQuestionHashes), signatures=new Set(body.previousSignatures);
@@ -68,7 +60,7 @@ const saveBody = z.object({
     text: z.string().trim().min(10).max(2000), marks: z.number().int().min(1).max(100),
     difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']),
     unit: z.number().int().min(1).max(5).optional(),
-  }).superRefine(validateObjective)).min(1).max(50),
+  }).superRefine(validateObjective)).min(1).max(100),
 });
 
 router.post('/papers/save-syllabus', async (req, res) => {

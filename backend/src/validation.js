@@ -16,7 +16,7 @@ const difficulty = z.preprocess(
 );
 
 export const bloomLevelSchema=z.enum(['K1','K2','K3','K4','K5','K6']);
-export const bloomCountsSchema=z.object(Object.fromEntries([1,2,5,10,16].map(m=>[String(m),z.object(Object.fromEntries(['K1','K2','K3','K4','K5','K6'].map(k=>[k,z.number().int().min(0).max(50).default(0)]))).strict().optional()])));
+export const bloomCountsSchema=z.object(Object.fromEntries([1,2,5,10,16].map(m=>[String(m),z.object(Object.fromEntries(['K1','K2','K3','K4','K5','K6'].map(k=>[k,z.number().int().min(0).max(100).default(0)]))).strict().optional()])));
 export function validBloomCounts(b){return !b.bloomCounts || (b.markCounts && Object.entries(b.bloomCounts).every(([m,counts])=>Object.values(counts).reduce((n,c)=>n+c,0)===(b.markCounts[m] || 0)) && Object.entries(b.markCounts).every(([m,count])=>!count || !!b.bloomCounts[m]));}
 export const objectiveFields = {
   bloomLevel:bloomLevelSchema.optional(),
@@ -34,11 +34,11 @@ export function validateObjective(q,ctx) {
   if(q.questionType==='MCQ' && (q.options.length!==4 || new Set(q.options.map(o=>o.toLowerCase())).size!==4 || q.options.filter(o=>o===q.answer).length!==1))issue('An MCQ requires four distinct options and exactly one matching correct answer.');
   if(q.questionType==='FILL_BLANK' && (!q.text.includes('____') || q.options.length))issue('A fill-in-the-blank question requires a blank and no options.');
 }
-export const markCountsSchema = z.object(Object.fromEntries([1, 2, 5, 10, 16].map(m => [String(m), z.number().int().min(0).max(50).default(0)])));
+export const markCountsSchema = z.object(Object.fromEntries([1, 2, 5, 10, 16].map(m => [String(m), z.number().int().min(0).max(100).default(0)])));
 export function validMarkPattern(b) {
   if (!b.markCounts) return true;
   const entries = Object.entries(b.markCounts), count = entries.reduce((n, [, c]) => n + c, 0);
-  return count === 0 || (count <= 50 && entries.reduce((n, [m, c]) => n + Number(m) * c, 0) === b.totalMarks && (!b.count || b.count === count));
+  return count === 0 || (count <= 100 && entries.reduce((n, [m, c]) => n + Number(m) * c, 0) === b.totalMarks && (!b.count || b.count === count));
 }
 
 export const questionBody = z.object({
@@ -73,10 +73,9 @@ export const paperBody = z
     topic: name.optional(),
     subtopic: name.optional(),
     totalMarks: z.coerce.number().int().min(1).max(1000),
-    count: z.number().int().min(0).max(50).default(0),
+    count: z.number().int().min(0).max(100).default(0),
     markCounts: markCountsSchema.optional(),
     bloomCounts:bloomCountsSchema.optional(),
-    questionStyle:z.enum(['MIXED','THEORY','PROBLEM_SOLVING','PROGRAMMING_SQL']).default('MIXED'),
     oneMarkType: z.enum(['MCQ','FILL_BLANK']).default('MCQ'),
     split: z
       .object({
@@ -98,7 +97,7 @@ export const autoBody = z.object({
   subtopic: name.optional(),
   marks,
   difficulty,
-  count: z.coerce.number().int().min(1).max(50).default(5),
+    count: z.coerce.number().int().min(1).max(100).default(5),
 });
 
 // accepts 101 or "Q101"

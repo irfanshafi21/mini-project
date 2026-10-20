@@ -8,15 +8,15 @@ const body = {
   fileName: 'physics.txt', mimeType: 'text/plain', data: Buffer.from('Unit 1: Ohm law relates voltage, current and resistance.').toString('base64'),
 };
 const slots = [{ marks: 5, difficulty: 'EASY', bloomLevel: 'K3' }];
-const topic = 'Ohm law relates voltage, current and resistance';
+const topic = 'Ohm law relates to voltage, current and resistance';
 const valid = { questions: [{
   topic,
-  subtopic: 'current', syllabusReference: topic,
+  subtopic: 'Ohm law', syllabusReference: topic,
   unit: 1,
-  openingVerb: 'Solve',
-  questionCore: 'for the current through a 6 Ω resistor connected to a 12 V source using Ohm’s law. Show your calculation.',
+  openingVerb: 'Apply',
+  questionCore: 'Calculate the current through a 6 Ω resistor connected to a 12 V source using Ohm law. Show your calculation.',
   marks: 5, difficulty: 'EASY', bloomLevel: 'K3', bloomSource: 'groq',
-  questionType: 'SHORT', options: [], answer: '2 A', solution: 'I = V/R = 12/6 = 2 A.',
+  questionType: 'SHORT', options: [], answer: '',
 }] };
 
 test('Groq structured generation maps questions to the requested syllabus slot', async () => {
@@ -38,8 +38,12 @@ test('Groq structured generation maps questions to the requested syllabus slot',
     assert.ok(request.messages[1].content.includes('Never write phrases'));
     assert.ok(request.response_format.json_schema.schema.properties.questions.items.properties.openingVerb.enum.includes('Assess'));
     assert.ok(request.response_format.json_schema.schema.properties.questions.items.properties.topic.enum.includes(topic));
+    assert.equal('solution' in request.response_format.json_schema.schema.properties.questions.items.properties, false);
+    assert.match(request.messages[1].content, /Never write an explanation, answer, worked solution/);
+    assert.equal(result[0].answer, '');
+    assert.equal('solution' in result[0], false);
     assert.deepEqual(request.response_format.json_schema.schema.properties.questions.items.properties.questionType.enum, ['SHORT']);
-    assert.match(result[0].text, /^Solve for the current/);
+    assert.match(result[0].text, /^Apply calculate the current/);
   } finally {
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = oldKey;
@@ -55,8 +59,7 @@ test('Groq retries invalid math once, then reports quality issues instead of acc
     calls++;
     const invalid = structuredClone(valid);
     invalid.questions[0].questionCore = 'Ohm’s law and explain its purpose.';
-    invalid.questions[0].answer = 'Current';
-    invalid.questions[0].solution = 'Use the formula.';
+    invalid.questions[0].answer = '';
     return { ok: true, json: async () => ({ choices: [{ message: { content: JSON.stringify(invalid) } }] }) };
   };
   try {
@@ -69,7 +72,7 @@ test('Groq retries invalid math once, then reports quality issues instead of acc
   }
 });
 
-test('Groq rejects template filler and requires a real worked numerical problem', async () => {
+test('Groq rejects template filler and requires a concrete numerical problem without a solution', async () => {
   const oldFetch = globalThis.fetch, oldKey = process.env.GROQ_API_KEY, oldModel = process.env.GROQ_MODEL;
   process.env.GROQ_API_KEY = 'unit-test-key'; process.env.GROQ_MODEL = 'openai/gpt-oss-20b';
   let calls = 0;
@@ -77,7 +80,6 @@ test('Groq rejects template filler and requires a real worked numerical problem'
     calls++;
     const invalid = structuredClone(valid);
     invalid.questions[0].questionCore = 'Develop your response with a relevant example and clear reasoning.';
-    invalid.questions[0].solution = 'The answer is 2.';
     return { ok: true, json: async () => ({ choices: [{ message: { content: JSON.stringify(invalid) } }] }) };
   };
   try {
@@ -105,14 +107,74 @@ test('Ollama uses local structured outputs and applies the same syllabus and mat
     assert.equal(request.model, 'qwen3.5:9b');
     assert.equal(request.stream, false);
     assert.equal(request.think, false);
+    assert.equal(request.keep_alive, '30m');
+    assert.ok(request.options.num_ctx >= 4096 && request.options.num_ctx <= 8192);
+    assert.ok(request.options.num_predict <= 8000);
     assert.equal(request.format.type, 'object');
     assert.equal(result[0].bloomSource, 'ollama');
     assert.deepEqual(request.format.properties.questions.items.properties.questionType.enum, ['SHORT']);
-    assert.match(result[0].text, /^Solve for the current/);
+    assert.equal('solution' in request.format.properties.questions.items.properties, false);
+    assert.match(result[0].text, /^Apply calculate the current/);
   } finally {
     globalThis.fetch = oldFetch;
     if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
     if (oldUrl === undefined) delete process.env.OLLAMA_BASE_URL; else process.env.OLLAMA_BASE_URL = oldUrl;
+  }
+});
+
+test('Ollama recovers valid JSON wrapped in model chatter or a markdown fence', async () => {
+  const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
+  process.env.OLLAMA_MODEL = 'qwen3.5:4b';
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({
+    message: { content: `Here is the result:\n\`\`\`json\n${JSON.stringify(valid)}\n\`\`\`` },
+  }) });
+  try {
+    const result = await generateOllamaQuestions({ body, text: `Unit 1: ${topic}.`, slots });
+    assert.equal(result.length, 1);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
+  }
+});
+
+test('Ollama explains when structured output was cut off at its token limit', async () => {
+  const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
+  process.env.OLLAMA_MODEL = 'qwen3.5:4b';
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({
+    message: { content: '{"questions":[' }, done_reason: 'length', eval_count: 920,
+  }) });
+  try {
+    await assert.rejects(
+      generateOllamaQuestions({ body, text: `Unit 1: ${topic}.`, slots }),
+      /reached its output limit before the JSON was complete/,
+    );
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
+  }
+});
+
+test('Ollama splits large papers into batches of ten and preserves the requested count', async () => {
+  const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
+  process.env.OLLAMA_MODEL = 'qwen3.5:4b';
+  let calls = 0;
+  globalThis.fetch = async () => {
+    const size = calls++ === 0 ? 10 : 1;
+    const question = { ...valid.questions[0], marks: 2, bloomLevel: 'K1', openingVerb: 'Define',
+      questionCore: 'the Ohm law.', text: undefined, answer: '' };
+    return { ok: true, json: async () => ({ message: { content: JSON.stringify({ questions: Array.from({ length: size }, () => question) }) } }) };
+  };
+  try {
+    const result = await generateOllamaQuestions({
+      body: { ...body, questionStyle: 'THEORY' }, text: `Unit 1: ${topic}.`,
+      slots: Array.from({ length: 11 }, () => ({ marks: 2, difficulty: 'EASY', bloomLevel: 'K1' })),
+    });
+    assert.equal(calls, 2);
+    assert.equal(result.length, 11);
+    assert.equal(result[10].id, 'OLLAMA11');
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
   }
 });
 
@@ -136,9 +198,8 @@ test('Ollama mixed mode requires both theory and a numerical problem when suppor
   process.env.OLLAMA_MODEL = 'qwen3.5:4b';
   let request;
   const theory = {
-    ...valid.questions[0], openingVerb: 'Explain', questionCore: 'the role of current in Ohm law',
-    marks: 2, bloomLevel: 'K2', answer: 'Current is the rate of charge flow.',
-    solution: 'Current describes the rate at which charge flows through a conductor.',
+    ...valid.questions[0], openingVerb: 'Explain', questionCore: 'the relationship between voltage, current and resistance in Ohm law',
+    marks: 2, bloomLevel: 'K2', answer: '',
   };
   globalThis.fetch = async (_url, init) => {
     request = JSON.parse(init.body);

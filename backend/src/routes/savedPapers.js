@@ -10,7 +10,7 @@ import { requireRegisteredSubject } from './subjects.js';
 const router = Router();
 const subject = z.string().trim().min(1).max(60).transform(normalizeName);
 const title = z.string().trim().min(1).max(120);
-const manual = z.object({ subject:z.preprocess(v=>typeof v==='string' && !v.trim()?undefined:v,subject.optional()), title, questionIds: z.array(z.number().int().positive()).min(1).max(50) })
+const manual = z.object({ subject:z.preprocess(v=>typeof v==='string' && !v.trim()?undefined:v,subject.optional()), title, questionIds: z.array(z.number().int().positive()).min(1).max(100) })
   .refine(b => new Set(b.questionIds).size === b.questionIds.length, { message: 'Select each question only once.' });
 const snapshotQuestion = z.object({
   ...objectiveFields,
@@ -20,7 +20,7 @@ const snapshotQuestion = z.object({
   topic: z.string().max(200), subtopic: z.string().max(200).optional(),
   syllabusReference: z.string().max(500).optional(),
 }).superRefine(validateObjective);
-const snapshot = z.object({ subject:subject.optional(), title, questions: z.array(snapshotQuestion).min(1).max(50) });
+const snapshot = z.object({ subject:subject.optional(), title, questions: z.array(snapshotQuestion).min(1).max(100) });
 export async function storePaper(subjectName, paperTitle, questions, metadata = {}) {
   questions=questions.map(withBloom);
   const totalMarks = questions.reduce((sum,q) => sum + q.marks,0);

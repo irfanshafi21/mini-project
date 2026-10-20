@@ -6,6 +6,7 @@ import java.util.*;
 /** Java owns paper planning and selection. Node supplies validated metadata over stdin. */
 public class PaperEngine {
     private static final String[] LEVELS = { "EASY", "MEDIUM", "HARD" };
+    private static final int MAX_QUESTIONS = 100;
     private record Question(int id, String difficulty, int marks) {}
 
     public static void main(String[] args) throws Exception {
@@ -18,13 +19,13 @@ public class PaperEngine {
             if (total < 1 || total > 1000 || Arrays.stream(split).anyMatch(n -> !Double.isFinite(n) || n < 0 || n > 100)
                     || Math.abs(Arrays.stream(split).sum() - 100) >= 0.001) throw new IllegalArgumentException("Invalid paper parameters");
             int[] pattern = fields.length == 10 ? new int[] { Integer.parseInt(fields[5]), Integer.parseInt(fields[6]), Integer.parseInt(fields[7]), Integer.parseInt(fields[8]), Integer.parseInt(fields[9]) } : null;
-            if (pattern != null && Arrays.stream(pattern).anyMatch(n -> n < 0 || n > 50)) throw new IllegalArgumentException("Invalid marks counts");
+            if (pattern != null && Arrays.stream(pattern).anyMatch(n -> n < 0 || n > MAX_QUESTIONS)) throw new IllegalArgumentException("Invalid marks counts");
             if ("PLAN_FIXED".equals(mode)) {
                 List<Integer> marks = marksPlan(total, count, pattern);
                 if (marks == null) { System.exit(2); return; }
                 System.out.println(fixedPlan(marks, split));
             } else if ("PLAN".equals(mode)) {
-                if (count < 1 || count > 50 || total < count || total > count * 100) throw new IllegalArgumentException("Invalid question count");
+                if (count < 1 || count > MAX_QUESTIONS || total < count || total > count * 100) throw new IllegalArgumentException("Invalid question count");
                 System.out.println(plan(total, count, split));
             } else if (("SELECT".equals(mode) || "SELECT_FIXED".equals(mode))) {
                 List<Question> pool = new ArrayList<>();
@@ -47,18 +48,18 @@ public class PaperEngine {
 
     private static final int[] MARKS = { 1, 2, 5, 10, 16 };
     static List<Integer> marksPlan(int total, int count, int[] pattern) {
-        if (count < 0 || count > 50 || pattern == null) return null;
+        if (count < 0 || count > MAX_QUESTIONS || pattern == null) return null;
         List<Integer> manual = new ArrayList<>();
         for (int i = 0; i < MARKS.length; i++) for (int j = 0; j < pattern[i]; j++) manual.add(MARKS[i]);
-        if (!manual.isEmpty()) return manual.size() <= 50 && (count == 0 || count == manual.size()) && manual.stream().mapToInt(Integer::intValue).sum() == total ? manual : null;
-        int[][] prev = new int[51][total + 1];
+        if (!manual.isEmpty()) return manual.size() <= MAX_QUESTIONS && (count == 0 || count == manual.size()) && manual.stream().mapToInt(Integer::intValue).sum() == total ? manual : null;
+        int[][] prev = new int[MAX_QUESTIONS + 1][total + 1];
         for (int[] row : prev) Arrays.fill(row, -1);
         prev[0][0] = 0;
-        for (int n = 1; n <= 50; n++) for (int sum = 1; sum <= total; sum++)
+        for (int n = 1; n <= MAX_QUESTIONS; n++) for (int sum = 1; sum <= total; sum++)
             for (int m : MARKS) if (sum >= m && prev[n - 1][sum - m] >= 0) { prev[n][sum] = m; break; }
         int n = count;
-        if (n == 0) { for (n = 1; n <= 50 && prev[n][total] < 0; n++); }
-        if (n > 50 || prev[n][total] < 0) return null;
+        if (n == 0) { for (n = 1; n <= MAX_QUESTIONS && prev[n][total] < 0; n++); }
+        if (n > MAX_QUESTIONS || prev[n][total] < 0) return null;
         List<Integer> result = new ArrayList<>();
         for (int sum = total; n > 0; n--) { int m = prev[n][sum]; result.add(m); sum -= m; }
         Collections.sort(result); return result;
@@ -76,7 +77,7 @@ public class PaperEngine {
         return json.toString();
     }
     static String fixedSelect(List<Question> pool, int total, int count, double[] split, int[] pattern) {
-        if (pattern == null || count < 0 || count > 50) return null;
+        if (pattern == null || count < 0 || count > MAX_QUESTIONS) return null;
         List<Question> chosen = new ArrayList<>();
         if (Arrays.stream(pattern).sum() > 0) {
             if (marksPlan(total, count, pattern) == null) return null;
@@ -91,18 +92,18 @@ public class PaperEngine {
         } else {
             // Bounded subset-sum: each active question can be used once.
             record Path(Question question, Path previous) {}
-            Path[][] dp = new Path[51][total + 1];
+            Path[][] dp = new Path[MAX_QUESTIONS + 1][total + 1];
             List<Question> sorted = new ArrayList<>(pool);
             sorted.sort(Comparator.comparingDouble((Question q) -> split[List.of(LEVELS).indexOf(q.difficulty)]).reversed());
             for (Question q : sorted) {
                 if (Arrays.stream(MARKS).noneMatch(m -> m == q.marks)) continue;
-                for (int n = 50; n >= 1; n--) for (int sum = total; sum >= q.marks; sum--)
+                for (int n = MAX_QUESTIONS; n >= 1; n--) for (int sum = total; sum >= q.marks; sum--)
                     if (dp[n][sum] == null && ((n == 1 && sum == q.marks) || dp[n - 1][sum - q.marks] != null))
                         dp[n][sum] = new Path(q, dp[n - 1][sum - q.marks]);
             }
             int n = count;
-            if (n == 0) for (n = 1; n <= 50 && dp[n][total] == null; n++);
-            if (n > 50 || dp[n][total] == null) return null;
+            if (n == 0) for (n = 1; n <= MAX_QUESTIONS && dp[n][total] == null; n++);
+            if (n > MAX_QUESTIONS || dp[n][total] == null) return null;
             for (Path path = dp[n][total]; path != null; path = path.previous) chosen.add(path.question);
         }
         chosen.sort(Comparator.comparingInt(Question::marks).thenComparingInt(Question::id));

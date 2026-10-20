@@ -24,7 +24,7 @@ A college examination workspace built with **React + Vite**, **Node.js + Express
 
 </div>
 
-> **Current generation is fully local:** no hosted AI provider, external AI key, Ollama installation, or pretrained language-model download is needed. Syllabus generation uses local BM25 retrieval to find relevant passages from the uploaded syllabus, then grounded question templates, trained classifiers, checked objective facts, and numerical problem generators. This is retrieval-grounded local generation, not a neural LLM trained from scratch.
+> **Generation stays on your machine by default.** The app can use its built-in retrieval and rule-based generation or a local Ollama model. Ollama does not need a hosted API key, but it does need its model installed once. A Groq provider is also available when explicitly configured.
 
 <table>
 <tr>
@@ -544,7 +544,7 @@ Read the data map from left to right: subjects provide a registered destination;
 | Python | Python 3; standard library only for classifier training |
 | VS Code | Convenient editor and terminals |
 
-**No external AI key or model download is required.** PostgreSQL Stack Builder add-ons are optional for this project.
+PostgreSQL Stack Builder add-ons are optional. For local Ollama generation, install Ollama and pull the configured model once; no hosted AI key is required.
 
 ### 0. Get the source and check the tools
 
@@ -569,7 +569,14 @@ The backend needs the PostgreSQL user's password, which may differ from the pgAd
 
 ### 2. Start the backend
 
-Open a terminal at the repository root:
+For the Radeon 860M Vulkan GPU, open a terminal at the repository root and start Ollama first:
+
+```powershell
+cd backend
+.\start-ollama-gpu.ps1
+```
+
+Keep this terminal open. In a second terminal, open the repository root and start the backend:
 
 ```powershell
 cd backend
@@ -577,31 +584,24 @@ npm.cmd install
 Copy-Item .env.example .env
 ```
 
+If your model is not installed yet, run `ollama pull qwen3.5:4b` once. The GPU startup script enables Vulkan and Ollama's integrated-GPU support for this laptop; `ollama ps` should show the model's processor as GPU after generation. If you prefer the default CPU Ollama service, change `OLLAMA_BASE_URL` to `http://127.0.0.1:11434` and use the normal Ollama app.
+
 Edit `backend/.env`:
 
 ```dotenv
 DATABASE_URL=postgresql://postgres:YOUR_DATABASE_PASSWORD@localhost:5432/questionbank
 PORT=4000
 AI_PROVIDER=ollama
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=qwen3.5:9b
+OLLAMA_BASE_URL=http://127.0.0.1:11435
+OLLAMA_MODEL=qwen3.5:4b
 ```
 
-Replace the password locally; URL-encode special characters when used in a connection URL. For local AI generation, install [Ollama for Windows](https://ollama.com/download/windows), then download the selected model once:
-
-```powershell
-ollama pull qwen3.5:9b
-```
-
-The Qwen 3.5 9B model is about 6.6–7.6 GB. Ollama serves it locally at `http://127.0.0.1:11434`; generation speed depends on available RAM and GPU, and may be slower without a dedicated GPU. If your computer struggles, try a smaller model such as `qwen3.5:4b`. The backend uses Ollama's JSON-schema output and then checks syllabus terms, Bloom level, generic wording and numerical working. These checks improve quality but cannot guarantee 100% correctness; review generated papers before an exam. To use Groq instead, set `AI_PROVIDER=groq` and configure `GROQ_API_KEY` and `GROQ_MODEL` in the private `.env` file.
-
-Then run:
+Replace the password locally; URL-encode special characters when used in a connection URL. Then run:
 
 ```powershell
 npm.cmd run db:init
 npm.cmd start
 ```
-
 Check [the backend health endpoint](http://localhost:4000/api/health). It should return a healthy response. Keep this terminal running.
 
 ### 3. Start the frontend

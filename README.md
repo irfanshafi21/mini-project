@@ -68,7 +68,7 @@ A college examination workspace built with **React + Vite**, **Node.js + Express
 | **Stored papers** | Retrieve saved paper snapshots, edit their contents and download them again. |
 | **Exports** | Download a PDF or TXT paper, or print from the browser. Student exports omit teacher answer fields. |
 
-The interface uses a calm academic palette with light blue surfaces, warm paper accents, a dedicated workspace sidebar, responsive navigation, clear question cards and a focused paper studio. Mark counts update live, Bloom allocation is shown by K1–K6, and saved papers can be reopened for review. No application login is included.
+The interface uses a shared academic design system: bundled Noto Sans typography, deep navy text, clear blue actions, pale blue surfaces and restrained warm paper accents. Consistent cards, form controls, navigation, focus indicators and responsive layouts carry through the question bank, paper builder, subject pages, stored papers and paper previews. Mark counts update live, Bloom allocation is shown by K1–K6, and saved papers can be reopened for review. No application login is included.
 
 ## Syllabus question styles
 

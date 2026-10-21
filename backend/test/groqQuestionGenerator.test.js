@@ -201,6 +201,31 @@ test('Ollama batches larger papers into five-question schema-constrained request
   }
 });
 
+test('Ollama keeps valid partial batches and requests only the missing slots', async () => {
+  const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
+  process.env.OLLAMA_MODEL = 'qwen3.5:4b';
+  const requestedCounts = [];
+  let calls = 0;
+  const question = { ...valid.questions[0], marks: 2, bloomLevel: 'K1', openingVerb: 'Define',
+    questionCore: 'the Ohm law.', text: undefined, answer: '' };
+  globalThis.fetch = async (_url, init) => {
+    requestedCounts.push(JSON.parse(init.body).format.properties.questions.minItems);
+    const size = calls++ === 0 ? 3 : 2;
+    return { ok: true, json: async () => ({ message: { content: JSON.stringify({ questions: Array.from({ length: size }, () => question) }) } }) };
+  };
+  try {
+    const result = await generateOllamaQuestions({
+      body: { ...body, questionStyle: 'THEORY' }, text: `Unit 1: ${topic}.`,
+      slots: Array.from({ length: 5 }, () => ({ marks: 2, difficulty: 'EASY', bloomLevel: 'K1' })),
+    });
+    assert.equal(result.length, 5);
+    assert.deepEqual(requestedCounts, [5, 2]);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
+  }
+});
+
 test('Ollama rejects problem-solving output when theory-only mode is selected', async () => {
   const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
   process.env.OLLAMA_MODEL = 'qwen3.5:4b';

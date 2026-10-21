@@ -271,16 +271,20 @@ async function generateQuestionsWithProvider({ body, text, slots, bankQuestions,
   const batchSize = provider === 'ollama' && slots.length > 5 ? 5 : slots.length;
   const generated = [];
   for (let offset = 0; offset < plannedSlots.length; offset += batchSize) {
-    const batch = plannedSlots.slice(offset, offset + batchSize);
+    let pendingBatch = plannedSlots.slice(offset, offset + batchSize);
+    let accepted = [];
+    let attempts = 0;
     let failures = [];
-    let accepted;
-    for (let attempt = 0; attempt < 2; attempt++) {
+    while (pendingBatch.length) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), provider === 'ollama' ? 300000 : 90000);
       try {
-        const response = await callProvider(makePrompt({ body, slots: batch, topics, bankQuestions, failures }), topics, batch, body, batch.length, controller.signal, provider);
-        const preparedQuestions = response.questions?.map((q, index) => {
-          const slot = batch[index];
+        const response = await callProvider(makePrompt({ body, slots: pendingBatch, topics, bankQuestions, failures }), topics, pendingBatch, body, pendingBatch.length, controller.signal, provider);
+        const returned = Array.isArray(response.questions) ? response.questions : [];
+        const usableCount = Math.min(returned.length, pendingBatch.length);
+        const returnedSlots = pendingBatch.slice(0, usableCount);
+        const preparedQuestions = returned.slice(0, usableCount).map((q, index) => {
+          const slot = returnedSlots[index];
           const source = slot?.sourceTopic;
           const core = String(q.questionCore || '').trim();
           // Bloom levels are optional in the UI. When they are automatic, use
@@ -320,18 +324,26 @@ async function generateQuestionsWithProvider({ body, text, slots, bankQuestions,
             ...(source ? { subtopic: normalizeSubtopic(source.topic, q.subtopic, text) } : {}),
           };
         });
-        failures = checkQuestions(preparedQuestions, batch, topics, body, selectedUnits);
-        if (!failures.length) {
-          accepted = preparedQuestions.map(q => {
+        failures = usableCount
+          ? checkQuestions(preparedQuestions, returnedSlots, topics, body, selectedUnits)
+          : ['The model returned no questions. Retry the remaining slots.'];
+        if (!failures.length && usableCount) {
+          const acceptedPart = preparedQuestions.map(q => {
             const topic = topics.find(item => item.unit === q.unit && normalize(item.topic) === normalize(q.syllabusReference));
             const storedQuestion = { ...q };
             delete storedQuestion.openingVerb;
             delete storedQuestion.questionCore;
-          delete storedQuestion.solution;
-          if (storedQuestion.questionType === 'SHORT') storedQuestion.answer = '';
+            delete storedQuestion.solution;
+            if (storedQuestion.questionType === 'SHORT') storedQuestion.answer = '';
             return { ...storedQuestion, topic: topic.topic, subtopic: q.subtopic.slice(0, 200), bloomSource: provider };
           });
-          break;
+          accepted.push(...acceptedPart);
+          pendingBatch = pendingBatch.slice(usableCount);
+          attempts = 0;
+          failures = [];
+        } else {
+          attempts++;
+          if (attempts >= 2) throw new HttpError(502, `${provider === 'ollama' ? 'Ollama' : 'Groq'} returned questions that failed quality checks: ${failures.slice(0, 4).join(' ')}`);
         }
       } catch (error) {
         if (error instanceof HttpError) throw error;
@@ -339,7 +351,6 @@ async function generateQuestionsWithProvider({ body, text, slots, bankQuestions,
         throw new HttpError(502, `Could not connect to ${provider === 'ollama' ? 'Ollama' : 'Groq'}. Check the service and try again.`);
       } finally { clearTimeout(timeout); }
     }
-    if (!accepted) throw new HttpError(502, `${provider === 'ollama' ? 'Ollama' : 'Groq'} returned questions that failed quality checks: ${failures.slice(0, 4).join(' ')}`);
     generated.push(...accepted);
   }
   const wholePaperFailures = checkQuestions(generated, slots, topics, body, selectedUnits);

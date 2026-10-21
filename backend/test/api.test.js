@@ -350,6 +350,9 @@ test('editing a stored paper updates its snapshot and totals without changing ba
   const original=(await call('GET',`/api/papers/saved/${id}`)).body;
   const bankBefore=(await query('SELECT id,text,marks FROM questions ORDER BY id')).rows;
   const questions=original.paper.questions.map((q,i)=>({...q,text:i===0?'Define cache memory.':q.text,marks:i===0?2:q.marks}));
+  questions[0].bloomSource='Generated locally with legacy explanatory provenance '.repeat(8);
+  questions[0].reuseKey='legacy '.repeat(80);
+  questions[0].syllabusReference='legacy syllabus notes '.repeat(80);
   const updated=await call('PUT',`/api/papers/saved/${id}`,{subject:'MANUAL_TEST',title:'Reviewed question paper',questions});
   assert.equal(updated.status,200);
   assert.equal(updated.body.paper.title,'Reviewed question paper');

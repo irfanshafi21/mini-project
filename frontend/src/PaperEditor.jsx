@@ -13,7 +13,16 @@ export default function PaperEditor({ apiUrl, result, onSaved }) {
   async function save(e) {
     e.preventDefault();setBusy(true);setError('')
     try {
-      const response=await fetch(`${apiUrl}/papers/saved${result.id?'/'+result.id:''}`,{method:result.id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:result.paper.subject==='UNASSIGNED'?undefined:result.paper.subject,title:plainText(draft.title),questions:draft.questions.map(q=>({...q,bloomLevel:q.bloomLevel || undefined,unit:q.unit||1,marks:Number(q.marks),text:plainText(q.text)}))})})
+      const response=await fetch(`${apiUrl}/papers/saved${result.id?'/'+result.id:''}`,{method:result.id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:result.paper.subject==='UNASSIGNED'?undefined:result.paper.subject,title:plainText(draft.title),questions:draft.questions.map(q=>({
+        // Send only fields accepted by the paper snapshot API. Older/generated snapshots
+        // may carry verbose provenance and syllabus metadata that are not editable fields.
+        bloomLevel:q.bloomLevel || undefined,questionType:q.questionType || 'SHORT',
+        options:Array.isArray(q.options)?q.options.slice(0,4):[],answer:q.answer || '',
+        unit:Number(q.unit)||1,marks:Number(q.marks),difficulty:q.difficulty || 'MEDIUM',
+        topic:plainText(q.topic || 'General topic').slice(0,200),
+        subtopic:plainText(q.subtopic || q.topic || 'General topic').slice(0,200),
+        text:plainText(q.text),
+      }))})})
       const saved=await response.json()
       if(!response.ok) throw new Error(saved.details?.map(d=>d.message).join(' | ') || saved.error || 'Could not save your edits.')
       onSaved(saved);setDraft(null)

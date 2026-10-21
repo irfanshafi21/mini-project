@@ -14,11 +14,12 @@ const manual = z.object({ subject:z.preprocess(v=>typeof v==='string' && !v.trim
   .refine(b => new Set(b.questionIds).size === b.questionIds.length, { message: 'Select each question only once.' });
 const snapshotQuestion = z.object({
   ...objectiveFields,
-  reuseKey: z.string().max(200).optional(),
+  // Provenance in old saved snapshots can contain free-form values. Ignore unknown
+  // provenance rather than rejecting an otherwise editable question.
+  bloomSource: z.preprocess(value => ['local-model','assigned','requested-llm','teacher-reviewed'].includes(value) ? value : undefined, z.enum(['local-model','assigned','requested-llm','teacher-reviewed']).optional()),
   text: z.string().trim().min(1).max(2000), marks: z.number().int().min(1).max(100),
   unit: z.number().int().min(1).max(5), difficulty: z.enum(['EASY','MEDIUM','HARD']),
   topic: z.string().max(200), subtopic: z.string().max(200).optional(),
-  syllabusReference: z.string().max(500).optional(),
 }).superRefine(validateObjective);
 const snapshot = z.object({ subject:subject.optional(), title, questions: z.array(snapshotQuestion).min(1).max(100) });
 export async function storePaper(subjectName, paperTitle, questions, metadata = {}) {

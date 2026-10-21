@@ -129,6 +129,8 @@ test('Ollama uses local structured outputs and applies the same syllabus and mat
     assert.ok(request.options.num_ctx >= 4096 && request.options.num_ctx <= 8192);
     assert.ok(request.options.num_predict <= 8000);
     assert.equal(request.format.type, 'object');
+    assert.equal(request.format.properties.questions.minItems, 1);
+    assert.equal(request.format.properties.questions.maxItems, 1);
     assert.equal(result[0].bloomSource, 'ollama');
     assert.equal('questionType' in request.format.properties.questions.items.properties, false);
     assert.equal('solution' in request.format.properties.questions.items.properties, false);
@@ -172,12 +174,14 @@ test('Ollama explains when structured output was cut off at its token limit', as
   }
 });
 
-test('Ollama keeps papers up to twenty questions in one batch and preserves larger-paper counts', async () => {
+test('Ollama batches larger papers into five-question schema-constrained requests', async () => {
   const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
   process.env.OLLAMA_MODEL = 'qwen3.5:4b';
   let calls = 0;
-  globalThis.fetch = async () => {
-    const size = calls++ === 0 ? 20 : 1;
+  const batchSizes = [];
+  globalThis.fetch = async (_url, init) => {
+    batchSizes.push(JSON.parse(init.body).format.properties.questions.minItems);
+    const size = calls++ < 4 ? 5 : 1;
     const question = { ...valid.questions[0], marks: 2, bloomLevel: 'K1', openingVerb: 'Define',
       questionCore: 'the Ohm law.', text: undefined, answer: '' };
     return { ok: true, json: async () => ({ message: { content: JSON.stringify({ questions: Array.from({ length: size }, () => question) }) } }) };
@@ -187,9 +191,10 @@ test('Ollama keeps papers up to twenty questions in one batch and preserves larg
       body: { ...body, questionStyle: 'THEORY' }, text: `Unit 1: ${topic}.`,
       slots: Array.from({ length: 21 }, () => ({ marks: 2, difficulty: 'EASY', bloomLevel: 'K1' })),
     });
-    assert.equal(calls, 2);
+    assert.equal(calls, 5);
     assert.equal(result.length, 21);
     assert.equal(result[20].id, 'OLLAMA21');
+    assert.deepEqual(batchSizes, [5, 5, 5, 5, 1]);
   } finally {
     globalThis.fetch = oldFetch;
     if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
@@ -239,6 +244,30 @@ test('Ollama mixed mode does not discard a syllabus-aligned paper for imperfect 
     assert.deepEqual(result[0].options, []);
     assert.ok(request.messages[1].content.includes('Mixed mode:'));
     assert.equal('questionType' in request.format.properties.questions.items.properties, false);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
+  }
+});
+
+test('Ollama normalizes automatic Bloom verbs and MCQ letter answer keys', async () => {
+  const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
+  process.env.OLLAMA_MODEL = 'qwen3.5:4b';
+  const automaticBloom = {
+    ...valid.questions[0], marks: 1, openingVerb: 'Explain',
+    questionCore: 'Calculate the current through a 6 Ω resistor connected to a 12 V source.',
+    bloomLevel: 'K3', options: ['8 A', '2 A', '18 A', '0.5 A'], answer: 'B',
+  };
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ message: { content: JSON.stringify({ questions: [automaticBloom] }) } }) });
+  try {
+    const result = await generateOllamaQuestions({
+      body: { ...body, questionStyle: 'PROBLEM_SOLVING' }, text: `Unit 1: ${topic}.`,
+      slots: [{ marks: 1, difficulty: 'EASY' }],
+    });
+    assert.match(result[0].text, /^Apply/);
+    assert.equal(result[0].bloomLevel, 'K3');
+    assert.equal(result[0].answer, '2 A');
+    assert.equal(result[0].options[1], result[0].answer);
   } finally {
     globalThis.fetch = oldFetch;
     if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;

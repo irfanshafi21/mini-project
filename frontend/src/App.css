@@ -572,7 +572,8 @@ textarea { resize: vertical; }
  .stored-paper-card h2 { min-height:2.8em;font-family:Georgia,serif;font-size:23px;font-weight:500;line-height:1.4; }
  .stored-paper-card .eyebrow { font-size:9px;letter-spacing:1.4px; }
  .stored-paper-card .primary { background:#eff5fa;color:#2c648b;box-shadow:none; }
- .stored-paper-card .primary:hover { background:#dfedf7; }
+ .stored-paper-card .primary:hover:not(:disabled),
+ .stored-paper-card .primary:focus-visible { background:#dfedf7;color:#214e6c;box-shadow:0 0 0 3px #2c77ad24; }
  .paper-summary { background:#f5f8fb;font-size:12px;border-radius:7px;border:1px solid #e3ebf1;padding:13px; }
  .paper-sheet { border-radius:10px;border-color:#dce5ec;box-shadow:0 8px 24px #244b6506; }
  .paper-header h2 { font-family:Georgia,serif;font-size:27px;font-weight:500; }

@@ -1054,6 +1054,56 @@ textarea { resize: vertical; }
   .quick-create:hover .paper-decoration:not(.paper-decoration-back) { transform: rotate(5deg); }
 }
 
+/* Landing dashboard refinement: clear hierarchy, calmer surfaces and responsive spacing. */
+@media screen {
+  main { max-width: 1320px; }
+  .workspace-topline { margin-bottom: 28px; }
+  .page-heading { padding: 2px 2px 4px; }
+  .page-heading h1 { letter-spacing: -1.3px; }
+  .quick-create {
+    min-height: 330px;
+    padding: clamp(28px, 5vw, 58px);
+    border-radius: 20px;
+    gap: clamp(24px, 6vw, 76px);
+    background:
+      radial-gradient(ellipse at 91% 13%, #fff6e6 0 7rem, transparent 7.1rem),
+      linear-gradient(116deg, #e4f1fa 0%, #f4f8fc 67%, #faf5eb 100%);
+  }
+  .hero-copy { max-width: 570px; }
+  .hero-copy .eyebrow { display: inline-flex; padding: 7px 11px; border: 1px solid #d0e2ee; border-radius: 999px; background: #f6fbffb8; }
+  .quick-create h2 { max-width: 570px; font-size: clamp(30px, 3.5vw, 46px); line-height: 1.12; letter-spacing: -1.4px; }
+  .quick-create p { max-width: 420px; font-size: 14px; line-height: 1.8; }
+  .hero-copy > .primary { min-height: 50px; padding-inline: 20px; border-radius: 11px; }
+  .hero-features { gap: 9px; margin-top: 24px; }
+  .hero-features span { padding: 7px 10px; border: 1px solid #d7e5ee; border-radius: 999px; background: #ffffffa3; font-size: 10px; }
+  .hero-features span::before { width: 6px; height: 6px; }
+  .hero-art { width: 250px; min-width: 250px; height: 255px; margin-right: 6px; }
+  .paper-decoration { width: 178px; height: 226px; border-radius: 9px; }
+  .art-caption { left: 0; bottom: -4px; }
+  .metrics { gap: 18px; margin-block: 24px 40px; }
+  .metric { padding: 23px 25px; }
+  .library { padding: 28px; border: 1px solid #dce6ed; border-radius: 18px; background: #ffffffc9; box-shadow: 0 8px 28px #183b5607; }
+  .library > .section-heading { align-items: flex-end; }
+}
+
+@media screen and (max-width: 760px) {
+  .quick-create { min-height: 0; padding: 30px; }
+  .quick-create h2 { font-size: clamp(28px, 6vw, 38px); }
+  .hero-art { margin-right: 0; }
+  .library { padding: 22px; }
+}
+
+@media screen and (max-width: 520px) {
+  .quick-create { padding: 25px 21px; gap: 12px; }
+  .quick-create h2 { font-size: 30px; }
+  .quick-create p { font-size: 13px; }
+  .hero-features { gap: 7px; }
+  .hero-features span { font-size: 9px; padding: 6px 8px; }
+  .hero-art { align-self: center; margin-bottom: -8px; }
+  .metrics { margin-block: 16px 26px; }
+  .library { padding: 18px 14px; border-radius: 14px; }
+}
+
 /* Unified college-ready design system for every workspace screen. */
 @font-face {
   font-family: "Noto Sans Local";

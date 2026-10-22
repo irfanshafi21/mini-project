@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { generateGroqQuestions, generateOllamaQuestions } from '../src/groqQuestionGenerator.js';
+import { generateGeminiQuestions, generateGroqQuestions } from '../src/groqQuestionGenerator.js';
 
 const body = {
   subject: 'Physics', questionStyle: 'PROBLEM_SOLVING', oneMarkType: 'MCQ',
@@ -14,7 +14,7 @@ const valid = { questions: [{
   subtopic: 'Ohm law', syllabusReference: topic,
   unit: 1,
   openingVerb: 'Apply',
-  questionCore: 'Calculate the current through a 6 Ω resistor connected to a 12 V source using Ohm law. Show your calculation.',
+  questionCore: 'Calculate the current through a 6 Î© resistor connected to a 12 V source using Ohm law. Show your calculation.',
   marks: 5, difficulty: 'EASY', bloomLevel: 'K3', bloomSource: 'groq',
   questionType: 'SHORT', options: [], answer: '',
 }] };
@@ -32,7 +32,8 @@ test('Groq structured generation maps questions to the requested syllabus slot',
     assert.equal(result.length, 1);
     assert.equal(result[0].marks, 5);
     assert.equal(result[0].bloomLevel, 'K3');
-    assert.equal(result[0].bloomSource, 'groq');
+    assert.equal(result[0].bloomSource, 'requested-llm');
+    assert.equal(result[0].difficulty, 'MEDIUM');
     assert.equal(request.response_format.type, 'json_schema');
     assert.equal(request.model, 'openai/gpt-oss-20b');
     assert.ok(request.messages[1].content.includes('Never write phrases'));
@@ -56,11 +57,11 @@ test('a question is kept when it is on-topic but does not repeat the exact subto
   const oldFetch = globalThis.fetch, oldKey = process.env.GROQ_API_KEY, oldModel = process.env.GROQ_MODEL;
   process.env.GROQ_API_KEY = 'unit-test-key'; process.env.GROQ_MODEL = 'openai/gpt-oss-20b';
   const onTopic = structuredClone(valid);
-  onTopic.questions[0].questionCore = 'a resistor of 10 Ω carrying a current of 2 A; calculate the voltage across it.';
+  onTopic.questions[0].questionCore = 'a resistor of 10 Î© carrying a current of 2 A; calculate the voltage across it.';
   globalThis.fetch = async () => ({ ok: true, json: async () => ({ choices: [{ message: { content: JSON.stringify(onTopic) } }] }) });
   try {
     const result = await generateGroqQuestions({ body, text: `Unit 1: ${topic}.`, slots });
-    assert.match(result[0].text, /resistor of 10 Ω/);
+    assert.match(result[0].text, /resistor of 10 Î©/);
     assert.equal(result[0].subtopic, 'Ohm law');
   } finally {
     globalThis.fetch = oldFetch;
@@ -76,7 +77,7 @@ test('Groq retries invalid math once, then reports quality issues instead of acc
   globalThis.fetch = async () => {
     calls++;
     const invalid = structuredClone(valid);
-    invalid.questions[0].questionCore = 'Ohm’s law and explain its purpose.';
+    invalid.questions[0].questionCore = 'Ohmâ€™s law and explain its purpose.';
     invalid.questions[0].answer = '';
     return { ok: true, json: async () => ({ choices: [{ message: { content: JSON.stringify(invalid) } }] }) };
   };
@@ -110,191 +111,35 @@ test('Groq rejects template filler and requires a concrete numerical problem wit
   }
 });
 
-test('Ollama uses local structured outputs and applies the same syllabus and math checks', async () => {
-  const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL, oldUrl = process.env.OLLAMA_BASE_URL;
-  process.env.OLLAMA_MODEL = 'qwen3.5:9b'; process.env.OLLAMA_BASE_URL = 'http://127.0.0.1:11434/';
-  let requestUrl, request;
-  globalThis.fetch = async (url, init) => {
-    requestUrl = url;
-    request = JSON.parse(init.body);
-    return { ok: true, json: async () => ({ message: { content: JSON.stringify(valid) } }) };
-  };
+test('Gemini sends a backend-held key and schema-constrained syllabus prompt', async () => {
+  const oldFetch=globalThis.fetch,oldKey=process.env.GEMINI_API_KEY,oldModel=process.env.GEMINI_MODEL;
+  process.env.GEMINI_API_KEY='unit-test-key';process.env.GEMINI_MODEL='gemini-3.8-flash';
+  let url,request,headers;
+  globalThis.fetch=async (u,init)=>{url=u;request=JSON.parse(init.body);headers=init.headers;return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify(valid)}]},finishReason:'STOP'}]})}};
   try {
-    const result = await generateOllamaQuestions({ body, text: `Unit 1: ${topic}.`, slots });
-    assert.equal(requestUrl, 'http://127.0.0.1:11434/api/chat');
-    assert.equal(request.model, 'qwen3.5:9b');
-    assert.equal(request.stream, false);
-    assert.equal(request.think, false);
-    assert.equal(request.keep_alive, '30m');
-    assert.ok(request.options.num_ctx >= 4096 && request.options.num_ctx <= 8192);
-    assert.ok(request.options.num_predict <= 8000);
-    assert.equal(request.format.type, 'object');
-    assert.equal(request.format.properties.questions.minItems, 1);
-    assert.equal(request.format.properties.questions.maxItems, 1);
-    assert.equal(result[0].bloomSource, 'ollama');
-    assert.equal('questionType' in request.format.properties.questions.items.properties, false);
-    assert.equal('solution' in request.format.properties.questions.items.properties, false);
-    assert.match(result[0].text, /^Apply calculate the current/);
+    const result=await generateGeminiQuestions({body:{...body,questionStyle:'PROBLEM_SOLVING'},text:`Unit 1: ${topic}.`,slots});
+    assert.equal(result.length,1);
+    assert.match(url,/models\/gemini-3\.8-flash:generateContent$/);
+    assert.equal(headers['x-goog-api-key'],'unit-test-key');
+    assert.equal(request.generationConfig.responseMimeType,'application/json');
+    assert.equal(request.generationConfig.responseSchema.properties.questions.minItems,1);
+    assert.match(request.contents[0].parts[0].text,/K1 Remember/);
+    assert.equal(result[0].bloomSource,'requested-llm');
   } finally {
-    globalThis.fetch = oldFetch;
-    if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
-    if (oldUrl === undefined) delete process.env.OLLAMA_BASE_URL; else process.env.OLLAMA_BASE_URL = oldUrl;
+    globalThis.fetch=oldFetch;
+    if(oldKey===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=oldKey;
+    if(oldModel===undefined)delete process.env.GEMINI_MODEL;else process.env.GEMINI_MODEL=oldModel;
   }
 });
 
-test('Ollama recovers valid JSON wrapped in model chatter or a markdown fence', async () => {
-  const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
-  process.env.OLLAMA_MODEL = 'qwen3.5:4b';
-  globalThis.fetch = async () => ({ ok: true, json: async () => ({
-    message: { content: `Here is the result:\n\`\`\`json\n${JSON.stringify(valid)}\n\`\`\`` },
-  }) });
+test('Bloom level raises minimum question difficulty from K1 through K6', async () => {
+  const oldFetch=globalThis.fetch,oldKey=process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY='unit-test-key';
+  const levels=[['K1','Define'],['K2','Explain'],['K3','Apply'],['K4','Analyze'],['K5','Evaluate'],['K6','Design']];
+  const questions=levels.map(([bloomLevel,openingVerb])=>({...valid.questions[0],bloomLevel,openingVerb,questionCore:'the Ohm law relationship between voltage, current and resistance.'}));
+  globalThis.fetch=async()=>({ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify({questions})}]},finishReason:'STOP'}]})});
   try {
-    const result = await generateOllamaQuestions({ body, text: `Unit 1: ${topic}.`, slots });
-    assert.equal(result.length, 1);
-  } finally {
-    globalThis.fetch = oldFetch;
-    if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
-  }
-});
-
-test('Ollama explains when structured output was cut off at its token limit', async () => {
-  const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
-  process.env.OLLAMA_MODEL = 'qwen3.5:4b';
-  globalThis.fetch = async () => ({ ok: true, json: async () => ({
-    message: { content: '{"questions":[' }, done_reason: 'length', eval_count: 920,
-  }) });
-  try {
-    await assert.rejects(
-      generateOllamaQuestions({ body, text: `Unit 1: ${topic}.`, slots }),
-      /reached its output limit before the JSON was complete/,
-    );
-  } finally {
-    globalThis.fetch = oldFetch;
-    if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
-  }
-});
-
-test('Ollama batches larger papers into five-question schema-constrained requests', async () => {
-  const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
-  process.env.OLLAMA_MODEL = 'qwen3.5:4b';
-  let calls = 0;
-  const batchSizes = [];
-  globalThis.fetch = async (_url, init) => {
-    batchSizes.push(JSON.parse(init.body).format.properties.questions.minItems);
-    const size = calls++ < 4 ? 5 : 1;
-    const question = { ...valid.questions[0], marks: 2, bloomLevel: 'K1', openingVerb: 'Define',
-      questionCore: 'the Ohm law.', text: undefined, answer: '' };
-    return { ok: true, json: async () => ({ message: { content: JSON.stringify({ questions: Array.from({ length: size }, () => question) }) } }) };
-  };
-  try {
-    const result = await generateOllamaQuestions({
-      body: { ...body, questionStyle: 'THEORY' }, text: `Unit 1: ${topic}.`,
-      slots: Array.from({ length: 21 }, () => ({ marks: 2, difficulty: 'EASY', bloomLevel: 'K1' })),
-    });
-    assert.equal(calls, 5);
-    assert.equal(result.length, 21);
-    assert.equal(result[20].id, 'OLLAMA21');
-    assert.deepEqual(batchSizes, [5, 5, 5, 5, 1]);
-  } finally {
-    globalThis.fetch = oldFetch;
-    if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
-  }
-});
-
-test('Ollama keeps valid partial batches and requests only the missing slots', async () => {
-  const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
-  process.env.OLLAMA_MODEL = 'qwen3.5:4b';
-  const requestedCounts = [];
-  let calls = 0;
-  const question = { ...valid.questions[0], marks: 2, bloomLevel: 'K1', openingVerb: 'Define',
-    questionCore: 'the Ohm law.', text: undefined, answer: '' };
-  globalThis.fetch = async (_url, init) => {
-    requestedCounts.push(JSON.parse(init.body).format.properties.questions.minItems);
-    const size = calls++ === 0 ? 3 : 2;
-    return { ok: true, json: async () => ({ message: { content: JSON.stringify({ questions: Array.from({ length: size }, () => question) }) } }) };
-  };
-  try {
-    const result = await generateOllamaQuestions({
-      body: { ...body, questionStyle: 'THEORY' }, text: `Unit 1: ${topic}.`,
-      slots: Array.from({ length: 5 }, () => ({ marks: 2, difficulty: 'EASY', bloomLevel: 'K1' })),
-    });
-    assert.equal(result.length, 5);
-    assert.deepEqual(requestedCounts, [5, 2]);
-  } finally {
-    globalThis.fetch = oldFetch;
-    if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
-  }
-});
-
-test('Ollama rejects problem-solving output when theory-only mode is selected', async () => {
-  const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
-  process.env.OLLAMA_MODEL = 'qwen3.5:4b';
-  globalThis.fetch = async () => ({ ok: true, json: async () => ({ message: { content: JSON.stringify(valid) } }) });
-  try {
-    await assert.rejects(
-      generateOllamaQuestions({ body: { ...body, questionStyle: 'THEORY' }, text: `Unit 1: ${topic}.`, slots }),
-      /must be theory only/,
-    );
-  } finally {
-    globalThis.fetch = oldFetch;
-    if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
-  }
-});
-
-test('Ollama mixed mode does not discard a syllabus-aligned paper for imperfect style balance', async () => {
-  const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
-  process.env.OLLAMA_MODEL = 'qwen3.5:4b';
-  let request;
-  const conceptualK3 = {
-    ...valid.questions[0], openingVerb: 'Explain',
-    questionCore: 'Explain how Ohm law predicts current changes when resistance increases while voltage remains constant.',
-    bloomLevel: 'K3', options: ['stray option'], answer: '',
-  };
-  const theoryK2 = {
-    ...valid.questions[0], openingVerb: 'Explain',
-    questionCore: 'Explain the relationship between voltage, current and resistance in Ohm law.',
-    bloomLevel: 'K2', answer: '',
-  };
-  globalThis.fetch = async (_url, init) => {
-    request = JSON.parse(init.body);
-    return { ok: true, json: async () => ({ message: { content: JSON.stringify({ questions: [conceptualK3, theoryK2] }) } }) };
-  };
-  try {
-    const result = await generateOllamaQuestions({
-      body: { ...body, questionStyle: 'MIXED' }, text: `Unit 1: ${topic}.`,
-      slots: [slots[0], { marks: 5, difficulty: 'EASY', bloomLevel: 'K2' }],
-    });
-    assert.equal(result.length, 2);
-    assert.match(result[0].text, /^Apply/);
-    assert.deepEqual(result[0].options, []);
-    assert.ok(request.messages[1].content.includes('Mixed mode:'));
-    assert.equal('questionType' in request.format.properties.questions.items.properties, false);
-  } finally {
-    globalThis.fetch = oldFetch;
-    if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
-  }
-});
-
-test('Ollama normalizes automatic Bloom verbs and MCQ letter answer keys', async () => {
-  const oldFetch = globalThis.fetch, oldModel = process.env.OLLAMA_MODEL;
-  process.env.OLLAMA_MODEL = 'qwen3.5:4b';
-  const automaticBloom = {
-    ...valid.questions[0], marks: 1, openingVerb: 'Explain',
-    questionCore: 'Calculate the current through a 6 Ω resistor connected to a 12 V source.',
-    bloomLevel: 'K3', options: ['8 A', '2 A', '18 A', '0.5 A'], answer: 'B',
-  };
-  globalThis.fetch = async () => ({ ok: true, json: async () => ({ message: { content: JSON.stringify({ questions: [automaticBloom] }) } }) });
-  try {
-    const result = await generateOllamaQuestions({
-      body: { ...body, questionStyle: 'PROBLEM_SOLVING' }, text: `Unit 1: ${topic}.`,
-      slots: [{ marks: 1, difficulty: 'EASY' }],
-    });
-    assert.match(result[0].text, /^Apply/);
-    assert.equal(result[0].bloomLevel, 'K3');
-    assert.equal(result[0].answer, '2 A');
-    assert.equal(result[0].options[1], result[0].answer);
-  } finally {
-    globalThis.fetch = oldFetch;
-    if (oldModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = oldModel;
-  }
+    const result=await generateGeminiQuestions({body:{...body,questionStyle:'THEORY'},text:`Unit 1: ${topic}.`,slots:levels.map(([bloomLevel])=>({marks:5,difficulty:'EASY',bloomLevel}))});
+    assert.deepEqual(result.map(q=>q.difficulty),['EASY','EASY','MEDIUM','MEDIUM','HARD','HARD']);
+  } finally {globalThis.fetch=oldFetch;if(oldKey===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=oldKey;}
 });

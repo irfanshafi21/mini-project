@@ -35,8 +35,9 @@ test('schemas reject inconsistent negative fractional and oversized custom count
 });
 test('syllabus output matches Java automatic slot count in template mode',async()=>{
  const body=syllabusBody.parse({subject:'GENERAL',fileName:'s.txt',mimeType:'text/plain',data:Buffer.from('Unit 1: CPU registers and memory hierarchy').toString('base64'),totalMarks:10,count:0,markCounts:auto,split});
- const result=await generateSyllabusPaper(body,{provider:'templates'});
- assert.equal(result.paper.totalMarks,10);assert.equal(result.paper.questions.length,1);
+ const previousProvider=process.env.AI_PROVIDER;process.env.AI_PROVIDER='local';
+ try { const result=await generateSyllabusPaper(body,{provider:'templates'});assert.equal(result.paper.totalMarks,10);assert.equal(result.paper.questions.length,1); }
+ finally { if(previousProvider===undefined)delete process.env.AI_PROVIDER;else process.env.AI_PROVIDER=previousProvider; }
 });
 
 test('Java plans mixed one-mark patterns exactly',async()=>{

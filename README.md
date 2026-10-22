@@ -6,9 +6,9 @@
 
 # Question Bank & Paper Generator
 
-### Plan with precision. Generate locally. Learn the complete stack.
+### Build syllabus-grounded papers with AI and clear academic controls.
 
-A college examination workspace built with **React + Vite**, **Node.js + Express**, **Java**, **PostgreSQL**, and our own **trained ML classifiers**.
+A college examination workspace built with **React + Vite**, **Node.js + Express**, **Java**, **PostgreSQL**, a **Gemini API model**, and local ML classifiers for selected classification tasks.
 
 ![React](https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white&style=for-the-badge)
 ![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white&style=for-the-badge)
@@ -18,13 +18,13 @@ A college examination workspace built with **React + Vite**, **Node.js + Express
 ![Python](https://img.shields.io/badge/Python-Model_training-3776ab?logo=python&logoColor=white&style=for-the-badge)
 ![ML](https://img.shields.io/badge/ML-Trained_locally-2b7884?style=for-the-badge)
 
-**React UI** → **Express API** → **PostgreSQL + Java + Local ML** → **Examination paper**
+**React UI** → **Express API** → **Gemini + BM25 syllabus evidence + validation** → **Examination paper**
 
 [Explore](#a-look-inside) · [Workflow](#the-workflow-at-a-glance) · [Install & run](#run-on-your-laptop) · [Learn from scratch](#learn-the-project-from-scratch) · [Architecture](#system-architecture) · [Code walkthrough](#code-walkthrough) · [Local ML](#how-our-own-model-works) · [Viva](#viva-and-project-explanation)
 
 </div>
 
-> **Generation stays on your machine by default.** The app can use its built-in retrieval and rule-based generation or a local Ollama model. Ollama does not need a hosted API key, but it does need its model installed once. A Groq provider is also available when explicitly configured.
+> **Question writing uses Gemini through the backend.** The API key stays in `backend/.env`; the React browser never receives it. Local BM25 retrieval, Bloom classification and quality checks continue to run in the backend. For a paid desktop product, keep a shared API key on a protected server rather than embedding it in the executable.
 
 <table>
 <tr>
@@ -281,15 +281,16 @@ sequenceDiagram
   participant API as Express
   participant DB as PostgreSQL
   participant Java as Java planner
-  participant ML as Local generator
+  participant AI as Gemini API
   User->>UI: Upload syllabus and set marks/K counts
   UI->>API: POST /api/papers/from-syllabus
   API->>API: Validate body and extract document text
   API->>DB: Check subject and previous generation history
   API->>Java: Request marks/difficulty slots
   Java-->>API: Planned slots as JSON
-  API->>ML: Topics, slots and repetition history
-  ML-->>API: Selected/generated question candidates
+  API->>API: Retrieve matching syllabus passages with BM25
+  API->>AI: Topics, evidence, slots and repetition history
+  AI-->>API: Structured question candidates
   API->>DB: Record history, save paper and queue learning
   API-->>UI: Saved paper with ID and questions
   UI-->>User: Preview with Bloom levels beside questions
@@ -328,7 +329,7 @@ The full college word lists are in [bloom-verbs.json](backend/ml/bloom-verbs.jso
 
 For every nonzero mark count, distribute that count across **K1–K6**. For example, **10 two-mark questions** can contain **2 K1 + 5 K2 + 3 K3 = 10**. An allocation of 2 + 5 + 4 totals 11 and is rejected.
 
-K level and difficulty are separate requirements. Bank selection satisfies both independently and reports a shortfall instead of silently substituting another level. Unsupported combinations, such as one-mark K6 questions without suitable bank content, can be rejected. Local objective generation covers curated recall facts and supported numerical application tasks; it does not fabricate higher-level MCQ answers.
+K level controls both the cognitive operation and a minimum toughness floor: K1/K2 questions are at least **Easy**, K3/K4 at least **Medium**, and K5/K6 at least **Hard**. The easy/medium/hard percentages set the requested distribution within those floors. Higher K levels must demand deeper work (recall, explain, apply, analyze, evaluate, create); changing only the opening verb does not qualify. Bank selection checks the K level and difficulty floor independently and reports a shortfall rather than silently substituting another level. Local objective fallback covers curated recall facts and supported numerical application tasks; it does not fabricate higher-level MCQ answers.
 
 ## How our own model works
 
@@ -342,13 +343,13 @@ Our multinomial Naive Bayes topic model learns four classes: **concept**, **proc
 
 A separate six-class Naive Bayes model learns **K1–K6** from complete question wording. It uses word and bigram context because opening verbs can overlap between Bloom levels.
 
-### 3. Generate within controlled question patterns
+### 3. Generate with syllabus-grounded Gemini prompts
 
-Java plans marks and difficulty slots. For syllabus papers, users can select one or more units or keep all units selected. Generation filters both extracted topics and retrieval passages to those units before creating questions. A local BM25 retriever ranks evidence from the uploaded file for each topic; the retrieved passage is kept with its question as the syllabus reference. The local generator then combines that grounded topic with authored, mark-bounded task grammars. For explicit K allocations, it uses the corresponding cognitive task grammar and ranks candidates using the trained Bloom classifier. Checked fact collections supply objective questions; supported numerical factories generate inputs, correct answers and variations. Retrieval improves syllabus grounding, but the templates do not have the open-ended language ability of a generative LLM.
+Java plans marks and difficulty slots. For syllabus papers, users can select one or more units. The backend extracts the topics, restricts them to those units, and uses a local BM25 retriever to find the most relevant syllabus passage for each question slot. Gemini receives the exact topic, retrieved evidence, allowed subtopics, question format and required Bloom level as structured instructions. The API key stays on the backend; the browser never receives it.
 
-A two-mark question asks a focused task. Longer questions request appropriately expanded reasoning, examples or designs. Some general application tasks explicitly ask the student to supply a small example; they are not solved numerical questions with hidden inputs.
+The prompt sets increasing cognitive demand from K1 Remember through K6 Create. It also raises the minimum stored difficulty: K1/K2 are at least EASY, K3/K4 at least MEDIUM, and K5/K6 at least HARD. Higher levels require deeper reasoning or design work, not just a different opening verb. The application checks the returned count, syllabus scope, question format, Bloom verb, numerical requirements and difficulty before saving a paper.
 
-**What is learned:** topic and cognitive-task classification probabilities. **What is authored:** question grammars, mathematical factories and objective fact records. The system does not learn unrestricted subject knowledge simply by generating a paper.
+The local Naive Bayes models still classify topic families and Bloom tasks and support background review. They are not generative language models and do not replace Gemini's question-writing capability. Retrieval narrows the evidence supplied to Gemini; it cannot guarantee that every generated item is factually or pedagogically perfect, so teachers should review papers before use.
 
 ### 4. Control repetition
 
@@ -363,7 +364,7 @@ BM25 is a text-search ranking method. It splits each syllabus passage and topic 
 The retriever indexes the uploaded syllabus in memory for the current generation request. It does not download an embedding model, call a hosted vector database or retain the uploaded file as a stored syllabus. The selected passage is attached to the candidate as its syllabus reference, helping generation stay grounded and making the source easier to inspect. BM25 can only retrieve evidence present in the uploaded text; unclear or missing syllabus content still limits the questions it can support.
 
 > [!NOTE]
-> **RAG here means retrieval plus constrained generation.** BM25 retrieves relevant source text, and authored question patterns use that evidence. The app does not run a neural text-generation model, and retrieval by itself does not prove that every question is factually or pedagogically correct.
+> **RAG here means local retrieval plus API generation.** BM25 retrieves relevant passages from the uploaded syllabus; Gemini uses those passages to write structured questions. The small local classifiers are separate and do not generate the question text.
 
 ### 5. Retrain locally
 
@@ -377,9 +378,9 @@ The Python trainer excludes held-out records and conflicting labels, evaluates t
 
 **Training builds probabilities. Inference uses them. Generation also needs authored task rules.**
 
-The following diagram separates the retrieval, classification, wording and validation steps. This distinction matters: BM25 searches the uploaded text; the small trained classifiers estimate topic family and Bloom level; authored patterns create question candidates; validation checks that the result follows the requested structure.
+The following diagram separates retrieval, classification, wording and validation. BM25 searches the uploaded syllabus, the local classifiers estimate topic family and Bloom task, Gemini writes candidates from retrieved evidence, and validation checks the requested structure.
 
-<img src="docs/images/readme-model-pipeline.svg" alt="Color-coded local syllabus generation stages: extract, filter units, retrieve with BM25, classify, generate with local patterns and validate" width="100%" />
+<img src="docs/images/readme-model-pipeline.svg" alt="Color-coded syllabus generation stages: extract, filter units, retrieve with BM25, classify, generate with Gemini and validate" width="100%" />
 
 ```mermaid
 flowchart LR
@@ -395,7 +396,7 @@ flowchart LR
     H["Extracted syllabus topics"] --> J["BM25 retrieves matching passages locally"]
     F -.-> I
     I["Load trained topic and Bloom classifiers"] --> L["Classify topic family and rank Bloom tasks"]
-    J --> K["Ground controlled task templates in retrieved context"]
+    J --> K["Gemini generates structured questions from retrieved evidence"]
     K --> L
     L --> M["Validate counts, prefixes and reuse budget"]
   end
@@ -544,7 +545,7 @@ Read the data map from left to right: subjects provide a registered destination;
 | Python | Python 3; standard library only for classifier training |
 | VS Code | Convenient editor and terminals |
 
-PostgreSQL Stack Builder add-ons are optional. For local Ollama generation, install Ollama and pull the configured model once; no hosted AI key is required.
+PostgreSQL Stack Builder add-ons are optional. Gemini generation requires a Gemini API key from Google AI Studio and an internet connection. Local retrieval and classification do not replace the Gemini question-writing model.
 
 ### 0. Get the source and check the tools
 
@@ -569,34 +570,23 @@ The backend needs the PostgreSQL user's password, which may differ from the pgAd
 
 ### 2. Start the backend
 
-For the Radeon 860M Vulkan GPU, open a terminal at the repository root and start Ollama first:
-
-```powershell
-cd backend
-.\start-ollama-gpu.ps1
-```
-
-Keep this terminal open. In a second terminal, open the repository root and start the backend:
-
 ```powershell
 cd backend
 npm.cmd install
 Copy-Item .env.example .env
 ```
 
-If your model is not installed yet, run `ollama pull qwen3.5:4b` once. The GPU startup script enables Vulkan and Ollama's integrated-GPU support for this laptop; `ollama ps` should show the model's processor as GPU after generation. If you prefer the default CPU Ollama service, change `OLLAMA_BASE_URL` to `http://127.0.0.1:11434` and use the normal Ollama app.
-
-Edit `backend/.env`:
+Edit `backend/.env`. Set your PostgreSQL connection string and paste your private Gemini API key locally:
 
 ```dotenv
 DATABASE_URL=postgresql://postgres:YOUR_DATABASE_PASSWORD@localhost:5432/questionbank
 PORT=4000
-AI_PROVIDER=ollama
-OLLAMA_BASE_URL=http://127.0.0.1:11435
-OLLAMA_MODEL=qwen3.5:4b
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your_private_key
+GEMINI_MODEL=gemini-3.8-flash
 ```
 
-Replace the password locally; URL-encode special characters when used in a connection URL. Then run:
+Replace the sample database password and API key locally. URL-encode special characters in the database URL. Keep `.env` private: never commit it or embed the key in frontend code or an installer. Then run:
 
 ```powershell
 npm.cmd run db:init
@@ -627,7 +617,7 @@ Open the URL printed by Vite, usually [http://localhost:5173](http://localhost:5
 
 Keep PostgreSQL running. Start `npm.cmd start` inside `backend` and `npm.cmd run dev` inside `frontend`. Installation is needed initially or when dependencies change. Run `db:init` after schema updates; it is designed to preserve existing records.
 
-Old Gemini/Groq/Ollama environment variables are no longer read by generation or learning. Keep `.env` files private and outside Git.
+The default provider is Gemini. Its key and model are read by the backend from `backend/.env`; never put the key in React code or commit it. Automatic review and ML classifier training remain local.
 
 ## Simple project structure
 
@@ -649,7 +639,7 @@ mini-project/
 └── README.md
 ```
 
-React handles state, forms and rendering. Vite serves the frontend in development and produces its build. Express validates HTTP requests, calls Java/our local ML logic, and reads/writes PostgreSQL. The browser never connects directly to the database.
+React handles state, forms and rendering. Vite serves the frontend in development and produces its build. Express validates HTTP requests, retrieves syllabus evidence, calls Gemini and Java, and reads/writes PostgreSQL. The browser never connects directly to the database and never receives the Gemini key.
 
 <br/>
 
@@ -895,7 +885,7 @@ This example does not impose a permanent relationship between marks and K level.
 
 ### A short explanation you can practise
 
-> The project manages a subject-based question bank and creates examination papers through manual selection, automatic bank selection or syllabus upload. React manages the interface, Vite handles frontend development/builds, and Express provides the HTTP API on Node.js. PostgreSQL stores subjects, questions, paper snapshots and learning records. Java plans marks and ordinary bank selection. Our locally trained Naive Bayes classifiers support topic/Bloom classification, while authored grammars, checked facts and numerical factories compose questions. Successful papers are saved automatically, with an explicit button for adding syllabus questions to the reusable bank. Eligible local examples can retrain the classifiers, but faculty review is still needed before real examination use.
+> The project manages a subject-based question bank and creates examination papers through manual selection, automatic bank selection or syllabus upload. React manages the interface, Vite handles frontend development/builds, and Express provides the HTTP API on Node.js. PostgreSQL stores subjects, questions, paper snapshots and learning records. Java plans marks and ordinary bank selection. Gemini generates syllabus questions using passages retrieved by local BM25; locally trained Naive Bayes classifiers support topic/Bloom classification. Successful papers are saved automatically, with an explicit button for adding syllabus questions to the reusable bank. Eligible local examples can retrain the classifiers, but faculty review is still needed before real examination use.
 
 <details>
 <summary><strong>20 viva questions with concise answers</strong></summary>
@@ -915,7 +905,7 @@ This example does not impose a permanent relationship between marks and K level.
 | What does Java do? | Plans marks and performs ordinary bank selection through a Node subprocess bridge. |
 | What is the local ML algorithm? | Multinomial Naive Bayes classifiers for topic families and Bloom task levels. |
 | Is the project a newly trained general-purpose LLM? | No. Learned classification is combined with controlled question composition. |
-| Does generation require an external AI key? | No. The current generation and learning paths are local. |
+| Does syllabus question generation require an external AI key? | Yes. Gemini runs through the backend; local BM25 retrieval and classifiers do not need a key. |
 | What does automatic learning change? | Eligible examples can update classifier probabilities after evaluation. |
 | Does self-training guarantee improvement? | No. Pseudo-labels can reinforce errors, and synthetic tests have limited coverage. |
 | How are repeated questions controlled? | Text hashes and known pattern signatures are checked within the subject/syllabus history scope. |
@@ -979,7 +969,7 @@ Python trainers and seed datasets are in `backend/ml/`. The topic and Bloom clas
 
 | Implemented | Boundary to understand |
 | --- | --- |
-| Fully local generation | A finite controlled generator, with no hosted-provider quota; not unlimited subject knowledge. |
+| Local fallback generation | A finite controlled generator for supported patterns only; syllabus question writing uses Gemini. |
 | Automatic classifier retraining | Pseudo-labels are not independent faculty validation. |
 | Bloom allocation and opening checks | Structural/task rules do not mathematically guarantee cognitive or academic correctness. |
 | Numerical factories | Cover supported operations, not arbitrary symbolic mathematics. |
@@ -988,7 +978,7 @@ Python trainers and seed datasets are in `backend/ml/`. The topic and Bloom clas
 | Saved-paper retrieval | Historical unsaved papers cannot be reconstructed automatically. |
 | Responsive academic UI | No application authentication/role-permission system is included. |
 
-There is no external AI daily quota. Current application bounds still include **50 questions**, **1,000 marks**, a **5 MB upload**, available topic/fact/pattern coverage and the historical **20% repeat budget**, rounded down.
+Gemini generation depends on the configured provider quota, network and API key. Current application bounds still include **50 questions**, **1,000 marks**, a **5 MB upload**, available topic/evidence coverage and the historical **20% repeat budget**, rounded down.
 
 ## Moving to the college server
 
@@ -1033,7 +1023,7 @@ Server credentials have not been requested or configured here. Laptop operation 
 | K counts do not match | Sum the six K fields to exactly the question count for each mark value. |
 | Paper saved but bank empty | Click **Add to question bank** and select a registered subject. |
 | Java/Python unavailable | Verify `java -version` and `python --version` in the backend terminal. |
-| Old generation-limit message | Update both frontend and backend and restart them. Current local generation has no hosted-provider quota. |
+| Gemini key or quota error | Check `GEMINI_API_KEY` in the private backend `.env`, confirm the model is enabled for that key, and review the provider quota. |
 
 ---
 

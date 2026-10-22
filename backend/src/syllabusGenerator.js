@@ -4,7 +4,7 @@ import { HttpError } from './errors.js';
 import { normalizeName, markCountsSchema, validMarkPattern, bloomCountsSchema, validBloomCounts } from './validation.js';
 import { planPaper } from './javaCore.js';
 import { extractSyllabusText, generateLocalQuestions } from './localModel.js';
-import { generateGroqQuestions, generateOllamaQuestions } from './groqQuestionGenerator.js';
+import { generateGeminiQuestions, generateGroqQuestions } from './groqQuestionGenerator.js';
 export { planPaper } from './javaCore.js';
 
 export const syllabusBody = z.object({
@@ -30,15 +30,15 @@ export const syllabusBody = z.object({
 export async function generateSyllabusPaper(body, { bankQuestions = [] } = {}) {
   const text=body.preparedText || await extractSyllabusText(body);
   const slots=assignBloomSlots(await planPaper(body.totalMarks,body.count,body.split,body.markCounts),body.bloomCounts);
-  const provider=(process.env.AI_PROVIDER || 'ollama').toLowerCase();
-  const questions=provider==='groq'
+  const provider=(process.env.AI_PROVIDER || 'gemini').toLowerCase();
+  const questions=provider==='gemini'
+    ? await generateGeminiQuestions({body,text,slots,bankQuestions})
+    : provider==='groq'
     ? await generateGroqQuestions({body,text,slots,bankQuestions})
-    : provider==='ollama'
-      ? await generateOllamaQuestions({body,text,slots,bankQuestions})
       : generateLocalQuestions(text,slots,body.previousQuestionHashes || [],body.oneMarkType,{
       previousSignatures:body.previousSignatures,reviewedQuestions:body.reviewedQuestions,units:body.units,chapters:body.chapters,bankQuestions,questionStyle:body.questionStyle,
     });
   return {paper:{source:'syllabus',fileName:body.fileName,subject:body.subject,
     requestedMarks:body.totalMarks,totalMarks:body.totalMarks,complete:true,requestedSplit:body.split,
-    bloomCounts:body.bloomCounts,model:provider==='groq'?process.env.GROQ_MODEL || 'groq':provider==='ollama'?process.env.OLLAMA_MODEL || 'qwen3.5:9b':'college-local-classifier-grammar-v2',questions}};
+    bloomCounts:body.bloomCounts,model:provider==='gemini'?process.env.GEMINI_MODEL || 'gemini-3.8-flash':provider==='groq'?process.env.GROQ_MODEL || 'groq':'college-local-classifier-grammar-v2',questions}};
 }

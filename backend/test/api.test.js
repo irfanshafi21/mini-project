@@ -44,8 +44,8 @@ test('health check', async () => {
   const r = await call('GET', '/api/health');
   assert.equal(r.status, 200);
   assert.equal(r.body.status, 'ok');
-  assert.equal(r.body.aiProvider, (process.env.AI_PROVIDER || 'ollama').toLowerCase());
-  assert.equal(r.body.model, r.body.aiProvider === 'groq' ? process.env.GROQ_MODEL || null : r.body.aiProvider === 'ollama' ? process.env.OLLAMA_MODEL || 'qwen3.5:9b' : 'college-local-classifier-grammar-v2');
+  assert.equal(r.body.aiProvider, (process.env.AI_PROVIDER || 'gemini').toLowerCase());
+  assert.equal(r.body.model, r.body.aiProvider === 'gemini' ? process.env.GEMINI_MODEL || 'gemini-3.8-flash' : r.body.aiProvider === 'groq' ? process.env.GROQ_MODEL || null : 'college-local-classifier-grammar-v2');
 });
 
 test('adding questions assigns numbers automatically (Q101, Q102, ...) and normalizes names', async () => {

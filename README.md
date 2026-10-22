@@ -878,7 +878,7 @@ Read the frozen train/validation/test files before interpreting accuracy. Runtim
 
 [paperText.js](frontend/src/paperText.js) formats question stems/options and supplies Bloom labels. Previews and [paperPdf.js](frontend/src/paperPdf.js) place K1–K6 beside each question, while marks stay in section headings/totals. TXT keeps the K tag without a per-question marks suffix.
 
-[PdfDownload.jsx](frontend/src/PdfDownload.jsx) calls the browser's PDF utility. jsPDF lays out A4 pages, wraps long text, adds section headers/page numbers, and embeds the supplied Noto Sans font. Print styles hide navigation, controls and workspace decoration. Teacher answers remain in data/editing fields and are omitted from student paper exports.
+[PdfDownload.jsx](frontend/src/PdfDownload.jsx) provides the PDF download action and reports export failures in the interface. jsPDF lays out A4 pages, wraps long text, adds section headers/page numbers, and uses the bundled Noto Sans font when available, with Helvetica as a fallback so font loading does not block export. Print styles hide navigation, controls and workspace decoration. Teacher answers remain in data/editing fields and are omitted from student paper exports.
 
 </details>
 

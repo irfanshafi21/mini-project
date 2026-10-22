@@ -1258,6 +1258,45 @@ textarea { resize: vertical; }
   .welcome-feature-grid button { margin-top: 12px; }
 }
 
+/* Brand and header reset: keep global workspace navigation styles off this header. */
+.welcome-header {
+  width: min(100%, 1320px);
+  min-height: 92px;
+  margin-inline: auto;
+  padding: 16px clamp(20px, 4vw, 52px);
+}
+.welcome-header > .brand { flex: 0 1 auto; min-width: 0; }
+.brand-logo { display: block; width: 44px; height: 44px; flex: 0 0 44px; object-fit: contain; border-radius: 12px; }
+.welcome-header > nav {
+  display: inline-flex;
+  width: auto;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: clamp(16px, 2.5vw, 30px);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.welcome-header > nav > a { white-space: nowrap; }
+.welcome-header > nav > .secondary { min-height: 46px; flex: 0 0 auto; padding: 11px 17px; border-radius: 10px; white-space: nowrap; }
+.welcome-footer .brand-logo { width: 32px; height: 32px; flex-basis: 32px; border-radius: 9px; }
+@media screen and (max-width: 700px) {
+  .welcome-header { min-height: 78px; gap: 12px; }
+  .welcome-header > nav { gap: 12px; }
+  .welcome-header > nav > a { display: none; }
+  .welcome-header > nav > .secondary { min-height: 42px; padding: 9px 12px; }
+  .welcome-header .brand-logo { width: 39px; height: 39px; flex-basis: 39px; }
+}
+@media screen and (max-width: 420px) {
+  .welcome-header { padding-inline: 12px; }
+  .welcome-header .brand-copy { font-size: 16px; }
+  .welcome-header .brand-copy small { font-size: 6px; letter-spacing: .8px; }
+  .welcome-header > nav > .secondary { min-height: 40px; padding: 8px 10px; font-size: 9px; }
+}
+
 /* Unified college-ready design system for every workspace screen. */
 @font-face {
   font-family: "Noto Sans Local";

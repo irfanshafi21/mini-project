@@ -309,7 +309,7 @@ For a bank-only paper, upload and retrieval are skipped: Express asks the Java p
 - The selected questions must equal the entered total marks. Papers support at most **50 questions** and **1,000 marks**.
 - With all category counts at zero, Java attempts an automatic denomination plan.
 - The final paper groups the selected mark values into consecutive sections, starting with **Section A**.
-- Each question shows its **Bloom level on the right**, such as K1 or K4. Section headings and paper totals retain marks. PDF/print follow the same arrangement; TXT retains the K label without a per-question marks suffix.
+- Each question shows its **Bloom level on the right**, such as K1 or K4. Section headings and paper totals retain marks. The PDF keeps this arrangement; TXT retains the K label without a per-question marks suffix. Browser printing uses print CSS and can wrap or paginate differently from the PDF.
 - One-mark questions support **multiple choice** or **fill in the blanks**. Checked MCQs have four distinct options and one recorded correct answer.
 
 ## College Bloom mapping
@@ -880,7 +880,7 @@ Read the frozen train/validation/test files before interpreting accuracy. Runtim
 
 [paperText.js](frontend/src/paperText.js) formats question stems/options and supplies Bloom labels. Previews and [paperPdf.js](frontend/src/paperPdf.js) place K1–K6 beside each question, while marks stay in section headings/totals. TXT keeps the K tag without a per-question marks suffix.
 
-[PdfDownload.jsx](frontend/src/PdfDownload.jsx) provides the PDF download action and reports export failures in the interface. jsPDF lays out A4 pages, wraps long text, adds section headers/page numbers, and uses the bundled Noto Sans font when available, with Helvetica as a fallback so font loading does not block export. Print styles hide navigation, controls and workspace decoration. Teacher answers remain in data/editing fields and are omitted from student paper exports.
+[PdfDownload.jsx](frontend/src/PdfDownload.jsx) provides the PDF download action and reports export failures in the interface. The browser creates the PDF with jsPDF on a fixed A4 page. Its layout mirrors the preview's centered subject and totals, section banners, question-number column, Bloom-level column, and structured schema/code blocks. Long text wraps within the page, whole questions are kept together where space allows, and page numbers are added. The responsive preview and fixed-size A4 page can still wrap lines and break pages at different points; use **Download PDF** when you want the dedicated paper layout. The bundled Noto Sans font is used when available, with Helvetica as a fallback. Browser print is a separate CSS-based path: it hides navigation, controls and workspace decoration, and its result can vary with browser print settings. Teacher answers remain in data/editing fields and are omitted from student paper exports.
 
 </details>
 
@@ -1042,6 +1042,7 @@ Server credentials have not been requested or configured here. Laptop operation 
 | Paper saved but bank empty | Click **Add to question bank** and select a registered subject. |
 | Java/Python unavailable | Verify `java -version` and `python --version` in the backend terminal. |
 | Gemini key or quota error | Check `GEMINI_API_KEY` and optional fallback keys in the private backend `.env`, confirm the model is enabled for the keys, and review the Google project quota. Fallback keys in one project share the same project rate limits; see [Gemini rate limits](https://ai.google.dev/gemini-api/docs/rate-limits). |
+| PDF still looks like the old layout, or the console reports an outdated `jspdf.js` dependency | Reload the app with **Ctrl+F5**. If the Vite terminal reports an outdated optimized dependency, stop the frontend with **Ctrl+C** and restart it from `frontend` using `npm.cmd run dev -- --force`. This rebuilds Vite's local dependency cache; then download the PDF again. |
 
 ---
 

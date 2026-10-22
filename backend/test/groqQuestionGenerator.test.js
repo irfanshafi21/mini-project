@@ -133,8 +133,9 @@ test('Groq rejects template filler and requires a concrete numerical problem wit
 });
 
 test('Gemini sends a backend-held key and schema-constrained syllabus prompt', async () => {
-  const oldFetch=globalThis.fetch,oldKey=process.env.GEMINI_API_KEY,oldModel=process.env.GEMINI_MODEL;
+  const oldFetch=globalThis.fetch,oldKey=process.env.GEMINI_API_KEY,oldFallback1=process.env.GEMINI_API_KEY_FALLBACK_1,oldFallback2=process.env.GEMINI_API_KEY_FALLBACK_2,oldModel=process.env.GEMINI_MODEL;
   process.env.GEMINI_API_KEY='unit-test-key';process.env.GEMINI_MODEL='gemini-3.8-flash';
+  delete process.env.GEMINI_API_KEY_FALLBACK_1;delete process.env.GEMINI_API_KEY_FALLBACK_2;
   let url,request,headers;
   globalThis.fetch=async (u,init)=>{url=u;request=JSON.parse(init.body);headers=init.headers;return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify(valid)}]},finishReason:'STOP'}]})}};
   try {
@@ -160,7 +161,54 @@ test('Gemini sends a backend-held key and schema-constrained syllabus prompt', a
   } finally {
     globalThis.fetch=oldFetch;
     if(oldKey===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=oldKey;
+    if(oldFallback1===undefined)delete process.env.GEMINI_API_KEY_FALLBACK_1;else process.env.GEMINI_API_KEY_FALLBACK_1=oldFallback1;
+    if(oldFallback2===undefined)delete process.env.GEMINI_API_KEY_FALLBACK_2;else process.env.GEMINI_API_KEY_FALLBACK_2=oldFallback2;
     if(oldModel===undefined)delete process.env.GEMINI_MODEL;else process.env.GEMINI_MODEL=oldModel;
+  }
+});
+
+test('Gemini uses two fallback keys after retryable primary-key failures', async () => {
+  const oldFetch=globalThis.fetch,oldKey=process.env.GEMINI_API_KEY,oldFallback1=process.env.GEMINI_API_KEY_FALLBACK_1,oldFallback2=process.env.GEMINI_API_KEY_FALLBACK_2,oldModel=process.env.GEMINI_MODEL;
+  process.env.GEMINI_API_KEY='unit-test-primary';process.env.GEMINI_API_KEY_FALLBACK_1='unit-test-fallback-one';process.env.GEMINI_API_KEY_FALLBACK_2='unit-test-fallback-two';process.env.GEMINI_MODEL='gemini-3.8-flash';
+  const usedKeys=[];let attempt=0;
+  globalThis.fetch=async (_url,init)=>{
+    usedKeys.push(init.headers['x-goog-api-key']);attempt++;
+    if(attempt===1)return {ok:false,status:429,json:async()=>({error:{message:'quota'}})};
+    if(attempt===2)return {ok:false,status:503,json:async()=>({error:{message:'temporarily unavailable'}})};
+    return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify(valid)}]},finishReason:'STOP'}]})};
+  };
+  try{
+    const result=await generateGeminiQuestions({body:{...body,questionStyle:'PROBLEM_SOLVING'},text:`Unit 1: ${topic}.`,slots});
+    assert.equal(result.length,1);
+    assert.deepEqual(usedKeys,['unit-test-primary','unit-test-fallback-one','unit-test-fallback-two']);
+  }finally{
+    globalThis.fetch=oldFetch;
+    if(oldKey===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=oldKey;
+    if(oldFallback1===undefined)delete process.env.GEMINI_API_KEY_FALLBACK_1;else process.env.GEMINI_API_KEY_FALLBACK_1=oldFallback1;
+    if(oldFallback2===undefined)delete process.env.GEMINI_API_KEY_FALLBACK_2;else process.env.GEMINI_API_KEY_FALLBACK_2=oldFallback2;
+    if(oldModel===undefined)delete process.env.GEMINI_MODEL;else process.env.GEMINI_MODEL=oldModel;
+  }
+});
+
+test('Gemini rotates through two fallback keys after retryable failures without exposing them', async () => {
+  const oldFetch=globalThis.fetch,oldKey=process.env.GEMINI_API_KEY,oldFallback1=process.env.GEMINI_API_KEY_FALLBACK_1,oldFallback2=process.env.GEMINI_API_KEY_FALLBACK_2;
+  process.env.GEMINI_API_KEY='test-primary';process.env.GEMINI_API_KEY_FALLBACK_1='test-fallback-one';process.env.GEMINI_API_KEY_FALLBACK_2='test-fallback-two';
+  const usedKeys=[];let call=0;
+  globalThis.fetch=async (_url,init)=>{
+    usedKeys.push(init.headers['x-goog-api-key']);call++;
+    if(call===1)return {ok:false,status:429,json:async()=>({error:{message:'quota'}})};
+    if(call===2)return {ok:false,status:403,json:async()=>({error:{message:'invalid key'}})};
+    return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify(valid)}]},finishReason:'STOP'}]})};
+  };
+  try{
+    const result=await generateGeminiQuestions({body:{...body,questionStyle:'PROBLEM_SOLVING'},text:`Unit 1: ${topic}.`,slots});
+    assert.equal(result.length,1);
+    assert.deepEqual(usedKeys,['test-primary','test-fallback-one','test-fallback-two']);
+  }finally{
+    globalThis.fetch=oldFetch;
+    if(oldKey===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=oldKey;
+    if(oldFallback1===undefined)delete process.env.GEMINI_API_KEY_FALLBACK_1;else process.env.GEMINI_API_KEY_FALLBACK_1=oldFallback1;
+    if(oldFallback2===undefined)delete process.env.GEMINI_API_KEY_FALLBACK_2;else process.env.GEMINI_API_KEY_FALLBACK_2=oldFallback2;
   }
 });
 

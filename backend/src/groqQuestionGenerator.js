@@ -198,43 +198,64 @@ function geminiCompatibleSchema(schema) {
 
 async function callProvider(prompt, units, slots, body, questionCount, signal, provider) {
   if (provider === 'gemini') {
-    const key = process.env.GEMINI_API_KEY;
+    const keys = [...new Set([
+      process.env.GEMINI_API_KEY,
+      process.env.GEMINI_API_KEY_FALLBACK_1,
+      process.env.GEMINI_API_KEY_FALLBACK_2,
+    ].map(key => String(key || '').trim()).filter(Boolean))];
     const model = (process.env.GEMINI_MODEL || 'gemini-3.8-flash').replace(/^models\//, '');
-    if (!key) throw new HttpError(503, 'Gemini is selected but GEMINI_API_KEY is not configured in backend/.env.');
+    if (!keys.length) throw new HttpError(503, 'Gemini is selected but no Gemini API key is configured in backend/.env.');
     if (!/^[A-Za-z0-9._-]+$/.test(model)) throw new HttpError(503, 'GEMINI_MODEL contains an invalid model name.');
     // The prior limit truncated otherwise-valid multi-question JSON responses.
     const outputLimit = Math.min(16000, 1200 + questionCount * 900 + slots.filter(slot => slot.marks === 1).length * 300);
+    const requestBody = JSON.stringify({
+      systemInstruction: { parts: [{ text: 'You are an expert university examiner. Use only the supplied syllabus as factual source material. Use original GATE-like precision and technical rigor as a quality reference, never copy past questions. State all assumptions and data needed for a unique answer. Follow the Bloom cognitive level and exact difficulty requirements. Return only valid JSON matching the response schema.' }] },
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: outputLimit,
+        responseMimeType: 'application/json',
+        responseJsonSchema: geminiCompatibleSchema(schemaFor(units, slots, body, slots.every(slot => slot.marks !== 1), true)),
+      },
+    });
     let response;
-    try {
-      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-        method: 'POST', signal,
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: 'You are an expert university examiner. Use only the supplied syllabus as factual source material. Use original GATE-like precision and technical rigor as a quality reference, never copy past questions. State all assumptions and data needed for a unique answer. Follow the Bloom cognitive level and exact difficulty requirements. Return only valid JSON matching the response schema.' }] },
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: outputLimit,
-            responseMimeType: 'application/json',
-            responseJsonSchema: geminiCompatibleSchema(schemaFor(units, slots, body, slots.every(slot => slot.marks !== 1), true)),
-          },
-        }),
-      });
-    } catch (error) {
-      if (error.name === 'AbortError' || error.name === 'TimeoutError') throw error;
-      throw new HttpError(503, 'Could not connect to the Gemini API. Check the network and try again.');
+    let data = {};
+    let lastNetworkError = false;
+    const failedStatuses = [];
+    for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
+      try {
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: 'POST', signal,
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': keys[keyIndex] },
+          body: requestBody,
+        });
+        lastNetworkError = false;
+      } catch (error) {
+        if (error.name === 'AbortError' || error.name === 'TimeoutError') throw error;
+        lastNetworkError = true;
+        console.error('[Gemini API network error]', JSON.stringify({ keySlot: keyIndex + 1 }));
+        if (keyIndex + 1 < keys.length) continue;
+        throw new HttpError(503, 'Could not connect to Gemini using the configured API keys. Check the network and try again.');
+      }
+      data = await response.json().catch(() => ({}));
+      if (response.ok) break;
+      failedStatuses.push(response.status);
+      console.error('[Gemini API error]', JSON.stringify({ keySlot: keyIndex + 1, status: response.status, error: data.error }));
+      const retryable = response.status === 401 || response.status === 403 || response.status === 429 || (response.status >= 500 && response.status < 600);
+      if (retryable && keyIndex + 1 < keys.length) continue;
+      break;
     }
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      console.error('[Gemini API error]', JSON.stringify({ status: response.status, error: data.error }));
-      if (response.status === 401 || response.status === 403) throw new HttpError(502, 'Gemini rejected the configured API key. Check GEMINI_API_KEY in backend/.env.');
-      if (response.status === 429) throw new HttpError(503, 'Gemini API quota or rate limit reached. Check the project quota and try again later.');
+    if (lastNetworkError) throw new HttpError(503, 'Could not connect to Gemini using the configured API keys. Check the network and try again.');
+    if (!response?.ok) {
+      if (failedStatuses.length && failedStatuses.every(status => status === 401 || status === 403)) throw new HttpError(502, 'Gemini rejected the configured API key(s). Check the Gemini keys in backend/.env.');
+      if (failedStatuses.includes(429)) throw new HttpError(503, 'Gemini quota or rate limit was reached for one or more configured keys. Check the project quotas and try again later.');
+      if (failedStatuses.length && failedStatuses.every(status => status >= 500 && status < 600)) throw new HttpError(503, 'Gemini is temporarily unavailable for the configured API keys. Try again later.');
       const violations = (data.error?.details || [])
         .flatMap(detail => detail.fieldViolations || [])
         .map(item => `${item.field}: ${item.description}`)
         .join('; ');
       const reason = String(violations || data.error?.message || '').replace(/\s+/g, ' ').slice(0, 420);
-      throw new HttpError(502, `Gemini question generation failed (HTTP ${response.status}).${reason ? ` ${reason}` : ''}`);
+      throw new HttpError(502, `Gemini question generation failed (HTTP ${response?.status || 'unknown'}).${reason ? ` ${reason}` : ''}`);
     }
     const candidate = data.candidates?.[0];
     const content = candidate?.content?.parts?.map(part => part.text || '').join('');

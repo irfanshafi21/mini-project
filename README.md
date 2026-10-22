@@ -596,11 +596,13 @@ Edit `backend/.env`. Set your PostgreSQL connection string and paste your privat
 DATABASE_URL=postgresql://postgres:YOUR_DATABASE_PASSWORD@localhost:5432/questionbank
 PORT=4000
 AI_PROVIDER=gemini
-GEMINI_API_KEY=your_private_key
+GEMINI_API_KEY=your_primary_private_key
+GEMINI_API_KEY_FALLBACK_1=
+GEMINI_API_KEY_FALLBACK_2=
 GEMINI_MODEL=gemini-3.8-flash
 ```
 
-Replace the sample database password and API key locally. URL-encode special characters in the database URL. Keep `.env` private: never commit it or embed the key in frontend code or an installer. Then run:
+Replace the sample database password and primary API key locally. If you have additional Gemini keys, enter them in `GEMINI_API_KEY_FALLBACK_1` and `GEMINI_API_KEY_FALLBACK_2`; leave unused fallback values blank. On authentication, quota/rate-limit, network, or provider-server errors, the backend tries the configured keys in order. The same model and prompt are used for every key. Gemini rate limits are project-scoped, so multiple keys from one Google project do not increase the same project rate limit; see the [official rate-limit documentation](https://ai.google.dev/gemini-api/docs/rate-limits). URL-encode special characters in the database URL. Keep `.env` private: never commit it or embed API keys in frontend code or an installer. Then run:
 
 ```powershell
 npm.cmd run db:init
@@ -1037,7 +1039,7 @@ Server credentials have not been requested or configured here. Laptop operation 
 | K counts do not match | Sum the six K fields to exactly the question count for each mark value. |
 | Paper saved but bank empty | Click **Add to question bank** and select a registered subject. |
 | Java/Python unavailable | Verify `java -version` and `python --version` in the backend terminal. |
-| Gemini key or quota error | Check `GEMINI_API_KEY` in the private backend `.env`, confirm the model is enabled for that key, and review the provider quota. |
+| Gemini key or quota error | Check `GEMINI_API_KEY` and optional fallback keys in the private backend `.env`, confirm the model is enabled for the keys, and review the Google project quota. Fallback keys in one project share the same project rate limits; see [Gemini rate limits](https://ai.google.dev/gemini-api/docs/rate-limits). |
 
 ---
 

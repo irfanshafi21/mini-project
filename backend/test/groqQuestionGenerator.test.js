@@ -37,6 +37,9 @@ test('Groq structured generation maps questions to the requested syllabus slot',
     assert.equal(request.response_format.type, 'json_schema');
     assert.equal(request.model, 'openai/gpt-oss-20b');
     assert.ok(request.messages[1].content.includes('Never write phrases'));
+    assert.match(request.messages[1].content, /small synthetic dataset/);
+    assert.match(request.messages[1].content, /labelled ASCII diagram/);
+    assert.equal(typeof request.response_format.json_schema.schema.properties.questions.items.properties.supportingMaterial, 'object');
     assert.ok(request.response_format.json_schema.schema.properties.questions.items.properties.openingVerb.enum.includes('Assess'));
     assert.equal('topic' in request.response_format.json_schema.schema.properties.questions.items.properties, false);
     assert.ok(request.messages[1].content.includes(`Unit 1: ${topic}`));
@@ -46,6 +49,24 @@ test('Groq structured generation maps questions to the requested syllabus slot',
     assert.equal('solution' in result[0], false);
     assert.equal('questionType' in request.response_format.json_schema.schema.properties.questions.items.properties, false);
     assert.match(result[0].text, /^Apply calculate the current/);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = oldKey;
+    if (oldModel === undefined) delete process.env.GROQ_MODEL; else process.env.GROQ_MODEL = oldModel;
+  }
+});
+
+test('optional printable ML dataset or diagram material is included with the stem', async () => {
+  const oldFetch = globalThis.fetch, oldKey = process.env.GROQ_API_KEY, oldModel = process.env.GROQ_MODEL;
+  process.env.GROQ_API_KEY = 'unit-test-key'; process.env.GROQ_MODEL = 'openai/gpt-oss-20b';
+  const withDataset = structuredClone(valid);
+  withDataset.questions[0].supportingMaterial = 'Dataset (hours studied | pass):\n1 | no\n3 | yes\n5 | yes';
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ choices: [{ message: { content: JSON.stringify(withDataset) } }] }) });
+  try {
+    const result = await generateGroqQuestions({ body, text: `Unit 1: ${topic}.`, slots });
+    assert.match(result[0].text, /calculate the current/i);
+    assert.match(result[0].text, /Dataset \(hours studied \| pass\):\n1 \| no\n3 \| yes\n5 \| yes/);
+    assert.equal('supportingMaterial' in result[0], false);
   } finally {
     globalThis.fetch = oldFetch;
     if (oldKey === undefined) delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY = oldKey;

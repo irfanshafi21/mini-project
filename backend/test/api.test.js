@@ -343,6 +343,18 @@ test('stored papers list all subjects, search titles, and exclude removed papers
   assert.equal((await call('GET','/api/papers/saved?page=0')).status,400);
 });
 
+test('stored papers can be soft-deleted and restored without changing their snapshots', async () => {
+  const paper={subject:'GENERAL',title:'Delete-paper test',questions:[{text:'Define a register.',marks:2}],totalMarks:2,complete:true};
+  const inserted=await query('INSERT INTO saved_papers(subject,title,paper) VALUES($1,$2,$3::jsonb) RETURNING id',['GENERAL',paper.title,JSON.stringify(paper)]);
+  const id=inserted.rows[0].id;
+  assert.equal((await call('DELETE',`/api/papers/saved/${id}`)).status,200);
+  assert.equal((await call('GET',`/api/papers/saved/${id}`)).status,404);
+  assert.equal((await call('POST',`/api/papers/saved/${id}/restore`)).status,200);
+  const restored=await call('GET',`/api/papers/saved/${id}`);
+  assert.equal(restored.status,200);
+  assert.equal(restored.body.paper.title,paper.title);
+});
+
 
 test('editing a stored paper updates its snapshot and totals without changing bank entries', async () => {
   const existing=await call('GET','/api/papers/saved?subject=MANUAL_TEST');

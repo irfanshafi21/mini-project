@@ -332,6 +332,8 @@ textarea { resize: vertical; }
 .stored-paper-card { display:flex;flex-direction:column;gap:12px; }
 .stored-paper-card h2 { font-size:20px;overflow-wrap:anywhere; }
 .stored-paper-card .primary { margin-top:auto; }
+.stored-paper-actions { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto; }
+.stored-paper-actions .primary { margin-top:0; }
 .paper-summary { display:flex;justify-content:space-between;gap:12px;padding:14px;background:#eff7fd;border-radius:10px; }
 @media print { .stored-paper-controls,.stored-paper-grid { display:none!important; } }
 @media(max-width:650px) { nav { flex-wrap:wrap; } .nav-item { flex:1 1 40%; } }

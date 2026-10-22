@@ -59,6 +59,18 @@ router.put('/saved/:id', async (req,res) => {
   if(!rows.length) throw new HttpError(404,'Stored paper not found.');
   res.json({id:rows[0].id,createdAt:rows[0].created_at,paper});
 });
+router.delete('/saved/:id', async (req,res) => {
+  const id=z.coerce.number().int().positive().parse(req.params.id);
+  const {rows}=await query('UPDATE saved_papers SET is_deleted=TRUE WHERE id=$1 AND NOT is_deleted RETURNING id',[id]);
+  if(!rows.length) throw new HttpError(404,'Stored paper not found.');
+  res.json({id:rows[0].id,deleted:true});
+});
+router.post('/saved/:id/restore', async (req,res) => {
+  const id=z.coerce.number().int().positive().parse(req.params.id);
+  const {rows}=await query('UPDATE saved_papers SET is_deleted=FALSE WHERE id=$1 AND is_deleted RETURNING id',[id]);
+  if(!rows.length) throw new HttpError(404,'Stored paper is not in the recycle bin.');
+  res.json({id:rows[0].id,restored:true});
+});
 router.get('/saved', async (req,res) => {
   const b = z.object({ subject:subject.optional(), q:z.string().trim().max(120).optional(), page:z.coerce.number().int().min(1).default(1) }).parse(req.query);
   if(b.subject) await requireRegisteredSubject(b.subject);

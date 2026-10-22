@@ -960,6 +960,8 @@ SELECT status, report FROM model_training_runs ORDER BY id DESC;
 | `GET /api/papers/saved` | Search/list saved papers |
 | `GET /api/papers/saved/:id` | Retrieve a saved paper |
 | `PUT /api/papers/saved/:id` | Edit its snapshot |
+| `DELETE /api/papers/saved/:id` | Move a complete saved paper to the recycle bin |
+| `POST /api/papers/saved/:id/restore` | Restore a deleted saved paper |
 | `GET /api/model/status` | Local classifier/training status |
 | `GET /api/model/papers/:id` | A paper's learning job |
 | `POST /api/model/train` | Retrain from eligible stored labels |

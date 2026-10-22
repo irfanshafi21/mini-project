@@ -651,6 +651,20 @@ textarea { resize: vertical; }
 }
 @media print { .skip-link,.workspace-topline,.workspace-footer,.sidebar { display:none!important; } }
 
+@page { size: A4 portrait; margin: 14mm; }
+@media print {
+  html, body, #root, .workspace { width:100%!important; min-height:0!important; margin:0!important; background:#fff!important; }
+  main { width:100%!important; max-width:none!important; margin:0!important; padding:0!important; }
+  .paper-preview { margin:0!important; padding:0!important; }
+  .paper-sheet { width:100%!important; max-width:none!important; margin:0!important; padding:0!important; border:0!important; border-radius:0!important; box-shadow:none!important; }
+  .paper-header { break-after:avoid-page; }
+  .paper-section-heading { break-after:avoid-page; }
+  .paper-questions { padding-left:7mm!important; }
+  .paper-questions li { break-inside:avoid-page; page-break-inside:avoid; }
+  .paper-questions p { font-size:11pt!important; line-height:1.45!important; }
+  .paper-end { break-inside:avoid; color:#333!important; }
+}
+
 /* Shared menus render outside clipping containers and within modal top layers. */
 .custom-select { position:relative;min-width:0;width:100%;font-weight:400; }
 .select-validation { position:absolute!important;opacity:0!important;width:1px!important;height:1px!important;min-height:0!important;padding:0!important;pointer-events:none; }

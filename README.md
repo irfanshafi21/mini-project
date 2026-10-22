@@ -64,7 +64,7 @@ A college examination workspace built with **React + Vite**, **Node.js + Express
 | **Subjects** | Register subjects explicitly, browse their questions and view question counts. Each registered subject has its own PostgreSQL partition. |
 | **Choose questions yourself** | Select the exact bank questions to include in a paper. |
 | **Generate from question bank** | Select saved questions automatically using marks, units, difficulty and Bloom allocation. |
-| **Upload a syllabus** | Upload a readable PDF or TXT file and generate new questions locally. |
+| **Upload a syllabus** | Upload a readable PDF or TXT file. Local BM25 retrieval finds relevant syllabus evidence and Gemini drafts structured questions through the backend. |
 | **Stored papers** | Retrieve saved paper snapshots, edit their contents and download them again. |
 | **Exports** | Download a PDF or TXT paper, or print from the browser. Student exports omit teacher answer fields. |
 
@@ -78,7 +78,7 @@ When building a paper from an uploaded syllabus, choose the kind of questions th
 | --- | --- |
 | **Theory only** | Conceptual questions grounded in the selected syllabus units. It filters out calculations and worked numerical exercises. |
 | **Sums / problem solving only** | Calculations, derivations, worked problems or other procedural questions when the selected units support them. |
-| **Mixed theory and problem solving** | A combination of conceptual and supported numerical/procedural questions. The generator aims to include both when the syllabus contains suitable problem-solving material and the paper has room for at least two questions. |
+| **Mixed theory and problem solving** | A combination of conceptual and supported numerical/procedural questions. The generator asks Gemini for both when the syllabus contains suitable problem-solving material and the paper has room for at least two questions. |
 
 The selection is sent with syllabus-generation requests as `questionStyle` (`THEORY`, `PROBLEM_SOLVING` or `MIXED`). It applies to syllabus-based generation; question-bank and manual-selection papers keep their own question-selection flow. Unit selection still limits the source material. The generator excludes book/reference metadata and uses syllabus passages as evidence, so a textbook title or author is not treated as examinable content. If a syllabus unit contains no supported numerical material, the app should not invent a sum just to fill the selected style.
 
@@ -103,7 +103,7 @@ From the first source to a paper you can retrieve later, each stage has a clear 
 <tr>
 <td width="25%" align="center"><strong>01 · CHOOSE</strong><br/>Pick bank questions, select saved questions manually, or upload a syllabus.</td>
 <td width="25%" align="center"><strong>02 · STRUCTURE</strong><br/>Set units, marks, difficulty and the desired Bloom-level distribution.</td>
-<td width="25%" align="center"><strong>03 · PREPARE</strong><br/>Local retrieval and constrained generation create a structured draft.</td>
+<td width="25%" align="center"><strong>03 · PREPARE</strong><br/>BM25 retrieves syllabus evidence and Gemini creates a structured draft.</td>
 <td width="25%" align="center"><strong>04 · REVIEW</strong><br/>Edit, save, retrieve, print or export the completed paper.</td>
 </tr>
 </table>
@@ -210,7 +210,7 @@ flowchart TD
   B --> E[Upload syllabus PDF or TXT]
   D --> F[Set marks, units, difficulty and K counts]
   E --> G[Extract topic and unit text locally]
-  G --> H[Local BM25 retrieval and constrained question generator]
+  G --> H[Local BM25 retrieves evidence; Gemini writes questions]
   F --> I[Validate and assemble paper]
   H --> I
   C --> I
@@ -329,7 +329,7 @@ The full college word lists are in [bloom-verbs.json](backend/ml/bloom-verbs.jso
 
 For every nonzero mark count, distribute that count across **K1–K6**. For example, **10 two-mark questions** can contain **2 K1 + 5 K2 + 3 K3 = 10**. An allocation of 2 + 5 + 4 totals 11 and is rejected.
 
-K level controls both the cognitive operation and a minimum toughness floor: K1/K2 questions are at least **Easy**, K3/K4 at least **Medium**, and K5/K6 at least **Hard**. The easy/medium/hard percentages set the requested distribution within those floors. Higher K levels must demand deeper work (recall, explain, apply, analyze, evaluate, create); changing only the opening verb does not qualify. Bank selection checks the K level and difficulty floor independently and reports a shortfall rather than silently substituting another level. Local objective fallback covers curated recall facts and supported numerical application tasks; it does not fabricate higher-level MCQ answers.
+For syllabus generation, Bloom level controls both the cognitive task and exact displayed toughness: **K1/K2 = Easy**, **K3/K4 = Medium**, and **K5/K6 = Hard**. The question must require the corresponding thinking (recall, explain, apply, analyze, evaluate or create); changing only the opening verb does not qualify. The requested difficulty mix guides slot planning, while the assigned Bloom level determines the final generated-question difficulty. Bank selection checks the requested K level and its configured difficulty requirement independently and reports a shortfall rather than silently substituting another level. Local objective fallback covers curated recall facts and supported numerical application tasks; it does not fabricate higher-level MCQ answers.
 
 ## How our own model works
 
@@ -347,9 +347,23 @@ A separate six-class Naive Bayes model learns **K1–K6** from complete question
 
 Java plans marks and difficulty slots. For syllabus papers, users can select one or more units. The backend extracts the topics, restricts them to those units, and uses a local BM25 retriever to find the most relevant syllabus passage for each question slot. Gemini receives the exact topic, retrieved evidence, allowed subtopics, question format and required Bloom level as structured instructions. The API key stays on the backend; the browser never receives it.
 
-The prompt sets increasing cognitive demand from K1 Remember through K6 Create. It also raises the minimum stored difficulty: K1/K2 are at least EASY, K3/K4 at least MEDIUM, and K5/K6 at least HARD. Higher levels require deeper reasoning or design work, not just a different opening verb. The application checks the returned count, syllabus scope, question format, Bloom verb, numerical requirements and difficulty before saving a paper.
+The prompt maps K1 Remember and K2 Understand to EASY, K3 Apply and K4 Analyze to MEDIUM, and K5 Evaluate and K6 Create to HARD. Each level must change the actual reasoning task, not merely the opening verb. It uses original GATE-style precision as a quality reference: each stem names the task, uses clear technical terminology, and includes the assumptions, parameters, values and units needed for a unique answer. Numerical premises should be checked for sufficiency and consistency. MCQ distractors should be plausible and distinct. The generator must use only retrieved evidence from the selected syllabus, exclude course/document metadata, avoid generic filler and repeated questions, and never copy past GATE items. The application checks the returned count, syllabus scope, question format, Bloom verb, numerical requirements and difficulty before saving a paper.
 
 The local Naive Bayes models still classify topic families and Bloom tasks and support background review. They are not generative language models and do not replace Gemini's question-writing capability. Retrieval narrows the evidence supplied to Gemini; it cannot guarantee that every generated item is factually or pedagogically perfect, so teachers should review papers before use.
+
+### GATE-referenced question quality
+
+GATE is used only as a **quality reference** for precise, technically rigorous assessment questions; the generator does not reproduce the official GATE exam pattern or copy past-paper questions. For every generated item, the prompt asks Gemini to:
+
+- Test one named concept or subtopic present in the selected syllabus evidence.
+- State exactly what students must determine, explain, compare, prove or construct, using the syllabus terminology.
+- Include sufficient assumptions, model/distribution parameters, inputs, units and conditions so a numerical task has a unique, solvable result.
+- Make conceptual comparisons specific by naming the objects and conditions, avoiding vague phrases such as ?a given function? or ?a suitable application.?
+- Match the requested K level to its real cognitive demand and exact difficulty mapping above.
+- Use four plausible, distinct MCQ choices with one correct answer when the one-mark format is MCQ.
+- Exclude questions about the syllabus document, course identity, coverage, year, author or reference books; these details are not examinable content.
+
+These prompt rules improve clarity and grounding but cannot guarantee factual correctness for every model response. Teachers should review the final paper, especially calculations and assumptions, before using it in an examination.
 
 ### 4. Control repetition
 

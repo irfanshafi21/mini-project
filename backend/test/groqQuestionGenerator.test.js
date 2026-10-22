@@ -122,8 +122,19 @@ test('Gemini sends a backend-held key and schema-constrained syllabus prompt', a
     assert.match(url,/models\/gemini-3\.8-flash:generateContent$/);
     assert.equal(headers['x-goog-api-key'],'unit-test-key');
     assert.equal(request.generationConfig.responseMimeType,'application/json');
-    assert.equal(request.generationConfig.responseSchema.properties.questions.minItems,1);
+    const schema=request.generationConfig.responseJsonSchema.properties.questions;
+    assert.equal(schema.minItems,1);
+    assert.equal('enum' in schema.items.properties.subtopic,false);
+    assert.equal('enum' in schema.items.properties.openingVerb,false);
+    assert.equal('options' in schema.items.properties,false);
+    assert.equal('answer' in schema.items.properties,false);
     assert.match(request.contents[0].parts[0].text,/K1 Remember/);
+    assert.match(request.contents[0].parts[0].text,/K1\/K2 to EASY, K3\/K4 to MEDIUM, and K5\/K6 to HARD/);
+    assert.match(request.contents[0].parts[0].text,/10 marks asks for a substantial/);
+    assert.match(request.contents[0].parts[0].text,/authors, publishers, or books/);
+    assert.match(request.contents[0].parts[0].text,/Use GATE as a reference for question quality only/);
+    assert.match(request.contents[0].parts[0].text,/State all assumptions, definitions, input values, units, boundary conditions/);
+    assert.match(request.contents[0].parts[0].text,/Do not copy or paraphrase past GATE questions/);
     assert.equal(result[0].bloomSource,'requested-llm');
   } finally {
     globalThis.fetch=oldFetch;
@@ -132,14 +143,38 @@ test('Gemini sends a backend-held key and schema-constrained syllabus prompt', a
   }
 });
 
-test('Bloom level raises minimum question difficulty from K1 through K6', async () => {
+test('generation rewrites questions about document metadata instead of keeping them', async () => {
+  const oldFetch=globalThis.fetch,oldKey=process.env.GROQ_API_KEY,oldModel=process.env.GROQ_MODEL;
+  process.env.GROQ_API_KEY='unit-test-key';process.env.GROQ_MODEL='openai/gpt-oss-20b';
+  let calls=0;const prompts=[];
+  globalThis.fetch=async (_url,init)=>{
+    prompts.push(JSON.parse(init.body).messages[1].content);
+    calls++;
+    const response=calls===1?structuredClone(valid):structuredClone(valid);
+    if(calls===1)response.questions[0].questionCore='List the subjects included in the syllabus across academic years.';
+    return {ok:true,json:async()=>({choices:[{message:{content:JSON.stringify(response)}}]})};
+  };
+  try{
+    const result=await generateGroqQuestions({body,text:`Unit 1: ${topic}.`,slots});
+    assert.equal(calls,2);
+    assert.match(prompts[0],/Never ask students to describe the document or its organization/);
+    assert.match(prompts[1],/document metadata or course coverage/);
+    assert.doesNotMatch(result[0].text,/syllabus|academic years|subjects included/i);
+  }finally{
+    globalThis.fetch=oldFetch;
+    if(oldKey===undefined)delete process.env.GROQ_API_KEY;else process.env.GROQ_API_KEY=oldKey;
+    if(oldModel===undefined)delete process.env.GROQ_MODEL;else process.env.GROQ_MODEL=oldModel;
+  }
+});
+
+test('Bloom level sets exact question difficulty from K1 through K6', async () => {
   const oldFetch=globalThis.fetch,oldKey=process.env.GEMINI_API_KEY;
   process.env.GEMINI_API_KEY='unit-test-key';
   const levels=[['K1','Define'],['K2','Explain'],['K3','Apply'],['K4','Analyze'],['K5','Evaluate'],['K6','Design']];
   const questions=levels.map(([bloomLevel,openingVerb])=>({...valid.questions[0],bloomLevel,openingVerb,questionCore:'the Ohm law relationship between voltage, current and resistance.'}));
   globalThis.fetch=async()=>({ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify({questions})}]},finishReason:'STOP'}]})});
   try {
-    const result=await generateGeminiQuestions({body:{...body,questionStyle:'THEORY'},text:`Unit 1: ${topic}.`,slots:levels.map(([bloomLevel])=>({marks:5,difficulty:'EASY',bloomLevel}))});
+    const result=await generateGeminiQuestions({body:{...body,questionStyle:'THEORY'},text:`Unit 1: ${topic}.`,slots:levels.map(([bloomLevel])=>({marks:5,difficulty:'HARD',bloomLevel}))});
     assert.deepEqual(result.map(q=>q.difficulty),['EASY','EASY','MEDIUM','MEDIUM','HARD','HARD']);
   } finally {globalThis.fetch=oldFetch;if(oldKey===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=oldKey;}
 });

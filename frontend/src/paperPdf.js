@@ -1,8 +1,9 @@
 import { plainText, formatQuestion, bloomLabel } from './paperText.js'
+import notoSansUrl from './assets/NotoSans-Regular.ttf?url'
 
 let fontPromise
 async function fontData() {
-  fontPromise ||= fetch(new URL('./assets/NotoSans-Regular.ttf',import.meta.url)).then(async r=>{
+  fontPromise ||= fetch(notoSansUrl).then(async r=>{
     if(!r.ok)throw new Error('Could not load the PDF font.')
     const bytes=new Uint8Array(await r.arrayBuffer())
     let binary=''
@@ -14,8 +15,21 @@ async function fontData() {
 export async function createPaperPdf(paper, fontBase64) {
   const {jsPDF}=await import('jspdf')
   const doc=new jsPDF({unit:'mm',format:'a4'})
-  doc.addFileToVFS('NotoSans.ttf',fontBase64 || await fontData())
-  doc.addFont('NotoSans.ttf','NotoSans','normal');doc.setFont('NotoSans')
+  let embeddedFont = fontBase64
+  if (!embeddedFont) {
+    try { embeddedFont = await fontData() } catch { /* Keep PDF export available if the optional local font cannot load. */ }
+  }
+  if (embeddedFont) {
+    try {
+      doc.addFileToVFS('NotoSans.ttf', embeddedFont)
+      doc.addFont('NotoSans.ttf', 'NotoSans', 'normal')
+      doc.setFont('NotoSans', 'normal')
+    } catch {
+      doc.setFont('helvetica', 'normal')
+    }
+  } else {
+    doc.setFont('helvetica', 'normal')
+  }
   const title=plainText(paper.title || 'Question paper'), subject=plainText((paper.subject || 'GENERAL').replaceAll('_',' '))
   doc.setProperties({title,subject,creator:'Question Bank'})
   let y=22,number=0

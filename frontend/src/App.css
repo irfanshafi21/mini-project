@@ -1456,3 +1456,21 @@ textarea { resize: vertical; }
     background: #f1f6fa;
   }
 }
+
+
+/* Small export-control polish: keep download feedback aligned with the actions. */
+@media screen {
+  .preview-actions {
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid #dce7ee;
+    border-radius: 12px;
+    background: #f8fbfd;
+  }
+  .preview-actions > button { min-height: 44px; }
+  .pdf-download-control { display: contents; }
+  .pdf-download-control > button { min-width: 132px; }
+  .pdf-download-error { flex: 1 0 100%; margin: 2px 0 0; padding: 11px 14px; border: 1px solid #efd8c8; border-radius: 10px; background: #fff5ef; color: #86563a; font-size: 12px; line-height: 1.55; }
+  .preview-actions > button:disabled { cursor: wait; opacity: .72; }
+}

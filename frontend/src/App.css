@@ -1,4 +1,4 @@
-:root { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; color: #263f57; background: #fffaf4; line-height: 1.5; font-synthesis: none; color-scheme: light; }
+:root { font-family: "Noto Sans Local", "Segoe UI", Arial, sans-serif; color: #263f57; background: #fffaf4; line-height: 1.5; font-synthesis: none; color-scheme: light; }
 * { box-sizing: border-box; }
 body { margin: 0; }
 button, input, select, textarea { font: inherit; }
@@ -1119,7 +1119,7 @@ textarea { resize: vertical; }
 .welcome-copy { position: relative; z-index: 1; max-width: 620px; }
 .welcome-kicker { display: inline-flex; align-items: center; gap: 9px; padding: 8px 12px; border: 1px solid #d2e1eb; border-radius: 999px; background: #ffffffa8; color: #55768c; font-size: 9px; font-weight: 750; letter-spacing: 1.35px; }
 .welcome-kicker i { width: 7px; height: 7px; border-radius: 50%; background: #4a89a9; box-shadow: 0 0 0 4px #e0edf4; }
-.welcome-copy h1 { max-width: 640px; margin: 22px 0 16px; font: 600 clamp(42px, 5.2vw, 66px)/1.07 Georgia, 'Times New Roman', serif; letter-spacing: -2.3px; color: #183b56; }
+.welcome-copy h1 { max-width: 640px; margin: 22px 0 16px; font: 700 clamp(40px, 5vw, 62px)/1.12 "Noto Sans Local", "Segoe UI", Arial, sans-serif; letter-spacing: -1.9px; color: #183b56; }
 .welcome-copy h1 em { color: #347da5; font-weight: 500; }
 .welcome-copy > p { max-width: 520px; color: #5f7586; font-size: 15px; line-height: 1.85; }
 .welcome-actions { display: flex; align-items: center; gap: 22px; margin-top: 28px; }
@@ -1165,7 +1165,7 @@ textarea { resize: vertical; }
 .welcome-features { scroll-margin-top: 26px; }
 .welcome-section-intro { max-width: 600px; margin: 0 auto 28px; text-align: center; }
 .welcome-section-intro .page-kicker { margin: 0 auto 10px; }
-.welcome-section-intro h2 { color: #244a65; font: 500 clamp(26px, 3vw, 35px)/1.2 Georgia, 'Times New Roman', serif; letter-spacing: -.7px; }
+.welcome-section-intro h2 { color: #244a65; font: 700 clamp(26px, 3vw, 35px)/1.25 "Noto Sans Local", "Segoe UI", Arial, sans-serif; letter-spacing: -.8px; }
 .welcome-section-intro p { margin-top: 10px; color: #6a8090; font-size: 12px; line-height: 1.7; }
 .welcome-feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .welcome-feature-grid article { position: relative; min-height: 210px; padding: 24px; border: 1px solid #dce6ed; border-radius: 15px; background: linear-gradient(145deg, #fff, #f9fbfd); box-shadow: 0 7px 22px #183b5606; }
@@ -1178,12 +1178,12 @@ textarea { resize: vertical; }
 .welcome-feature-grid button:hover { color: #1d587a; }
 .welcome-bottom-cta { display: flex; align-items: center; justify-content: space-between; gap: 22px; margin-top: 60px; padding: 27px 32px; border: 1px solid #d2e1eb; border-radius: 16px; background: linear-gradient(110deg, #e8f2f9, #f7f9fb 75%, #fbf5e9); }
 .welcome-bottom-cta .eyebrow { color: #63849a; font-size: 8px; letter-spacing: 1.2px; }
-.welcome-bottom-cta h2 { margin-top: 5px; color: #264b66; font: 500 24px Georgia, serif; }
+.welcome-bottom-cta h2 { margin-top: 5px; color: #264b66; font: 650 24px "Noto Sans Local", "Segoe UI", Arial, sans-serif; }
 .welcome-bottom-cta p { margin-top: 5px; color: #6a8090; font-size: 11px; }
 .welcome-footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 48px; padding: 18px 0 8px; border-top: 1px solid #dce6ed; color: #738695; font-size: 9px; }
 .welcome-footer .brand { gap: 9px; font-size: inherit; }
 .welcome-footer .brand-mark { width: 28px; height: 30px; border-radius: 9px 9px 9px 3px; }
-.welcome-footer .brand-copy { font: 600 14px Georgia, serif; }
+.welcome-footer .brand-copy { font: 650 14px "Noto Sans Local", "Segoe UI", Arial, sans-serif; }
 
 @media screen and (max-width: 900px) {
   .welcome-header, .welcome-main { padding-inline: 26px; }

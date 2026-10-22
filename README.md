@@ -41,6 +41,7 @@ A college examination workspace built with **React + Vite**, **Node.js + Express
 | --- | --- | --- |
 | [Features](#what-you-can-do) | [System architecture](#system-architecture) | [Evaluation](#evaluation-what-the-numbers-mean) |
 | [Screenshots](#a-look-inside) | [Code walkthrough](#code-walkthrough) | [Development checks](#verification-and-development) |
+| [Welcome page and navigation](#welcome-page-and-navigation) | [Typography and logo](#typography-and-logo) | [Project limits](#project-boundaries) |
 | [Learning roadmap](#learn-the-project-from-scratch) | [Our own model](#how-our-own-model-works) | [College hosting](#moving-to-the-college-server) |
 | [Installation](#run-on-your-laptop) | [Training visualised](#training-and-inference-visualised) | [Troubleshooting](#troubleshooting) |
 | [Everyday workflow](#everyday-workflow) | [Database relationships](#database-relationships) | [Viva questions](#viva-and-project-explanation) |
@@ -69,6 +70,25 @@ A college examination workspace built with **React + Vite**, **Node.js + Express
 | **Exports** | Download a PDF or TXT paper, or print from the browser. Student exports omit teacher answer fields. |
 
 The interface uses a shared academic design system: bundled Noto Sans typography, deep navy text, clear blue actions, pale blue surfaces and restrained warm paper accents. Consistent cards, form controls, navigation, focus indicators and responsive layouts carry through the question bank, paper builder, subject pages, stored papers and paper previews. Mark counts update live, Bloom allocation is shown by K1–K6, and saved papers can be reopened for review. No application login is included.
+
+## Welcome page and navigation
+
+Open the app at `http://localhost:5173/` to see the welcome page before entering the dashboard. The page explains the main assessment workflow and provides direct links to the relevant workspace screens.
+
+| Welcome page action | Destination | What opens |
+| --- | --- | --- |
+| **Enter the workspace** / **Open workspace** | `#bank` | The question-bank dashboard. |
+| **How it works** / **Explore the tools** | `#welcome-features` | The four-step workflow explanation on the welcome page. |
+| **Start with a syllabus** | `#create` | The paper builder with syllabus upload selected. |
+| **Configure a paper** / **Open the paper builder** | `#create` | The paper builder, where you choose manual, question-bank or syllabus-based creation. |
+| **View stored papers** | `#stored-papers` | The saved-paper archive. |
+| **Question Bank logo** | `#welcome` | The top of the welcome page. |
+
+The four steps describe the actual workflow: select syllabus units, configure marks and question style, review or edit the generated paper, and retrieve saved papers or export a PDF. The syllabus route does not require a subject name. All actions work from buttons or in-page links, and direct links such as `#create` continue to open the requested app section.
+
+### Typography and logo
+
+The landing page and workspace use the bundled **Noto Sans** font so the typography stays consistent without loading a remote font. The custom book mark in `frontend/public/question-bank-logo.svg` is used in the page header and as the browser-tab favicon.
 
 ## Syllabus question styles
 

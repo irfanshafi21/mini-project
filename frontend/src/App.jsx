@@ -91,7 +91,7 @@ export default function App() {
   const [selectedSubject, setSelectedSubject] = useState(null)
   const [subjectEditor, setSubjectEditor] = useState(false)
   const [view, setView] = useState(() => { const hash=window.location.hash.slice(1); return hash.startsWith('stored-papers')?'stored':['bank','create','subjects'].includes(hash)?hash:'welcome' }), [source, setSource] = useState(null)
-  useEffect(() => { const changed = () => { const hash = window.location.hash.slice(1); if (hash.startsWith('stored-papers')) setView('stored'); else if (['bank','create','subjects'].includes(hash)) setView(hash); else setView('welcome') }; window.addEventListener('hashchange', changed); return () => window.removeEventListener('hashchange',changed) }, [])
+  useEffect(() => { const changed = () => { const hash = window.location.hash.slice(1); if (hash.startsWith('stored-papers')) setView('stored'); else if (['bank','create','subjects'].includes(hash)) setView(hash); else if (!hash || hash === 'welcome') setView('welcome') }; window.addEventListener('hashchange', changed); return () => window.removeEventListener('hashchange',changed) }, [])
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }) }, [view])
   const [filters, setFilters] = useState({ subject: '', unit: '', difficulty: '', q: '' }), [page, setPage] = useState(1)
   const [data, setData] = useState({ items: [], total: 0 }), [stats, setStats] = useState(null), [loading, setLoading] = useState(true), [error, setError] = useState(''), [refresh, setRefresh] = useState(0)

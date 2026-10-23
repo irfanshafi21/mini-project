@@ -266,28 +266,52 @@ async function callProvider(prompt, units, slots, body, questionCount, signal, p
     return parseStructuredContent(content, provider, { doneReason: candidate?.finishReason === 'MAX_TOKENS' ? 'length' : undefined });
   }
   const model = process.env.GROQ_MODEL;
-  const key = process.env.GROQ_API_KEY;
-  if (!key) throw new HttpError(503, 'Groq is selected but GROQ_API_KEY is not configured in backend/.env.');
+  const keys = [...new Set([
+    process.env.GROQ_API_KEY,
+    process.env.GROQ_API_KEY_FALLBACK_1,
+    process.env.GROQ_API_KEY_FALLBACK_2,
+  ].map(key => String(key || '').trim()).filter(Boolean))];
+  if (!keys.length) throw new HttpError(503, 'Groq is selected but no Groq API key is configured in backend/.env.');
   if (!model) throw new HttpError(503, 'Groq is selected but GROQ_MODEL is not configured in backend/.env.');
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST', signal,
-    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: 'You are an exacting university examiner and subject-matter expert. Use original GATE-like precision and technical rigor as a quality reference, never copy past questions. Use only supplied syllabus evidence; state sufficient assumptions and data for every solvable stem. Match the assigned Bloom operation and exact difficulty. Return only schema-valid question data. Never claim certainty when the syllabus lacks enough information.' },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.2,
-      reasoning_effort: 'low',
-      max_completion_tokens: Math.min(16000, 2400 + questionCount * 320),
-      response_format: { type: 'json_schema', json_schema: { name: 'question_paper', strict: true, schema: schemaFor(units, slots, body) } },
-    }),
+  const requestBody = JSON.stringify({
+    model,
+    messages: [
+      { role: 'system', content: 'You are an exacting university examiner and subject-matter expert. Use original GATE-like precision and technical rigor as a quality reference, never copy past questions. Use only supplied syllabus evidence; state sufficient assumptions and data for every solvable stem. Match the assigned Bloom operation and exact difficulty. Return only schema-valid question data. Never claim certainty when the syllabus lacks enough information.' },
+      { role: 'user', content: prompt },
+    ],
+    temperature: 0.2,
+    reasoning_effort: 'low',
+    max_completion_tokens: Math.min(16000, 2400 + questionCount * 320),
+    response_format: { type: 'json_schema', json_schema: { name: 'question_paper', strict: true, schema: schemaFor(units, slots, body) } },
   });
-  const data = await response.json().catch(() => ({}));
+  let response, data = {}, lastNetworkError = false;
+  const failedStatuses = [];
+  for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
+    try {
+      response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST', signal,
+        headers: { Authorization: `Bearer ${keys[keyIndex]}`, 'Content-Type': 'application/json' },
+        body: requestBody,
+      });
+      lastNetworkError = false;
+    } catch (error) {
+      if (error.name === 'AbortError' || error.name === 'TimeoutError') throw error;
+      lastNetworkError = true;
+      console.error('[Groq API network error]', JSON.stringify({ keySlot: keyIndex + 1 }));
+      if (keyIndex + 1 < keys.length) continue;
+      throw new HttpError(503, 'Could not connect to Groq using the configured API keys. Check the network and try again.');
+    }
+    data = await response.json().catch(() => ({}));
+    if (response.ok) break;
+    failedStatuses.push(response.status);
+    console.error('[Groq API error]', JSON.stringify({ keySlot: keyIndex + 1, status: response.status }));
+    const retryable = response.status === 401 || response.status === 403 || response.status === 429 || response.status >= 500;
+    if (!retryable || keyIndex + 1 === keys.length) break;
+  }
+  if (lastNetworkError) throw new HttpError(503, 'Could not connect to Groq using the configured API keys. Check the network and try again.');
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) throw new HttpError(502, 'Groq rejected the configured API key. Check backend/.env and restart the backend.');
-    if (response.status === 429) throw new HttpError(503, 'Groq rate limit reached. Wait briefly and try again.');
+    if (failedStatuses.length && failedStatuses.every(status => status === 401 || status === 403)) throw new HttpError(502, 'Groq rejected the configured API key(s). Check the Groq keys in backend/.env and restart the backend.');
+    if (response.status === 429) throw new HttpError(503, 'Groq rate limit reached for the configured API keys. Check the project quota and try again later.');
     if (response.status === 400) {
       const reason = String(data.error?.message || '').replace(/\s+/g, ' ').slice(0, 240);
       throw new HttpError(502, `Groq rejected the generation request for model ${model}.${reason ? ` ${reason}` : ' Check model support and generation limits.'}`);

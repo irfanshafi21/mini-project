@@ -56,6 +56,50 @@ test('Groq structured generation maps questions to the requested syllabus slot',
   }
 });
 
+test('Groq falls back through configured keys after quota or authentication failures', async () => {
+  const oldFetch=globalThis.fetch,oldKey=process.env.GROQ_API_KEY,oldFallback1=process.env.GROQ_API_KEY_FALLBACK_1,oldFallback2=process.env.GROQ_API_KEY_FALLBACK_2,oldModel=process.env.GROQ_MODEL;
+  process.env.GROQ_API_KEY='primary-test-key';process.env.GROQ_API_KEY_FALLBACK_1='fallback-test-key-1';process.env.GROQ_API_KEY_FALLBACK_2='fallback-test-key-2';process.env.GROQ_MODEL='openai/gpt-oss-20b';
+  const usedKeys=[];let calls=0;
+  globalThis.fetch=async(_url,init)=>{
+    usedKeys.push(init.headers.Authorization);calls++;
+    if(calls===1)return {ok:false,status:429,json:async()=>({error:{message:'quota'}})};
+    if(calls===2)return {ok:false,status:403,json:async()=>({error:{message:'invalid key'}})};
+    return {ok:true,json:async()=>({choices:[{message:{content:JSON.stringify(valid)}}]})};
+  };
+  try {
+    const result=await generateGroqQuestions({body,text:`Unit 1: ${topic}.`,slots});
+    assert.equal(result.length,1);
+    assert.deepEqual(usedKeys,['Bearer primary-test-key','Bearer fallback-test-key-1','Bearer fallback-test-key-2']);
+  } finally {
+    globalThis.fetch=oldFetch;
+    if(oldKey===undefined)delete process.env.GROQ_API_KEY;else process.env.GROQ_API_KEY=oldKey;
+    if(oldFallback1===undefined)delete process.env.GROQ_API_KEY_FALLBACK_1;else process.env.GROQ_API_KEY_FALLBACK_1=oldFallback1;
+    if(oldFallback2===undefined)delete process.env.GROQ_API_KEY_FALLBACK_2;else process.env.GROQ_API_KEY_FALLBACK_2=oldFallback2;
+    if(oldModel===undefined)delete process.env.GROQ_MODEL;else process.env.GROQ_MODEL=oldModel;
+  }
+});
+
+test('Groq reports one safe quota message after every configured key is exhausted', async () => {
+  const oldFetch=globalThis.fetch,oldKey=process.env.GROQ_API_KEY,oldFallback1=process.env.GROQ_API_KEY_FALLBACK_1,oldFallback2=process.env.GROQ_API_KEY_FALLBACK_2,oldModel=process.env.GROQ_MODEL;
+  process.env.GROQ_API_KEY='primary-secret-test';process.env.GROQ_API_KEY_FALLBACK_1='fallback-secret-test';process.env.GROQ_API_KEY_FALLBACK_2='';process.env.GROQ_MODEL='openai/gpt-oss-20b';
+  let calls=0;
+  globalThis.fetch=async()=>{calls++;return {ok:false,status:429,json:async()=>({error:{message:'private provider detail'}})}};
+  try {
+    await assert.rejects(generateGroqQuestions({body,text:`Unit 1: ${topic}.`,slots}),error=>{
+      assert.match(error.message,/rate limit reached for the configured API keys/i);
+      assert.doesNotMatch(error.message,/primary-secret-test|fallback-secret-test|private provider detail/);
+      return true;
+    });
+    assert.equal(calls,2);
+  } finally {
+    globalThis.fetch=oldFetch;
+    if(oldKey===undefined)delete process.env.GROQ_API_KEY;else process.env.GROQ_API_KEY=oldKey;
+    if(oldFallback1===undefined)delete process.env.GROQ_API_KEY_FALLBACK_1;else process.env.GROQ_API_KEY_FALLBACK_1=oldFallback1;
+    if(oldFallback2===undefined)delete process.env.GROQ_API_KEY_FALLBACK_2;else process.env.GROQ_API_KEY_FALLBACK_2=oldFallback2;
+    if(oldModel===undefined)delete process.env.GROQ_MODEL;else process.env.GROQ_MODEL=oldModel;
+  }
+});
+
 test('optional printable ML dataset or diagram material is included with the stem', async () => {
   const oldFetch = globalThis.fetch, oldKey = process.env.GROQ_API_KEY, oldModel = process.env.GROQ_MODEL;
   process.env.GROQ_API_KEY = 'unit-test-key'; process.env.GROQ_MODEL = 'openai/gpt-oss-20b';

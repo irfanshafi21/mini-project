@@ -624,6 +624,8 @@ GEMINI_MODEL=gemini-3.8-flash
 
 Replace the sample database password and primary API key locally. If you have additional Gemini keys, enter them in `GEMINI_API_KEY_FALLBACK_1` and `GEMINI_API_KEY_FALLBACK_2`; leave unused fallback values blank. On authentication, quota/rate-limit, network, or provider-server errors, the backend tries the configured keys in order. The same model and prompt are used for every key. Gemini rate limits are project-scoped, so multiple keys from one Google project do not increase the same project rate limit; see the [official rate-limit documentation](https://ai.google.dev/gemini-api/docs/rate-limits). URL-encode special characters in the database URL. Keep `.env` private: never commit it or embed API keys in frontend code or an installer. Then run:
 
+To use Groq instead, set `AI_PROVIDER=groq`, add `GROQ_MODEL` and configure `GROQ_API_KEY`, `GROQ_API_KEY_FALLBACK_1` and `GROQ_API_KEY_FALLBACK_2`. Groq tries these keys one at a time in order and switches after authentication, quota/rate-limit, network or provider-server errors; it does not send duplicate requests simultaneously. Keys from the same Groq project may share quota limits, so fallback helps most when keys have independent quota or one key is invalid/temporarily unavailable. If all keys are unavailable, the app returns one clear provider error. Restart the backend after changing `.env`.
+
 ```powershell
 npm.cmd run db:init
 npm.cmd start

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { generateSyllabusPaper, planPaper, syllabusBody } from '../src/syllabusGenerator.js';
-import { extractSyllabusText } from '../src/localModel.js';
+import { extractSyllabusText, transcribeSyllabusVisual } from '../src/localModel.js';
 // Keep these broad syllabus tests deterministic and offline. Provider
 // behavior is covered by groqQuestionGenerator.test.js with mocked requests.
 process.env.AI_PROVIDER = 'local';
@@ -42,6 +42,21 @@ test('reads a syllabus photo through Gemini and validates its image bytes', asyn
   }
 });
 
+test('Gemini can transcribe scanned PDF content as well as image uploads', async () => {
+  const oldFetch=globalThis.fetch,oldKey=process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY='test-key';
+  let mimeType;
+  globalThis.fetch=async(_url,options)=>{mimeType=JSON.parse(options.body).contents[0].parts[1].inlineData.mimeType;return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:'Unit 1: Digital logic, Boolean algebra, logic gates and combinational circuits.'}]}}]})}};
+  try {
+    const text=await transcribeSyllabusVisual(Buffer.from('%PDF-scanned').toString('base64'),'application/pdf');
+    assert.match(text,/Boolean algebra/);
+    assert.equal(mimeType,'application/pdf');
+  } finally {
+    globalThis.fetch=oldFetch;
+    if(oldKey===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=oldKey;
+  }
+});
+
 test('reports actionable messages when syllabus extraction returns too little text', async () => {
   const oldFetch=globalThis.fetch,oldKey=process.env.GEMINI_API_KEY;
   process.env.GEMINI_API_KEY='unit-test-key';
@@ -50,7 +65,7 @@ test('reports actionable messages when syllabus extraction returns too little te
     const png=Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),Buffer.from('photo-data')]);
     await assert.rejects(extractSyllabusText({mimeType:'image/png',data:png.toString('base64')}),/could not read enough syllabus text.*clear, well-lit image/i);
     await assert.rejects(extractSyllabusText({...body,data:Buffer.from('Unit 1: AI').toString('base64')}),/TXT file contains only 10 readable characters/i);
-    await assert.rejects(extractSyllabusText({...body,mimeType:'application/pdf',data:Buffer.from('%PDF-1.7').toString('base64')}),/Could not extract syllabus text from this PDF.*If it is scanned/i);
+    await assert.rejects(extractSyllabusText({...body,mimeType:'application/pdf',data:Buffer.from('%PDF-1.7').toString('base64')}),/No readable syllabus text could be recovered from this PDF.*scanned-page reading/i);
   } finally {
     globalThis.fetch=oldFetch;
     if(oldKey===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=oldKey;

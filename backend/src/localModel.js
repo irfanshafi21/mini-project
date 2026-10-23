@@ -22,6 +22,43 @@ export function classifyTopic(text) {
   if(settings.bigrams)for(let i=1;i<words.length;i++)for(let j=0;j<weight;j++)features.push('@'+words[i-1]+' '+words[i]);
   return model.labels.map(label=>({label,score:model.logPrior[label]+features.reduce((n,w)=>n+(model.logLikelihood[label][w]||0),0)})).sort((a,b)=>b.score-a.score)[0].label;
 }
+export async function transcribeSyllabusVisual(data, mimeType) {
+  const keys = [...new Set([
+    process.env.GEMINI_API_KEY,
+    process.env.GEMINI_API_KEY_FALLBACK_1,
+    process.env.GEMINI_API_KEY_FALLBACK_2,
+  ].map(key => String(key || '').trim()).filter(Boolean))];
+  const modelName = (process.env.GEMINI_MODEL || 'gemini-3.8-flash').replace(/^models\//, '');
+  if (!keys.length) throw new HttpError(503, 'Reading a scanned syllabus requires a Gemini API key in backend/.env.');
+  if (!/^[A-Za-z0-9._-]+$/.test(modelName)) throw new HttpError(503, 'GEMINI_MODEL contains an invalid model name.');
+  let response, result = {};
+  for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
+    try {
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': keys[keyIndex] },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [
+            { text: 'Read this syllabus document and transcribe only its academic syllabus content, preserving unit headings, topic names, technical terms, equations and values. Exclude book citations, authors, publisher details, page numbers, headers and footers. Do not invent or summarize content. Return plain text only.' },
+            { inlineData: { mimeType, data } },
+          ] }],
+          generationConfig: { temperature: 0, maxOutputTokens: 8192 },
+        }),
+      });
+    } catch {
+      if (keyIndex + 1 === keys.length) throw new HttpError(503, 'Could not connect to Gemini to read the scanned syllabus. Check the network and try again.');
+      continue;
+    }
+    result = await response.json().catch(() => ({}));
+    if (response.ok) break;
+    const retryable = response.status === 401 || response.status === 403 || response.status === 429 || response.status >= 500;
+    if (!retryable || keyIndex + 1 === keys.length) {
+      if (response.status === 429) throw new HttpError(503, 'Gemini quota or rate limit was reached while reading the scanned syllabus. Try again later.');
+      throw new HttpError(502, `Gemini could not read the scanned syllabus (HTTP ${response.status}).`);
+    }
+  }
+  return result.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('\n') || '';
+}
 export async function extractSyllabusText(body) {
   const bytes = Buffer.from(body.data, 'base64');
   if (!bytes.length || bytes.length > 5*1024*1024 || bytes.toString('base64') !== body.data) throw new HttpError(400,'Upload a valid PDF, TXT or syllabus image up to 5 MB.');
@@ -31,8 +68,9 @@ export async function extractSyllabusText(body) {
     const { PDFParse } = await import('pdf-parse');
     const parser = new PDFParse({data:new Uint8Array(bytes)});
     try { text = (await parser.getText()).text; }
-    catch { throw new HttpError(400,'Could not extract syllabus text from this PDF. If it is scanned, upload a clear page photo (JPG, PNG or WebP); otherwise use a readable PDF/TXT.'); }
+    catch { text = ''; }
     finally { await parser.destroy(); }
+    if (text.trim().length < 30) text = await transcribeSyllabusVisual(body.data, body.mimeType);
   } else if (body.mimeType === 'text/plain') text=bytes.toString('utf8');
   else if (['image/jpeg', 'image/png', 'image/webp'].includes(body.mimeType)) {
     const validImage = body.mimeType === 'image/jpeg'
@@ -41,46 +79,12 @@ export async function extractSyllabusText(body) {
         ? bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
         : bytes.subarray(0, 4).toString() === 'RIFF' && bytes.subarray(8, 12).toString() === 'WEBP';
     if (!validImage) throw new HttpError(400, 'The uploaded file does not match its image type. Choose a JPEG, PNG or WebP photo.');
-    const keys = [...new Set([
-      process.env.GEMINI_API_KEY,
-      process.env.GEMINI_API_KEY_FALLBACK_1,
-      process.env.GEMINI_API_KEY_FALLBACK_2,
-    ].map(key => String(key || '').trim()).filter(Boolean))];
-    const modelName = (process.env.GEMINI_MODEL || 'gemini-3.8-flash').replace(/^models\//, '');
-    if (!keys.length) throw new HttpError(503, 'Photo syllabus reading requires a Gemini API key in backend/.env.');
-    if (!/^[A-Za-z0-9._-]+$/.test(modelName)) throw new HttpError(503, 'GEMINI_MODEL contains an invalid model name.');
-    let response, data = {};
-    for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
-      try {
-        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': keys[keyIndex] },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [
-              { text: 'Read this uploaded syllabus image and transcribe only its academic syllabus content, preserving unit headings, topic names, technical terms, equations and values. Exclude book citations, authors, publisher details, page numbers, headers and footers. Do not invent, summarize or add content. Return plain text only.' },
-              { inlineData: { mimeType: body.mimeType, data: body.data } },
-            ] }],
-            generationConfig: { temperature: 0, maxOutputTokens: 8192 },
-          }),
-        });
-      } catch {
-        if (keyIndex + 1 === keys.length) throw new HttpError(503, 'Could not connect to Gemini to read the syllabus photo. Check the network and try again.');
-        continue;
-      }
-      data = await response.json().catch(() => ({}));
-      if (response.ok) break;
-      const retryable = response.status === 401 || response.status === 403 || response.status === 429 || response.status >= 500;
-      if (!retryable || keyIndex + 1 === keys.length) {
-        if (response.status === 429) throw new HttpError(503, 'Gemini quota or rate limit was reached while reading the syllabus photo. Try again later.');
-        throw new HttpError(502, `Gemini could not read the syllabus photo (HTTP ${response.status}).`);
-      }
-    }
-    text = data.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('\n') || '';
+    text = await transcribeSyllabusVisual(body.data, body.mimeType);
   }
   else throw new HttpError(400, 'Upload a valid PDF, TXT or syllabus image up to 5 MB.');
   const readableLength=text.trim().length;
   if(readableLength<30) {
-    if(body.mimeType === 'application/pdf') throw new HttpError(400,'No readable syllabus text was extracted from this PDF. It may be scanned; upload a clear page photo (JPG, PNG or WebP) or a text-based PDF.');
+    if(body.mimeType === 'application/pdf') throw new HttpError(400,'No readable syllabus text could be recovered from this PDF, even after scanned-page reading. Try a clearer PDF or upload clear page photos (JPG, PNG or WebP).');
     if(body.mimeType === 'text/plain') throw new HttpError(400,`This TXT file contains only ${readableLength} readable characters. Add the syllabus topic lines and try again (minimum 30 characters).`);
     if(body.mimeType.startsWith('image/')) throw new HttpError(400,'Gemini could not read enough syllabus text from this photo. Upload a clear, well-lit image with the syllabus text filling the frame, or use a text-based PDF/TXT.');
     throw new HttpError(400,'No readable syllabus text was found. Upload a text-based PDF/TXT or a clear syllabus photo.');

@@ -355,7 +355,7 @@ For syllabus generation, Bloom level controls both the cognitive task and exact 
 
 ### 1. Extract the syllabus
 
-The backend reads text from a PDF or TXT file, or asks Gemini to transcribe a syllabus photo (JPEG, PNG or WebP). It removes common headings and page formatting, and extracts topics with Unit 1–5 or Roman-numeral unit headings. Scanned image PDFs need OCR before upload; upload a clear photo of the page when OCR is needed. Each uploaded file is limited to **5 MB**, and extracted text must contain 30–100,000 characters. Image transcription uses the configured Gemini API key before the regular question-generation request.
+The backend reads text from a PDF or TXT file, or asks Gemini to transcribe syllabus photos (JPEG, PNG or WebP). If a PDF has little or no extractable text, Gemini reads the scanned PDF pages directly. It removes common headings and page formatting, and extracts topics with Unit 1–5 or Roman-numeral unit headings. Clear, high-resolution scans improve transcription. Each uploaded file is limited to **5 MB**, and extracted text must contain 30–100,000 characters. Visual transcription uses the configured Gemini API key before the regular question-generation request.
 
 ### 2. Classify topics with trained ML
 
@@ -1011,7 +1011,7 @@ Python trainers and seed datasets are in `backend/ml/`. The topic and Bloom clas
 | Automatic classifier retraining | Pseudo-labels are not independent faculty validation. |
 | Bloom allocation and opening checks | Structural/task rules do not mathematically guarantee cognitive or academic correctness. |
 | Numerical factories | Cover supported operations, not arbitrary symbolic mathematics. |
-| PDF/TXT extraction | Scanned image PDFs need OCR first. |
+| PDF/TXT extraction | Scanned PDFs use Gemini transcription; clear, high-resolution pages improve OCR quality. |
 | Repetition policy | Known signatures do not detect every possible semantic paraphrase. |
 | Saved-paper retrieval | Historical unsaved papers cannot be reconstructed automatically. |
 | Responsive academic UI | No application authentication/role-permission system is included. |
@@ -1056,7 +1056,7 @@ Server credentials have not been requested or configured here. Laptop operation 
 | `client password must be a string` | Create `backend/.env`, confirm `DATABASE_URL` includes the PostgreSQL password, and restart the backend. |
 | Missing `dotenv`, `cors` or another package | Run `npm.cmd install` successfully inside `backend`. |
 | Missing tables or partitions | Run `npm.cmd run db:init` using the correct database connection. |
-| No syllabus text found | Use a text-based PDF/TXT with topic lines, or upload a clear JPEG/PNG/WebP syllabus photo. Scanned PDFs need OCR. |
+| No syllabus text found | Use a text-based PDF/TXT with topic lines, or upload a clear JPEG/PNG/WebP photo. For scanned PDFs, check page clarity and that the file contains readable syllabus topics. |
 | Not enough fresh questions | Add topics/bank content, reduce the requested count or adjust mark/K allocation. |
 | K counts do not match | Sum the six K fields to exactly the question count for each mark value. |
 | Paper saved but bank empty | Click **Add to question bank** and select a registered subject. |

@@ -2150,3 +2150,82 @@ textarea { resize: vertical; }
 @media print {
   .archive-overview, .stored-paper-overview, .subject-directory-banner { display: none !important; }
 }
+
+/* Final alignment pass for stored-paper detail and subject pages. */
+@media screen {
+  .paper-preview[aria-label="Retrieved question paper"] > .section-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 17px;
+    margin-bottom: 18px;
+    padding-bottom: 20px;
+  }
+  .paper-preview[aria-label="Retrieved question paper"] > .section-heading > div:first-child {
+    width: 100%;
+    max-width: 1050px;
+  }
+  .paper-preview[aria-label="Retrieved question paper"] > .section-heading h2 {
+    max-width: 100%;
+    margin: 7px 0 4px;
+    overflow-wrap: anywhere;
+    letter-spacing: -.45px;
+  }
+  .paper-preview[aria-label="Retrieved question paper"] > .section-heading .muted { margin-top: 7px; }
+  .paper-preview[aria-label="Retrieved question paper"] > .section-heading .preview-actions {
+    display: flex;
+    width: 100%;
+    min-height: 66px;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 9px;
+    padding: 10px 12px;
+    border: 1px solid #dce6ed;
+    border-radius: 14px;
+    background: linear-gradient(100deg, #f7fafc, #fff);
+  }
+  .paper-preview[aria-label="Retrieved question paper"] .preview-actions > * { flex: 0 0 auto; }
+  .paper-preview[aria-label="Retrieved question paper"] .preview-actions > button,
+  .paper-preview[aria-label="Retrieved question paper"] .preview-actions .pdf-download-control > button { min-height: 44px; border-radius: 10px; }
+  .paper-preview[aria-label="Retrieved question paper"] .preview-actions .danger-text { margin-left: auto; }
+  .paper-preview[aria-label="Retrieved question paper"] .learning-review,
+  .paper-preview[aria-label="Retrieved question paper"] .stored-paper-overview,
+  .paper-preview[aria-label="Retrieved question paper"] .paper-sheet { width: min(100%, 900px); max-width: 900px; margin-right: auto; margin-left: auto; }
+  .paper-preview[aria-label="Retrieved question paper"] .learning-review { margin-top: 0; margin-bottom: 12px; padding: 0 2px; }
+  .paper-preview[aria-label="Retrieved question paper"] .learning-review p { margin: 0; color: #6a8192; font-size: 11px; line-height: 1.6; }
+  .paper-preview[aria-label="Retrieved question paper"] .stored-paper-overview { grid-template-columns: minmax(145px, .7fr) minmax(210px, .9fr) minmax(260px, 1.4fr); margin-top: 12px; padding: 17px 18px; }
+  .paper-preview[aria-label="Retrieved question paper"] .paper-sheet { margin-top: 18px; }
+  .subject-directory { width: 100%; max-width: 1180px; margin-inline: auto; }
+  .subject-directory-banner { min-height: 166px; padding: clamp(27px, 3.5vw, 40px); }
+  .subject-directory-banner > div:first-child { flex: 1; }
+  .directory-stats > div { min-width: 132px; min-height: 78px; align-content: center; }
+  .subject-directory .subject-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 265px), 1fr)); align-items: stretch; }
+  .subject-directory .subject-card { display: flex; width: 100%; min-height: 250px; flex-direction: column; align-items: flex-start; text-align: left; }
+  .subject-directory .subject-card .subject-card-label { margin-top: 5px; }
+  .subject-directory .subject-card h2 { width: 100%; min-height: 2.8em; margin-top: 12px; }
+  .subject-directory .subject-card p { min-height: 1.6em; }
+  .subject-overview { width: 100%; max-width: 1180px; margin-inline: auto; }
+  .subject-overview > .panel,
+  .subject-overview > section.panel { border: 1px solid #dce6ed; border-radius: 16px; background: linear-gradient(145deg, #fff, #fbfdff); box-shadow: 0 7px 22px #183b5608; }
+  .subject-overview .subject-marks-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+  .subject-overview .subject-mark-count { min-height: 120px; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 16px; border: 1px solid #dce6ed; border-radius: 12px; background: #f8fbfd; }
+  .subject-overview .subject-mark-count strong { color: #286b93; font-size: 26px; font-variant-numeric: tabular-nums; }
+  .subject-overview .subject-mark-count > span:last-child { color: #5f788b; font-size: 11px; }
+}
+
+@media screen and (max-width: 760px) {
+  .paper-preview[aria-label="Retrieved question paper"] > .section-heading .preview-actions { justify-content: flex-start; }
+  .paper-preview[aria-label="Retrieved question paper"] .preview-actions .danger-text { margin-left: 0; }
+  .paper-preview[aria-label="Retrieved question paper"] .stored-paper-overview { grid-template-columns: 1fr; }
+  .subject-directory-banner { min-height: 0; }
+  .subject-overview .subject-marks-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media screen and (max-width: 480px) {
+  .paper-preview[aria-label="Retrieved question paper"] > .section-heading .preview-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .paper-preview[aria-label="Retrieved question paper"] .preview-actions > *,
+  .paper-preview[aria-label="Retrieved question paper"] .preview-actions .pdf-download-control { width: 100%; min-width: 0; }
+  .paper-preview[aria-label="Retrieved question paper"] .preview-actions .pdf-download-control > button { width: 100%; min-width: 0; }
+  .subject-overview .subject-marks-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .subject-overview .subject-mark-count { min-height: 100px; padding: 12px; }
+}

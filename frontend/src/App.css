@@ -1750,3 +1750,81 @@ textarea { resize: vertical; }
   .pdf-download-error { flex: 1 0 100%; margin: 2px 0 0; padding: 11px 14px; border: 1px solid #efd8c8; border-radius: 10px; background: #fff5ef; color: #86563a; font-size: 12px; line-height: 1.55; }
   .preview-actions > button:disabled { cursor: wait; opacity: .72; }
 }
+
+/* A clear, accessible upload surface for syllabus files and page photos. */
+@media screen {
+  .upload-zone {
+    min-height: 226px;
+    margin: 24px 0 12px;
+    padding: 26px 24px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "icon browse" "copy browse" "formats browse" "limit browse";
+    align-content: center;
+    justify-content: stretch;
+    justify-items: start;
+    gap: 10px 24px;
+    border: 1.5px dashed #a9c7da;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #f5faff 0%, #fff 72%);
+    text-align: left;
+    transition: border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .18s ease;
+  }
+  .upload-zone:hover, .upload-zone:focus-within {
+    border-color: #4388af;
+    background: linear-gradient(135deg, #edf6fc 0%, #fff 75%);
+    box-shadow: 0 8px 24px #286f9b12, inset 0 0 0 1px #d4e5f0;
+  }
+  .upload-zone.dragging {
+    border-color: #2779a8;
+    background: #eaf5fc;
+    box-shadow: 0 0 0 4px #3b87b51c;
+    transform: translateY(-1px);
+  }
+  .upload-zone.has-file { border-style: solid; background: linear-gradient(135deg, #f0f7fb, #fff); }
+  .upload-icon {
+    grid-area: icon;
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #d6e7f1;
+    border-radius: 13px;
+    background: #eaf4fa;
+    color: #2f779e;
+  }
+  .upload-icon svg { display: block; width: 25px; height: 25px; }
+  .upload-copy { grid-area: copy; display: grid; gap: 4px; max-width: 100%; }
+  .upload-copy strong { color: #244e6b; font-size: 16px; line-height: 1.4; }
+  .upload-copy > span { max-width: 100%; color: #668095; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+  .upload-formats { grid-area: formats; display: flex; flex-wrap: wrap; gap: 7px; }
+  .upload-formats > span { padding: 4px 9px; border: 1px solid #d9e6ee; border-radius: 999px; background: #fff; color: #52758d; font-size: 10px; font-weight: 700; letter-spacing: .35px; }
+  .upload-limit { grid-area: limit; color: #748a99; font-size: 11px; }
+  .upload-browse { grid-area: browse; align-self: center; justify-self: end; padding: 12px 17px; border: 1px solid #cbdfea; border-radius: 11px; background: #fff; color: #286f96; font-size: 13px; font-weight: 700; box-shadow: 0 3px 9px #183b560c; transition: background .18s ease, color .18s ease, border-color .18s ease; }
+  .upload-zone:hover .upload-browse, .upload-zone:focus-within .upload-browse { border-color: #367fa7; background: #2f789f; color: #fff; }
+  .upload-zone input { z-index: 1; }
+  .syllabus-file-preview {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 0 0 20px;
+    padding: 12px 15px;
+    border: 1px solid #d8e6ee;
+    border-radius: 13px;
+    background: #f8fbfd;
+  }
+  .syllabus-file-preview img, .syllabus-file-type { width: 54px; height: 54px; flex: 0 0 54px; border: 1px solid #d7e5ed; border-radius: 10px; }
+  .syllabus-file-preview img { object-fit: cover; }
+  .syllabus-file-type { display: grid; place-items: center; background: #eaf3f9; color: #2f739c; font-size: 11px; font-weight: 800; letter-spacing: .5px; }
+  .syllabus-file-info { display: grid; flex: 1; min-width: 0; gap: 4px; }
+  .syllabus-file-info strong { color: #345872; font-size: 13px; overflow-wrap: anywhere; }
+  .syllabus-file-info > span { color: #748a99; font-size: 11px; }
+  .syllabus-file-preview .text-button { flex: 0 0 auto; }
+}
+
+@media screen and (max-width: 560px) {
+  .upload-zone { min-height: 0; padding: 20px 17px; grid-template-columns: 1fr; grid-template-areas: "icon" "copy" "formats" "limit" "browse"; gap: 9px; }
+  .upload-browse { justify-self: stretch; text-align: center; margin-top: 4px; }
+  .syllabus-file-preview { align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+  .syllabus-file-preview .text-button { margin-left: auto; }
+}

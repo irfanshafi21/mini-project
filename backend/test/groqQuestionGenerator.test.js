@@ -40,10 +40,14 @@ test('Groq structured generation maps questions to the requested syllabus slot',
     assert.ok(request.messages[1].content.includes('Never write phrases'));
     assert.match(request.messages[1].content, /small synthetic dataset/);
     assert.match(request.messages[1].content, /labelled ASCII diagram/);
+    assert.match(request.messages[1].content, /For K5, require a substantive judgment/);
+    assert.match(request.messages[1].content, /For K6, require a coherent original design/);
+    assert.match(request.messages[1].content, /never an entire unit or umbrella heading/);
     assert.equal(typeof request.response_format.json_schema.schema.properties.questions.items.properties.supportingMaterial, 'object');
     assert.equal('options' in request.response_format.json_schema.schema.properties.questions.items.properties, false);
     assert.equal('answer' in request.response_format.json_schema.schema.properties.questions.items.properties, false);
     assert.equal(request.response_format.json_schema.schema.properties.questions.items.properties.openingVerb.type, 'string');
+    assert.equal(request.response_format.json_schema.schema.properties.questions.items.properties.questionCore.maxLength, 400);
     assert.equal('topic' in request.response_format.json_schema.schema.properties.questions.items.properties, false);
     assert.ok(request.messages[1].content.includes(`Unit 1: ${topic}`));
     assert.equal('solution' in request.response_format.json_schema.schema.properties.questions.items.properties, false);

@@ -24,7 +24,7 @@ export function classifyTopic(text) {
 }
 export async function extractSyllabusText(body) {
   const bytes = Buffer.from(body.data, 'base64');
-  if (!bytes.length || bytes.length > 5*1024*1024 || bytes.toString('base64') !== body.data) throw new HttpError(400,'Upload a valid PDF or TXT syllabus up to 5 MB.');
+  if (!bytes.length || bytes.length > 5*1024*1024 || bytes.toString('base64') !== body.data) throw new HttpError(400,'Upload a valid PDF, TXT or syllabus image up to 5 MB.');
   let text;
   if (body.mimeType === 'application/pdf') {
     if (bytes.subarray(0,5).toString() !== '%PDF-') throw new HttpError(400,'The uploaded file is not a PDF.');
@@ -33,7 +33,51 @@ export async function extractSyllabusText(body) {
     try { text = (await parser.getText()).text; }
     catch { throw new HttpError(400,'Cannot read this PDF. Use a text-based PDF or TXT syllabus.'); }
     finally { await parser.destroy(); }
-  } else text=bytes.toString('utf8');
+  } else if (body.mimeType === 'text/plain') text=bytes.toString('utf8');
+  else if (['image/jpeg', 'image/png', 'image/webp'].includes(body.mimeType)) {
+    const validImage = body.mimeType === 'image/jpeg'
+      ? bytes[0] === 0xff && bytes[1] === 0xd8 && bytes.at(-2) === 0xff && bytes.at(-1) === 0xd9
+      : body.mimeType === 'image/png'
+        ? bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+        : bytes.subarray(0, 4).toString() === 'RIFF' && bytes.subarray(8, 12).toString() === 'WEBP';
+    if (!validImage) throw new HttpError(400, 'The uploaded file does not match its image type. Choose a JPEG, PNG or WebP photo.');
+    const keys = [...new Set([
+      process.env.GEMINI_API_KEY,
+      process.env.GEMINI_API_KEY_FALLBACK_1,
+      process.env.GEMINI_API_KEY_FALLBACK_2,
+    ].map(key => String(key || '').trim()).filter(Boolean))];
+    const modelName = (process.env.GEMINI_MODEL || 'gemini-3.8-flash').replace(/^models\//, '');
+    if (!keys.length) throw new HttpError(503, 'Photo syllabus reading requires a Gemini API key in backend/.env.');
+    if (!/^[A-Za-z0-9._-]+$/.test(modelName)) throw new HttpError(503, 'GEMINI_MODEL contains an invalid model name.');
+    let response, data = {};
+    for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
+      try {
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': keys[keyIndex] },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [
+              { text: 'Read this uploaded syllabus image and transcribe only its academic syllabus content, preserving unit headings, topic names, technical terms, equations and values. Exclude book citations, authors, publisher details, page numbers, headers and footers. Do not invent, summarize or add content. Return plain text only.' },
+              { inlineData: { mimeType: body.mimeType, data: body.data } },
+            ] }],
+            generationConfig: { temperature: 0, maxOutputTokens: 8192 },
+          }),
+        });
+      } catch {
+        if (keyIndex + 1 === keys.length) throw new HttpError(503, 'Could not connect to Gemini to read the syllabus photo. Check the network and try again.');
+        continue;
+      }
+      data = await response.json().catch(() => ({}));
+      if (response.ok) break;
+      const retryable = response.status === 401 || response.status === 403 || response.status === 429 || response.status >= 500;
+      if (!retryable || keyIndex + 1 === keys.length) {
+        if (response.status === 429) throw new HttpError(503, 'Gemini quota or rate limit was reached while reading the syllabus photo. Try again later.');
+        throw new HttpError(502, `Gemini could not read the syllabus photo (HTTP ${response.status}).`);
+      }
+    }
+    text = data.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('\n') || '';
+  }
+  else throw new HttpError(400, 'Upload a valid PDF, TXT or syllabus image up to 5 MB.');
   if(text.trim().length<30 || text.length>100000) throw new HttpError(400,'Upload readable syllabus text between 30 and 100,000 characters.');
   return text;
 }

@@ -65,7 +65,7 @@ A college examination workspace built with **React + Vite**, **Node.js + Express
 | **Subjects** | Register subjects explicitly, browse their questions and view question counts. Each registered subject has its own PostgreSQL partition. |
 | **Choose questions yourself** | Select the exact bank questions to include in a paper. |
 | **Generate from question bank** | Select saved questions automatically using marks, units, difficulty and Bloom allocation. |
-| **Upload a syllabus** | Upload a readable PDF or TXT file. Local BM25 retrieval finds relevant syllabus evidence and Gemini drafts structured questions through the backend. |
+| **Upload a syllabus** | Upload a readable PDF, TXT file, or syllabus photo (JPEG, PNG or WebP). Gemini reads photo text; local BM25 retrieval finds relevant syllabus evidence and Gemini drafts structured questions through the backend. |
 | **Stored papers** | Retrieve saved paper snapshots, edit their contents and download them again. |
 | **Exports** | Download a PDF or TXT paper, or print from the browser. Student exports omit teacher answer fields. |
 
@@ -355,7 +355,7 @@ For syllabus generation, Bloom level controls both the cognitive task and exact 
 
 ### 1. Extract the syllabus
 
-The backend reads text from a PDF or TXT file, removes common headings and page formatting, and extracts topics with Unit 1–5 or Roman-numeral unit headings. Scanned image PDFs need OCR before upload. The file limit is **5 MB**, and extracted text must contain 30–100,000 characters.
+The backend reads text from a PDF or TXT file, or asks Gemini to transcribe a syllabus photo (JPEG, PNG or WebP). It removes common headings and page formatting, and extracts topics with Unit 1–5 or Roman-numeral unit headings. Scanned image PDFs need OCR before upload; upload a clear photo of the page when OCR is needed. Each uploaded file is limited to **5 MB**, and extracted text must contain 30–100,000 characters. Image transcription uses the configured Gemini API key before the regular question-generation request.
 
 ### 2. Classify topics with trained ML
 
@@ -975,7 +975,7 @@ SELECT status, report FROM model_training_runs ORDER BY id DESC;
 | `GET /api/subjects/:name/overview` | Subject overview |
 | `POST /api/papers/generate` | Automatic bank paper |
 | `POST /api/papers/manual` | Manual selection paper |
-| `POST /api/papers/from-syllabus` | Fully local syllabus generation |
+| `POST /api/papers/from-syllabus` | Generate from PDF/TXT syllabus content or a syllabus photo |
 | `POST /api/papers/save-syllabus` | Explicitly add generated questions to bank |
 | `GET /api/papers/saved` | Search/list saved papers |
 | `GET /api/papers/saved/:id` | Retrieve a saved paper |
@@ -1056,7 +1056,7 @@ Server credentials have not been requested or configured here. Laptop operation 
 | `client password must be a string` | Create `backend/.env`, confirm `DATABASE_URL` includes the PostgreSQL password, and restart the backend. |
 | Missing `dotenv`, `cors` or another package | Run `npm.cmd install` successfully inside `backend`. |
 | Missing tables or partitions | Run `npm.cmd run db:init` using the correct database connection. |
-| No syllabus text found | Use a text-based PDF/TXT with topic lines; scanned PDFs need OCR. |
+| No syllabus text found | Use a text-based PDF/TXT with topic lines, or upload a clear JPEG/PNG/WebP syllabus photo. Scanned PDFs need OCR. |
 | Not enough fresh questions | Add topics/bank content, reduce the requested count or adjust mark/K allocation. |
 | K counts do not match | Sum the six K fields to exactly the question count for each mark value. |
 | Paper saved but bank empty | Click **Add to question bank** and select a registered subject. |

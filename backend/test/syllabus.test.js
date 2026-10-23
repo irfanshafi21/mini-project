@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { generateSyllabusPaper, planPaper, syllabusBody } from '../src/syllabusGenerator.js';
+import { extractSyllabusText } from '../src/localModel.js';
 // Keep these broad syllabus tests deterministic and offline. Provider
 // behavior is covered by groqQuestionGenerator.test.js with mocked requests.
 process.env.AI_PROVIDER = 'local';
@@ -20,6 +21,24 @@ test('validates upload metadata, marks and split', () => {
   }
   for (const change of [{ mimeType: 'application/exe' }, { totalMarks: 2 }, { count: 51 }, { split: { easy: 50, medium: 50, hard: 50 } }, { data: 'bad!' }, {units:[]}, {units:[0]}, {questionStyle:'UNSUPPORTED'}]) {
     assert.equal(syllabusBody.safeParse({ ...body, ...change }).success, false);
+  }
+  for (const mimeType of ['image/jpeg', 'image/png', 'image/webp']) assert.equal(syllabusBody.safeParse({ ...body, mimeType }).success, true);
+});
+
+test('reads a syllabus photo through Gemini and validates its image bytes', async () => {
+  const oldFetch=globalThis.fetch, oldKey=process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY='test-key';
+  let request;
+  globalThis.fetch=async(url,options)=>{request={url,body:JSON.parse(options.body)};return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:'Unit 1: Binary search trees, insertion and deletion operations.'}]}}]})}};
+  try {
+    const png=Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),Buffer.from('photo-data')]);
+    const text=await extractSyllabusText({mimeType:'image/png',data:png.toString('base64')});
+    assert.match(text,/Binary search trees/);
+    assert.equal(request.body.contents[0].parts[1].inlineData.mimeType,'image/png');
+    await assert.rejects(extractSyllabusText({mimeType:'image/png',data:Buffer.from('not an image').toString('base64')}),e=>e.status===400);
+  } finally {
+    globalThis.fetch=oldFetch;
+    if(oldKey===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=oldKey;
   }
 });
 

@@ -15,7 +15,7 @@ export const syllabusBody = z.object({
   units: z.array(z.number().int().min(1).max(5)).min(1).max(5).transform(values => [...new Set(values)]).optional(),
   chapters: z.array(z.string().trim().min(1).max(200)).min(1).max(50).optional(),
   fileName: z.string().min(1).max(200),
-  mimeType: z.enum(['application/pdf', 'text/plain']),
+  mimeType: z.enum(['application/pdf', 'text/plain', 'image/jpeg', 'image/png', 'image/webp']),
   data: z.string().min(1).max(7_000_000).regex(/^[A-Za-z0-9+/]+={0,2}$/),
   totalMarks: z.number().int().min(1).max(1000),
   count: z.number().int().min(0).max(100),

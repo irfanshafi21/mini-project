@@ -101,6 +101,10 @@ textarea { resize: vertical; }
 .upload-icon { font-size: 27px; color: #b38d56; }
 .upload-zone input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
 .upload-zone:focus-within { outline: 3px solid #4599dc; }
+.syllabus-photo-preview { display: flex; align-items: center; gap: 14px; padding: 12px 16px; margin: 0 0 18px; border: 1px solid #d6e3ed; border-radius: 10px; background: #f7fafc; }
+.syllabus-photo-preview img { width: 72px; height: 72px; object-fit: cover; border-radius: 7px; border: 1px solid #d6e3ed; }
+.syllabus-photo-preview .muted { flex: 1; }
+@media (max-width: 560px) { .syllabus-photo-preview { align-items: flex-start; flex-wrap: wrap; } .syllabus-photo-preview .muted { flex-basis: calc(100% - 95px); } }
 .dragging, .has-file { background: #edf6fd; border-color: #7aaed1; }
 .generation-status { display: flex; gap: 12px; align-items: center; margin-top: 20px; font-size: 13px; color: #648eac; }
 .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #cfe4f4; border-top-color: #4387b9; animation: spin 1s linear infinite; }

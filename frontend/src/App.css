@@ -2298,3 +2298,25 @@ textarea { resize: vertical; }
   .subject-question-table .filter-bar input { grid-column: auto; }
   .subject-related-actions { align-items: flex-start; flex-direction: column; }
 }
+
+/* Use a soft, even surface across archive and subject cards instead of a top stripe. */
+@media screen {
+  .stored-paper-card {
+    border-top: 1px solid #d5e3eb;
+    background: #f0f6fa;
+    box-shadow: 0 5px 16px #183b5607;
+  }
+  .stored-paper-card:hover {
+    border-color: #b9cfdd;
+    background: #e9f2f7;
+    box-shadow: 0 11px 24px #183b560d;
+  }
+  .subject-directory .subject-card {
+    background: #f0f6fa;
+    box-shadow: 0 5px 16px #183b5607;
+  }
+  .subject-directory .subject-card:hover {
+    background: #e9f2f7;
+    box-shadow: 0 11px 24px #183b560d;
+  }
+}

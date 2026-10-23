@@ -31,7 +31,7 @@ export async function extractSyllabusText(body) {
     const { PDFParse } = await import('pdf-parse');
     const parser = new PDFParse({data:new Uint8Array(bytes)});
     try { text = (await parser.getText()).text; }
-    catch { throw new HttpError(400,'Cannot read this PDF. Use a text-based PDF or TXT syllabus.'); }
+    catch { throw new HttpError(400,'Could not extract syllabus text from this PDF. If it is scanned, upload a clear page photo (JPG, PNG or WebP); otherwise use a readable PDF/TXT.'); }
     finally { await parser.destroy(); }
   } else if (body.mimeType === 'text/plain') text=bytes.toString('utf8');
   else if (['image/jpeg', 'image/png', 'image/webp'].includes(body.mimeType)) {
@@ -78,7 +78,14 @@ export async function extractSyllabusText(body) {
     text = data.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('\n') || '';
   }
   else throw new HttpError(400, 'Upload a valid PDF, TXT or syllabus image up to 5 MB.');
-  if(text.trim().length<30 || text.length>100000) throw new HttpError(400,'Upload readable syllabus text between 30 and 100,000 characters.');
+  const readableLength=text.trim().length;
+  if(readableLength<30) {
+    if(body.mimeType === 'application/pdf') throw new HttpError(400,'No readable syllabus text was extracted from this PDF. It may be scanned; upload a clear page photo (JPG, PNG or WebP) or a text-based PDF.');
+    if(body.mimeType === 'text/plain') throw new HttpError(400,`This TXT file contains only ${readableLength} readable characters. Add the syllabus topic lines and try again (minimum 30 characters).`);
+    if(body.mimeType.startsWith('image/')) throw new HttpError(400,'Gemini could not read enough syllabus text from this photo. Upload a clear, well-lit image with the syllabus text filling the frame, or use a text-based PDF/TXT.');
+    throw new HttpError(400,'No readable syllabus text was found. Upload a text-based PDF/TXT or a clear syllabus photo.');
+  }
+  if(text.length>100000) throw new HttpError(400,'The extracted syllabus is over 100,000 characters. Upload a smaller file or select a shorter syllabus document.');
   return text;
 }
 const looksStructured = text => /```|\b(function|class|return|printf|print|console\.|int\s+\w+|public\s+static)\b|(?:\b[a-z_]\w*\s*=\s*[^=]+)|(?:\d+(?:\.\d+)?\s*[=<>+*/^%≤≥≠-]\s*\d)|(?:\b[a-z]\s*[=<>+*/^≤≥≠]\s*[a-z0-9]\b)|(?:\b[a-z]\s*-\s*[a-z0-9]\b)/i.test(text);

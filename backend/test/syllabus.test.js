@@ -42,6 +42,21 @@ test('reads a syllabus photo through Gemini and validates its image bytes', asyn
   }
 });
 
+test('reports actionable messages when syllabus extraction returns too little text', async () => {
+  const oldFetch=globalThis.fetch,oldKey=process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY='unit-test-key';
+  globalThis.fetch=async()=>({ok:true,json:async()=>({candidates:[{content:{parts:[{text:'Unit 1: AI'}]}}]})});
+  try {
+    const png=Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),Buffer.from('photo-data')]);
+    await assert.rejects(extractSyllabusText({mimeType:'image/png',data:png.toString('base64')}),/could not read enough syllabus text.*clear, well-lit image/i);
+    await assert.rejects(extractSyllabusText({...body,data:Buffer.from('Unit 1: AI').toString('base64')}),/TXT file contains only 10 readable characters/i);
+    await assert.rejects(extractSyllabusText({...body,mimeType:'application/pdf',data:Buffer.from('%PDF-1.7').toString('base64')}),/Could not extract syllabus text from this PDF.*If it is scanned/i);
+  } finally {
+    globalThis.fetch=oldFetch;
+    if(oldKey===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=oldKey;
+  }
+});
+
 test('syllabus generation is restricted to the selected units',async()=>{
  const syllabus='Unit 1: Binary search trees and AVL rotations.\nUnit 2: Bayes theorem and conditional probability.\nUnit 3: K-means clustering and centroid updates.';
  const input={...body,data:Buffer.from(syllabus).toString('base64'),units:[2],totalMarks:5,count:1,markCounts:{5:1}};

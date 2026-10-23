@@ -323,8 +323,14 @@ async function generateQuestionsWithProvider({ body, text, slots, bankQuestions,
   // Small structured-output batches limit truncation risk for larger papers.
   const batchSize = provider === 'gemini' && slots.length > 10 ? 10 : slots.length;
   const generated = [];
-  for (let offset = 0; offset < plannedSlots.length; offset += batchSize) {
-    let pendingBatch = plannedSlots.slice(offset, offset + batchSize);
+  const batches = Array.from({ length: Math.ceil(plannedSlots.length / batchSize) }, (_, index) =>
+    plannedSlots.slice(index * batchSize, (index + 1) * batchSize));
+  // Run a small number of independent Gemini batches together. Sequential
+  // requests made large papers take one full model round trip per 10 questions.
+  const concurrency = provider === 'gemini' ? 3 : 1;
+  for (let offset = 0; offset < batches.length; offset += concurrency) {
+    const batchResults = await Promise.all(batches.slice(offset, offset + concurrency).map(async initialBatch => {
+    let pendingBatch = initialBatch;
     let accepted = [];
     let attempts = 0;
     let failures = [];
@@ -408,7 +414,9 @@ async function generateQuestionsWithProvider({ body, text, slots, bankQuestions,
         throw new HttpError(502, `Could not connect to ${providerName(provider)}. Check the service and try again.`);
       } finally { clearTimeout(timeout); }
     }
-    generated.push(...accepted);
+    return accepted;
+    }));
+    generated.push(...batchResults.flat());
   }
   const wholePaperFailures = checkQuestions(generated, plannedSlots.map((slot, index) => ({ ...slot, difficulty: generated[index]?.difficulty || slot.difficulty })), topics, body, selectedUnits);
   if (wholePaperFailures.length) throw new HttpError(502, `${providerName(provider)} returned questions that failed quality checks: ${wholePaperFailures.slice(0, 4).join(' ')}`);

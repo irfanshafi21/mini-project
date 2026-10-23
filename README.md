@@ -1016,7 +1016,7 @@ Python trainers and seed datasets are in `backend/ml/`. The topic and Bloom clas
 | Saved-paper retrieval | Historical unsaved papers cannot be reconstructed automatically. |
 | Responsive academic UI | No application authentication/role-permission system is included. |
 
-Gemini generation depends on the configured provider quota, network and API key. Current application bounds still include **50 questions**, **1,000 marks**, a **5 MB upload**, available topic/evidence coverage and the historical **20% repeat budget**, rounded down.
+Gemini generation depends on the configured provider quota, network and API key. For larger syllabus papers, Gemini handles groups of up to ten questions with at most three groups running concurrently; image uploads require an additional Gemini transcription request before question generation. The backend records preparation, generation and persistence durations in its server log to help diagnose slow runs. Current application bounds still include **50 questions**, **1,000 marks**, a **5 MB upload**, available topic/evidence coverage and the historical **20% repeat budget**, rounded down.
 
 ## Moving to the college server
 

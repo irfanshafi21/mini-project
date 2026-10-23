@@ -167,6 +167,23 @@ test('Gemini sends a backend-held key and schema-constrained syllabus prompt', a
   }
 });
 
+test('Gemini starts at most three large-paper batches concurrently', async () => {
+  const oldFetch=globalThis.fetch,oldKey=process.env.GEMINI_API_KEY,oldFallback1=process.env.GEMINI_API_KEY_FALLBACK_1,oldFallback2=process.env.GEMINI_API_KEY_FALLBACK_2;
+  process.env.GEMINI_API_KEY='unit-test-key';delete process.env.GEMINI_API_KEY_FALLBACK_1;delete process.env.GEMINI_API_KEY_FALLBACK_2;
+  let active=0,maxActive=0,calls=0;
+  globalThis.fetch=async()=>{active++;calls++;maxActive=Math.max(maxActive,active);await new Promise(resolve=>setTimeout(resolve,15));active--;return {ok:false,status:400,json:async()=>({error:{message:'test stop'}})}};
+  try {
+    await assert.rejects(generateGeminiQuestions({body:{...body,questionStyle:'THEORY'},text:`Unit 1: ${topic}.`,slots:Array.from({length:31},(_,i)=>({...slots[0],bloomLevel:['K1','K2','K3','K4','K5','K6'][i%6]}))}));
+    assert.equal(calls,3);
+    assert.equal(maxActive,3);
+  } finally {
+    globalThis.fetch=oldFetch;
+    if(oldKey===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=oldKey;
+    if(oldFallback1===undefined)delete process.env.GEMINI_API_KEY_FALLBACK_1;else process.env.GEMINI_API_KEY_FALLBACK_1=oldFallback1;
+    if(oldFallback2===undefined)delete process.env.GEMINI_API_KEY_FALLBACK_2;else process.env.GEMINI_API_KEY_FALLBACK_2=oldFallback2;
+  }
+});
+
 test('Gemini uses two fallback keys after retryable primary-key failures', async () => {
   const oldFetch=globalThis.fetch,oldKey=process.env.GEMINI_API_KEY,oldFallback1=process.env.GEMINI_API_KEY_FALLBACK_1,oldFallback2=process.env.GEMINI_API_KEY_FALLBACK_2,oldModel=process.env.GEMINI_MODEL;
   process.env.GEMINI_API_KEY='unit-test-primary';process.env.GEMINI_API_KEY_FALLBACK_1='unit-test-fallback-one';process.env.GEMINI_API_KEY_FALLBACK_2='unit-test-fallback-two';process.env.GEMINI_MODEL='gemini-3.8-flash';

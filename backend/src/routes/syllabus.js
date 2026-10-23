@@ -21,9 +21,11 @@ router.post('/papers/from-syllabus',async(req,res,next)=>{
   res.once('finish',finish);res.once('close',finish);next();
 });
 router.post('/papers/from-syllabus', async (req, res) => {
+  const startedAt=performance.now();
   const body = syllabusBody.parse(req.body);
   if(body.subject) await requireRegisteredSubject(body.subject);
   let syllabusHash;
+  let generationStartedAt=startedAt;
   {
     body.preparedText = await extractSyllabusText(body);
     syllabusHash = questionHash(body.preparedText);
@@ -32,7 +34,9 @@ router.post('/papers/from-syllabus', async (req, res) => {
     body.previousSignatures=history.map(r=>r.signature_hash).filter(Boolean);
     body.reviewedQuestions=(await query(`SELECT question FROM reviewed_examples WHERE review_source IN ('faculty','local') ORDER BY approved_at DESC LIMIT 500`)).rows.map(r=>r.question);
   }
+  generationStartedAt=performance.now();
   const result = await generateSyllabusPaper(body);
+  const generatedAt=performance.now();
   {
     const questions=result.paper.questions;
     const history=new Set(body.previousQuestionHashes), signatures=new Set(body.previousSignatures);
@@ -48,6 +52,7 @@ router.post('/papers/from-syllabus', async (req, res) => {
   }
   if(body.subject) await recordGeneratedPaper(body.subject, result.paper.questions.length, 'syllabus');
   const saved = await storePaper(body.subject, `${(body.subject || 'Unassigned').replaceAll('_',' ')} - Syllabus paper`, result.paper.questions, {...result.paper,source:'syllabus'});
+  console.info('[Syllabus paper timing]',JSON.stringify({preparationMs:Math.round(generationStartedAt-startedAt),generationMs:Math.round(generatedAt-generationStartedAt),persistenceMs:Math.round(performance.now()-generatedAt),totalMs:Math.round(performance.now()-startedAt),questionCount:result.paper.questions.length,photo:/^image\//.test(body.mimeType),provider:result.paper.model}));
   res.json({ ...result, ...saved, savedUnit: body.unit });
 });
 

@@ -1828,3 +1828,153 @@ textarea { resize: vertical; }
   .syllabus-file-preview { align-items: flex-start; flex-wrap: wrap; gap: 10px; }
   .syllabus-file-preview .text-button { margin-left: auto; }
 }
+
+/* Refined syllabus scope and paper setup controls. */
+@media screen {
+  .syllabus-unit-field {
+    display: grid;
+    gap: 13px;
+    margin: 18px 0 10px;
+    padding: 20px 22px;
+    border: 1px solid #d8e6ef;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #f5f9fc 0%, #fbfdff 100%);
+    box-shadow: inset 0 1px 0 #fff;
+  }
+  .syllabus-unit-field > span:first-child {
+    color: #244e6b;
+    font-size: 15px;
+    font-weight: 750;
+    letter-spacing: .01em;
+  }
+  .syllabus-unit-field .unit-picker { gap: 9px; }
+  .syllabus-unit-field .unit-picker label {
+    min-height: 48px;
+    padding: 10px 15px;
+    gap: 9px;
+    border: 1px solid #d7e4ed;
+    border-radius: 12px;
+    background: #fff;
+    color: #355a73;
+    font-size: 13px;
+    font-weight: 650;
+    box-shadow: 0 2px 5px #23486108;
+    transition: border-color .16s ease, background .16s ease, box-shadow .16s ease, transform .16s ease;
+  }
+  .syllabus-unit-field .unit-picker label:hover {
+    transform: translateY(-1px);
+    border-color: #9dbdd0;
+    box-shadow: 0 4px 10px #2348610d;
+  }
+  .syllabus-unit-field .unit-picker label:has(input:checked) {
+    border-color: #83afc8;
+    background: #eaf4fa;
+    color: #235f83;
+    box-shadow: inset 0 0 0 1px #c6dce9;
+  }
+  .syllabus-unit-field .unit-picker input {
+    width: 18px !important;
+    height: 18px;
+    min-height: 18px !important;
+    margin: 0;
+    accent-color: #2f789f;
+  }
+  .syllabus-unit-field > .small {
+    max-width: 760px;
+    color: #617b8e;
+    font-size: 12px;
+    line-height: 1.65;
+  }
+  .generation-panel form > p.small.muted {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin: 10px 2px 22px;
+    color: #698194;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .generation-panel form > p.small.muted::before {
+    content: "i";
+    display: grid;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    place-items: center;
+    border-radius: 50%;
+    background: #e8f2f8;
+    color: #286b93;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .question-style-field {
+    display: grid;
+    gap: 10px;
+    margin: 20px 0 22px;
+    padding: 20px 22px;
+    border: 1px solid #d8e6ef;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #f2f7fb 0%, #f8fbfd 100%);
+  }
+  .question-style-field > span:first-child {
+    color: #244e6b;
+    font-size: 14px;
+    font-weight: 750;
+  }
+  .question-style-field select {
+    min-height: 54px;
+    border-color: #d2e1eb;
+    border-radius: 12px;
+    background-color: #fff;
+    box-shadow: 0 2px 5px #23486108;
+  }
+  .question-style-field > .small {
+    color: #617b8e;
+    font-size: 12px;
+    line-height: 1.65;
+  }
+  .marks-entry-row { align-items: stretch; gap: 16px; margin: 18px 0 24px; }
+  .marks-entry-row > .field {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-content: center;
+    gap: 9px 12px;
+    min-width: 0;
+    padding: 16px 18px;
+    border: 1px solid #d9e5ed;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 3px 10px #23486108;
+  }
+  .marks-entry-row > .field > span {
+    grid-column: 1 / -1;
+    color: #365a73;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .marks-entry-row input {
+    min-height: 52px;
+    border-radius: 10px;
+    background: #fbfdff;
+    font-size: 19px;
+    font-weight: 700;
+  }
+  .marks-entry-row input.calculated-count {
+    border-color: #c9ddeb;
+    background: #edf5fa;
+    color: #286b93;
+  }
+  .syllabus-unit-field :focus-visible,
+  .question-style-field :focus-visible,
+  .marks-entry-row :focus-visible {
+    outline: 3px solid #5b9ac0;
+    outline-offset: 2px;
+  }
+}
+
+@media screen and (max-width: 560px) {
+  .syllabus-unit-field, .question-style-field { padding: 16px; border-radius: 13px; }
+  .syllabus-unit-field .unit-picker label { min-height: 44px; padding: 8px 11px; }
+  .marks-entry-row { gap: 10px; }
+  .marks-entry-row > .field { padding: 12px; }
+}

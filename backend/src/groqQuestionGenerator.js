@@ -70,7 +70,7 @@ function normalizeSubtopic(topic, candidate, question) {
     .sort((a, b) => b.score - a.score || a.index - b.index)[0]?.value || topic;
 }
 
-function schemaFor(topics, slots, body, compactShortAnswers = false, simplified = false) {
+function schemaFor(topics, slots, body, compactShortAnswers = false, simplified = false, maxQuestions = slots.length) {
   const assignedTopics = slots.map(slot => slot.sourceTopic).filter(Boolean);
   const scope = assignedTopics.length ? assignedTopics : topics;
   const subtopicNames = [...new Set(scope.flatMap(item => subtopicsFor(item.topic)))];
@@ -91,7 +91,7 @@ function schemaFor(topics, slots, body, compactShortAnswers = false, simplified 
   };
   return { type: 'object', additionalProperties: false, required: ['questions'], properties: {
     // Enforce the slot count so the API cannot silently return a shorter paper.
-    questions: { type: 'array', minItems: slots.length, maxItems: slots.length, items: { type: 'object', additionalProperties: false, required: compactShortAnswers ? ['subtopic', 'openingVerb', 'bloomLevel', 'questionCore', 'supportingMaterial'] : Object.keys(properties), properties } },
+    questions: { type: 'array', minItems: slots.length, maxItems: maxQuestions, items: { type: 'object', additionalProperties: false, required: compactShortAnswers ? ['subtopic', 'openingVerb', 'bloomLevel', 'questionCore', 'supportingMaterial'] : Object.keys(properties), properties } },
   } };
 }
 
@@ -282,7 +282,12 @@ async function callProvider(prompt, units, slots, body, questionCount, signal, p
     temperature: 0.2,
     reasoning_effort: 'low',
     max_completion_tokens: Math.min(16000, 2400 + questionCount * 320),
-    response_format: { type: 'json_schema', json_schema: { name: 'question_paper', strict: true, schema: schemaFor(units, slots, body) } },
+    // Short-answer papers do not need MCQ options or answer fields. Requiring
+    // those empty fields makes Groq reject otherwise valid structured output.
+    // Groq occasionally appends a few otherwise-valid items despite the exact
+    // count instruction. The consumer trims to the assigned slots and checks
+    // their Bloom level, difficulty, marks and syllabus scope before saving.
+    response_format: { type: 'json_schema', json_schema: { name: 'question_paper', strict: true, schema: schemaFor(units, slots, body, slots.every(slot => slot.marks !== 1), true, slots.length + 2) } },
   });
   let response, data = {}, lastNetworkError = false;
   const failedStatuses = [];

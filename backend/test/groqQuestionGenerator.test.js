@@ -36,11 +36,14 @@ test('Groq structured generation maps questions to the requested syllabus slot',
     assert.equal(result[0].difficulty, 'MEDIUM');
     assert.equal(request.response_format.type, 'json_schema');
     assert.equal(request.model, 'openai/gpt-oss-20b');
+    assert.equal(request.response_format.json_schema.schema.properties.questions.maxItems, slots.length + 2);
     assert.ok(request.messages[1].content.includes('Never write phrases'));
     assert.match(request.messages[1].content, /small synthetic dataset/);
     assert.match(request.messages[1].content, /labelled ASCII diagram/);
     assert.equal(typeof request.response_format.json_schema.schema.properties.questions.items.properties.supportingMaterial, 'object');
-    assert.ok(request.response_format.json_schema.schema.properties.questions.items.properties.openingVerb.enum.includes('Assess'));
+    assert.equal('options' in request.response_format.json_schema.schema.properties.questions.items.properties, false);
+    assert.equal('answer' in request.response_format.json_schema.schema.properties.questions.items.properties, false);
+    assert.equal(request.response_format.json_schema.schema.properties.questions.items.properties.openingVerb.type, 'string');
     assert.equal('topic' in request.response_format.json_schema.schema.properties.questions.items.properties, false);
     assert.ok(request.messages[1].content.includes(`Unit 1: ${topic}`));
     assert.equal('solution' in request.response_format.json_schema.schema.properties.questions.items.properties, false);

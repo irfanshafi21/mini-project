@@ -36,6 +36,7 @@ export async function transcribeSyllabusVisual(data, mimeType) {
     try {
       response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, {
         method: 'POST',
+        signal: AbortSignal.timeout(30000),
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': keys[keyIndex] },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [
@@ -45,7 +46,10 @@ export async function transcribeSyllabusVisual(data, mimeType) {
           generationConfig: { temperature: 0, maxOutputTokens: 8192 },
         }),
       });
-    } catch {
+    } catch (error) {
+      if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+        throw new HttpError(504, 'Reading the scanned syllabus timed out. Upload a text-based PDF or a clear syllabus photo and try again.');
+      }
       if (keyIndex + 1 === keys.length) throw new HttpError(503, 'Could not connect to Gemini to read the scanned syllabus. Check the network and try again.');
       continue;
     }

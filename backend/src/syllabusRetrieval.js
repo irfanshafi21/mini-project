@@ -39,17 +39,36 @@ function bm25Score(queryTokens, passageTokens, documentFrequency, count, average
 }
 
 export function retrieveSyllabusEvidence(text, topic, { limit = 2 } = {}) {
-  const passages = syllabusPassages(text).filter(item => item.unit === topic.unit);
-  if (!passages.length) return [String(topic.topic || '').slice(0, 700)].filter(Boolean);
-  const indexed = passages.map(item => ({ ...item, terms: tokens(item.text) }));
-  const documentFrequency = new Map();
-  for (const item of indexed) for (const token of new Set(item.terms)) documentFrequency.set(token, (documentFrequency.get(token) || 0) + 1);
-  const averageLength = indexed.reduce((sum, item) => sum + item.terms.length, 0) / indexed.length;
-  const queryTokens = [...new Set(tokens(topic.topic))];
-  const ranked = indexed.map((item, index) => ({ item, index, score: bm25Score(queryTokens, item.terms, documentFrequency, indexed.length, averageLength) }))
-    .filter(item => item.score > 0)
-    .sort((a, b) => b.score - a.score || a.index - b.index)
-    .slice(0, limit)
-    .map(({ item }) => item.text);
-  return ranked.length ? ranked : [String(topic.topic || '').slice(0, 700)].filter(Boolean);
+  return createSyllabusRetriever(text)(topic, { limit });
+}
+
+// Build the BM25 passage index once per paper instead of retokenizing the
+// entire uploaded syllabus for every requested question.
+export function createSyllabusRetriever(text) {
+  const units = new Map();
+  for (const passage of syllabusPassages(text)) {
+    if (!units.has(passage.unit)) units.set(passage.unit, []);
+    units.get(passage.unit).push({ ...passage, terms: tokens(passage.text) });
+  }
+  const indexes = new Map();
+  for (const [unit, passages] of units) {
+    const documentFrequency = new Map();
+    for (const item of passages) for (const token of new Set(item.terms)) documentFrequency.set(token, (documentFrequency.get(token) || 0) + 1);
+    indexes.set(unit, {
+      passages,
+      documentFrequency,
+      averageLength: passages.reduce((sum, item) => sum + item.terms.length, 0) / passages.length,
+    });
+  }
+  return (topic, { limit = 2 } = {}) => {
+    const index = indexes.get(topic.unit);
+    if (!index?.passages.length) return [String(topic.topic || '').slice(0, 700)].filter(Boolean);
+    const queryTokens = [...new Set(tokens(topic.topic))];
+    const ranked = index.passages.map((item, position) => ({ item, position, score: bm25Score(queryTokens, item.terms, index.documentFrequency, index.passages.length, index.averageLength) }))
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score || a.position - b.position)
+      .slice(0, limit)
+      .map(({ item }) => item.text);
+    return ranked.length ? ranked : [String(topic.topic || '').slice(0, 700)].filter(Boolean);
+  };
 }

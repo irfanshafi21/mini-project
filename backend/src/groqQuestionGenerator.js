@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { HttpError } from './errors.js';
 import { BLOOM_VERBS, classifyBloom, startsWithBloomVerb } from './blooms.js';
 import { classifySourceQuestionStyle, syllabusTopics } from './localModel.js';
-import { retrieveSyllabusEvidence } from './syllabusRetrieval.js';
+import { createSyllabusRetriever } from './syllabusRetrieval.js';
 
 const bloomLevels = ['K1', 'K2', 'K3', 'K4', 'K5', 'K6'];
 // Bloom level determines the displayed difficulty exactly.
@@ -290,6 +290,7 @@ async function callProvider(prompt, units, slots, body, questionCount, signal, p
     response_format: { type: 'json_schema', json_schema: { name: 'question_paper', strict: true, schema: schemaFor(units, slots, body, slots.every(slot => slot.marks !== 1), true, slots.length + 2) } },
   });
   let response, data = {}, lastNetworkError = false;
+  const providerStartedAt = performance.now();
   const failedStatuses = [];
   for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
     try {
@@ -325,6 +326,7 @@ async function callProvider(prompt, units, slots, body, questionCount, signal, p
   }
   const content = data.choices?.[0]?.message?.content;
   if (typeof content !== 'string') throw new HttpError(502, 'Groq returned an empty question response. Try again.');
+  console.info('[Question batch timing]', JSON.stringify({ provider: 'groq', model, questionCount, durationMs: Math.round(performance.now() - providerStartedAt), promptTokens: data.usage?.prompt_tokens, completionTokens: data.usage?.completion_tokens }));
   return parseStructuredContent(content, provider, { doneReason: data.choices?.[0]?.finish_reason });
 }
 
@@ -353,22 +355,24 @@ async function generateQuestionsWithProvider({ body, text, slots, bankQuestions,
       assignments[slotIndex] = selectedUnits[(start + position) % selectedUnits.length];
     });
   });
+  const retrieveEvidence = createSyllabusRetriever(text);
   const plannedSlots = slots.map((slot, index) => {
     const unit = assignments[index];
     const unitTopics = topicsByUnit.get(unit);
     const position = unitPositions.get(unit) || 0;
     unitPositions.set(unit, position + 1);
     const sourceTopic = unitTopics[position % unitTopics.length];
-    return { ...slot, sourceTopic: { ...sourceTopic, evidence: retrieveSyllabusEvidence(text, sourceTopic) } };
+    return { ...slot, sourceTopic: { ...sourceTopic, evidence: retrieveEvidence(sourceTopic) } };
   });
-  // Small structured-output batches limit truncation risk for larger papers.
-  const batchSize = provider === 'gemini' && slots.length > 10 ? 10 : slots.length;
+  // Smaller Groq requests return sooner and isolate quality retries to only the
+  // affected slots; two requests in flight reduce total wait for large papers.
+  const batchSize = slots.length > 20 ? (provider === 'gemini' ? 10 : provider === 'groq' ? 20 : slots.length) : slots.length;
   const generated = [];
   const batches = Array.from({ length: Math.ceil(plannedSlots.length / batchSize) }, (_, index) =>
     plannedSlots.slice(index * batchSize, (index + 1) * batchSize));
   // Run a small number of independent Gemini batches together. Sequential
   // requests made large papers take one full model round trip per 10 questions.
-  const concurrency = provider === 'gemini' ? 3 : 1;
+  const concurrency = provider === 'gemini' ? 3 : provider === 'groq' ? 2 : 1;
   for (let offset = 0; offset < batches.length; offset += concurrency) {
     const batchResults = await Promise.all(batches.slice(offset, offset + concurrency).map(async initialBatch => {
     let pendingBatch = initialBatch;

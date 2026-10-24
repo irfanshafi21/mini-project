@@ -92,15 +92,15 @@ The landing page and workspace use the bundled **Noto Sans** font so the typogra
 
 ## Syllabus question styles
 
-When building a paper from an uploaded syllabus, choose the kind of questions the paper should contain:
+For every marks section with a non-zero question count, choose its own question style and allocate its questions across K1–K6. For example, a paper can use theory for its 1-mark section and numerical problems for its 2-mark section. The style and Bloom allocation are submitted with that section's marks count, so they do not unintentionally affect other sections.
 
 | Style | What it asks the generator to produce |
 | --- | --- |
 | **Theory only** | Conceptual questions grounded in the selected syllabus units. It filters out calculations and worked numerical exercises. |
 | **Sums / problem solving only** | Calculations, derivations, worked problems or other procedural questions when the selected units support them. |
-| **Mixed theory and problem solving** | A combination of conceptual and supported numerical/procedural questions. The generator asks Gemini for both when the syllabus contains suitable problem-solving material and the paper has room for at least two questions. |
+| **Mixed theory and problem solving** | Allows conceptual or supported numerical/procedural questions for that section, guided by the available syllabus material. |
 
-The selection is sent with syllabus-generation requests as `questionStyle` (`THEORY`, `PROBLEM_SOLVING` or `MIXED`). It applies to syllabus-based generation; question-bank and manual-selection papers keep their own question-selection flow. Unit selection still limits the source material. The generator excludes book/reference metadata and uses syllabus passages as evidence, so a textbook title or author is not treated as examinable content. If a syllabus unit contains no supported numerical material, the app should not invent a sum just to fill the selected style.
+The builder sends per-section settings as `questionStyles`, keyed by marks (for example, `{ "1": "THEORY", "2": "PROBLEM_SOLVING" }`), and Bloom counts as `bloomCounts`, also keyed by marks. The same section settings apply when selecting from the question bank; bank generation can only select question styles already present in the saved questions. Unit selection still limits syllabus source material. The generator excludes book/reference metadata and uses syllabus passages as evidence, so a textbook title or author is not treated as examinable content. If the selected syllabus has no supported numerical material, the app should not invent a sum just to fill the selected style.
 
 ```mermaid
 flowchart LR

@@ -1,6 +1,8 @@
 :root { font-family: "Noto Sans Local", "Segoe UI", Arial, sans-serif; color: #263f57; background: #fffaf4; line-height: 1.5; font-synthesis: none; color-scheme: light; }
 * { box-sizing: border-box; }
 body { margin: 0; }
+.app-crash-fallback { min-height: 100vh; display: grid; align-content: center; justify-items: start; gap: 14px; padding: 40px max(24px, calc((100vw - 720px) / 2)); background: #f3f7fa; color: #263f57; }
+.app-crash-fallback p { max-width: 560px; color: #70808c; }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; border: 0; }
 button:disabled { opacity: .5; cursor: not-allowed; }
@@ -2323,6 +2325,14 @@ textarea { resize: vertical; }
 
 /* Syllabus coverage summary: compact, readable counts by marks and detected unit. */
 .unit-coverage-panel { margin: 18px 0 24px; padding: 20px; background: #f8fbfd; }
+.section-style-intro { margin: -4px 0 14px; }
+.mark-section-config { margin: 18px 0; padding: 20px; border: 1px solid #d7e5f0; border-radius: 16px; background: #f8fbfd; }
+.mark-section-config-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.mark-section-config-heading h3 { margin: 4px 0 0; color: #244e6b; font-size: 18px; }
+.mark-section-config-heading h3 span { color: #688198; font-size: 14px; font-weight: 500; }
+.mark-section-config .question-style-field { margin: 0 0 14px; }
+.mark-section-config .bloom-allocation { margin: 0; }
+.mark-section-config .bloom-heading { margin-bottom: 14px; }
 .unit-coverage-panel .section-heading { align-items: flex-start; margin-bottom: 12px; }
 .unit-coverage-panel .section-heading h3 { margin: 0 0 6px; color: #244e6b; }
 .generated-style-summary { margin: 0 0 12px; text-transform: capitalize; }
@@ -2331,4 +2341,8 @@ textarea { resize: vertical; }
 .unit-coverage-panel thead th { background: #f0f6fa; color: #315d79; }
 .unit-coverage-panel tbody th { text-align: left; color: #315d79; }
 .unit-coverage-panel tbody tr:last-child th, .unit-coverage-panel tbody tr:last-child td { border-bottom: 0; }
+@media (max-width: 640px) {
+  .mark-section-config { padding: 14px; }
+  .mark-section-config-heading h3 { font-size: 16px; }
+}
 @media print { .unit-coverage-panel { display: none !important; } }

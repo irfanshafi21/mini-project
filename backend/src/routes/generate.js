@@ -35,8 +35,8 @@ router.post('/papers/generate', async (req, res) => {
   if (b.subtopic) add('subtopic = $?', b.subtopic);
 
   let { rows } = await query(`SELECT * FROM questions WHERE ${where.join(' AND ')}`, params);
-  if(b.questionStyle!=='MIXED') rows=rows.filter(row=>classifySourceQuestionStyle(row.text)===b.questionStyle);
-  if(!rows.length) throw new HttpError(409,`No ${b.questionStyle==='PROGRAMMING_SQL'?'programming or SQL':b.questionStyle==='PROBLEM_SOLVING'?'problem-solving':'theory'} questions match the selected subject, units, and topic.`);
+  if(b.questionStyles) rows=rows.filter(row=>!b.questionStyles[row.marks] || b.questionStyles[row.marks]==='MIXED' || classifySourceQuestionStyle(row.text)===b.questionStyles[row.marks] || b.questionStyles[row.marks]==='PROBLEM_SOLVING' && classifySourceQuestionStyle(row.text)==='PROGRAMMING_SQL');
+  if(!rows.length) throw new HttpError(409,'No saved questions match the selected marks-section styles. Add matching theory or problem-solving questions to the question bank.');
   if (!rows.length) throw new HttpError(404, 'No questions available for this unit/topic');
 
   let result;
@@ -55,6 +55,7 @@ router.post('/papers/generate', async (req, res) => {
       topic: b.topic ?? 'ALL',
       subtopic: b.subtopic ?? null,
       requestedMarks: b.totalMarks,
+      questionStyles:b.questionStyles,
       totalMarks: result.totalMarks,
       complete,
       targets: result.targets,

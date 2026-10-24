@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS questions (
   id          INTEGER GENERATED ALWAYS AS IDENTITY (START WITH 101) PRIMARY KEY,
-  unit        SMALLINT    NOT NULL CHECK (unit BETWEEN 1 AND 5),
+  unit        SMALLINT    NOT NULL CHECK (unit BETWEEN 1 AND 100),
   topic       TEXT        NOT NULL,
   subtopic    TEXT        NOT NULL,
   difficulty  TEXT        NOT NULL CHECK (difficulty IN ('EASY', 'MEDIUM', 'HARD')),
@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS questions (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Support unit numbers discovered from uploaded syllabi (including existing installs).
+ALTER TABLE questions DROP CONSTRAINT IF EXISTS questions_unit_check;
+ALTER TABLE questions ADD CONSTRAINT questions_unit_check CHECK (unit BETWEEN 1 AND 100);
 
 -- fast topic-wise search (the HashMap of the Java version)
 -- Safe migration: existing questions keep their data under GENERAL.

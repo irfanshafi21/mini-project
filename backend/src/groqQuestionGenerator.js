@@ -32,8 +32,8 @@ const questionStyleOf = question => classifySourceQuestionStyle(question.text);
 const normalize = value => String(value || '').toLowerCase().normalize('NFKC').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 function selectTopics(text, body) {
   const all = syllabusTopics(text);
-  const units = new Set(body.units || [1, 2, 3, 4, 5]);
-  let selected = all.filter(item => units.has(item.unit));
+  const units = body.units ? new Set(body.units) : null;
+  let selected = units ? all.filter(item => units.has(item.unit)) : all;
   if (body.chapters?.length) {
     const wanted = new Set(body.chapters.map(normalize));
     const found = new Set(selected.map(item => normalize(item.topic)));
@@ -341,8 +341,20 @@ async function generateQuestionsWithProvider({ body, text, slots, bankQuestions,
   const selectedUnits = [...new Set(topics.map(item => item.unit))];
   const topicsByUnit = new Map(selectedUnits.map(unit => [unit, topics.filter(item => item.unit === unit)]));
   const unitPositions = new Map(selectedUnits.map(unit => [unit, 0]));
+  const assignments = Array(slots.length);
+  const markGroups = new Map();
+  slots.forEach((slot, index) => {
+    if (!markGroups.has(slot.marks)) markGroups.set(slot.marks, []);
+    markGroups.get(slot.marks).push(index);
+  });
+  [...markGroups.entries()].sort(([left], [right]) => left - right).forEach(([marks, indexes], groupIndex) => {
+    const start = (marks + groupIndex) % selectedUnits.length;
+    indexes.forEach((slotIndex, position) => {
+      assignments[slotIndex] = selectedUnits[(start + position) % selectedUnits.length];
+    });
+  });
   const plannedSlots = slots.map((slot, index) => {
-    const unit = selectedUnits[index % selectedUnits.length];
+    const unit = assignments[index];
     const unitTopics = topicsByUnit.get(unit);
     const position = unitPositions.get(unit) || 0;
     unitPositions.set(unit, position + 1);

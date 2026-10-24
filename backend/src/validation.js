@@ -2,7 +2,7 @@ import { validateBloomPrefix } from './blooms.js';
 import { z } from 'zod';
 
 export const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'];
-export const TOTAL_UNITS = 5;
+export const TOTAL_UNITS = 100;
 
 // "data structures" -> "DATA_STRUCTURES"  (same rule as the Java CLI)
 export const normalizeName = (s) => s.trim().toUpperCase().replace(/\s+/g, '_');
@@ -69,7 +69,7 @@ export const paperBody = z
   .object({
     subject: z.preprocess(v => typeof v === "string" && !v.trim() ? undefined : v, name.optional()),
     unit: z.coerce.number().int().min(0).max(TOTAL_UNITS).default(0), // 0 = all units
-    units: z.array(z.number().int().min(1).max(TOTAL_UNITS)).min(1).max(5).transform(values => [...new Set(values)]).optional(),
+    units: z.array(z.number().int().min(1).max(TOTAL_UNITS)).min(1).max(TOTAL_UNITS).transform(values => [...new Set(values)]).optional(),
     topic: name.optional(),
     subtopic: name.optional(),
     totalMarks: z.coerce.number().int().min(1).max(1000),

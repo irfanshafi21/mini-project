@@ -2320,3 +2320,15 @@ textarea { resize: vertical; }
     box-shadow: 0 11px 24px #183b560d;
   }
 }
+
+/* Syllabus coverage summary: compact, readable counts by marks and detected unit. */
+.unit-coverage-panel { margin: 18px 0 24px; padding: 20px; background: #f8fbfd; }
+.unit-coverage-panel .section-heading { align-items: flex-start; margin-bottom: 12px; }
+.unit-coverage-panel .section-heading h3 { margin: 0 0 6px; color: #244e6b; }
+.generated-style-summary { margin: 0 0 12px; text-transform: capitalize; }
+.unit-coverage-panel table { width: 100%; border-collapse: collapse; text-align: center; font-size: 13px; }
+.unit-coverage-panel th, .unit-coverage-panel td { padding: 10px 12px; border-bottom: 1px solid #e2ebf1; white-space: nowrap; }
+.unit-coverage-panel thead th { background: #f0f6fa; color: #315d79; }
+.unit-coverage-panel tbody th { text-align: left; color: #315d79; }
+.unit-coverage-panel tbody tr:last-child th, .unit-coverage-panel tbody tr:last-child td { border-bottom: 0; }
+@media print { .unit-coverage-panel { display: none !important; } }

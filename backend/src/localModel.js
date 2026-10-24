@@ -4,6 +4,7 @@ import path from 'node:path';
 import { objectiveCandidates } from './objectiveQuestions.js';
 import { createHash, randomInt } from 'node:crypto';
 import { HttpError } from './errors.js';
+import { parseUnitNumber, unitHeadingPattern } from './unitNumbers.js';
 
 const activePath=process.env.MODEL_RUNTIME_DIR ? path.join(process.env.MODEL_RUNTIME_DIR,'active-model.json') : new URL('../.runtime/active-model.json',import.meta.url);
 let model=JSON.parse(fs.readFileSync(fs.existsSync(activePath)?activePath:new URL('../ml/model.json',import.meta.url),'utf8'));
@@ -117,7 +118,7 @@ const bibliographicMetadata=/^(?:author(?:s)?|publisher|edition|isbn|doi|publica
 const projectInstructionNoise=/\b(?:developer prompt|system prompt|user request|project requirements?|project instructions?|critical requirements|testing instructions?|regression test|test suite|error message|ui labels?|upload instructions?|prompt examples?|question paper generator|preserve existing features|do not (?:modify|change|remove|replace|assume|silently|blindly|invent)|run (?:the )?(?:existing )?(?:tests|test suite|build)|click to browse|drop your syllabus|choose your syllabus|generate (?:the )?question paper|add to question bank|the uploaded file|work directly on my existing|final verification and report|inspect the existing implementation first|implement subject-aware question generation|support question-type selection|generate genuine problem-solving questions|fix retrieval filtering and validation|prevent irrelevant questions|handle insufficient questions|inspect model training|add regression tests)\b/i;
 function isProjectInstruction(text){return projectInstructionNoise.test(String(text||'')) || /^(?:error|warning|note to (?:the )?(?:user|developer))\s*:/i.test(String(text||'').trim()) || /^(?:#{1,6}\s*)?(?:\d+\.\s*)?(?:inspect|implement|support|generate|fix|prevent|handle|run|add|report)\b/i.test(String(text||'').trim()) && /\b(?:existing implementation|question generation|question-type|engineering subjects|regression tests|the test suite|final verification|existing project)\b/i.test(String(text||''));}
 export function syllabusTopics(text) {
-  let unit=1, active=!/\bunit\s*[-:]?\s*(\d|IV|III|II|V|I)\b/i.test(text), skip=false;
+  let unit=1, active=!(String(text).split(/\r?\n/).some(line=>unitHeadingPattern.test(line))), skip=false;
   const topics=[],seen=new Set(),titles=[];let buffer=[];
   const flush=()=>{
     const paragraph=buffer.join('\n').trim();buffer=[];
@@ -134,8 +135,8 @@ export function syllabusTopics(text) {
   };
   for(const raw of text.split(/\r?\n/)){
     const line=raw.trim().replace(/^#{1,6}\s*/, '').replace(/\*\*([^*]+)\*\*/g,'$1').replace(/`([^`]+)`/g,'$1').replace(/^[-*•]\s+/, '');
-    const heading=line.match(/^unit\s*[-:]?\s*(\d|IV|III|II|V|I)\b\s*[:.\-–—]*/i);
-    if(heading){flush();unit=Number(heading[1])||({I:1,II:2,III:3,IV:4,V:5}[heading[1].toUpperCase()]);if(!unit||unit>5)unit=1;active=true;skip=false;const title=line.slice(heading[0].length).replace(/\s*[-–—]\s*\d+\s*(hours?|hrs?)\b/ig,'');if(title)titles.push({topic:title.replace(/[.]+$/, '').trim(),unit});continue;}
+    const heading=line.match(unitHeadingPattern);
+    if(heading){flush();const parsedUnit=parseUnitNumber(heading[1]);if(!parsedUnit)continue;unit=parsedUnit;active=true;skip=false;const title=line.slice(heading[0].length).replace(/\s*[-–—]\s*\d+\s*(hours?|hrs?)\b/ig,'');if(title)titles.push({topic:title.replace(/[.]+$/, '').trim(),unit});continue;}
     if(nonSyllabusSection.test(line) || /^(learning outcomes?|course objectives?|assessment scope|illustrative difficulty|suggested practical|overall course)/i.test(line)){flush();skip=true;continue;}
     if(bibliographicMetadata.test(line)){flush();continue;}
     if(isProjectInstruction(line)){flush();continue;}
@@ -146,7 +147,7 @@ export function syllabusTopics(text) {
   }
   flush();
   for(const title of titles) if(!topics.some(t=>t.unit===title.unit) && title.topic.length>=5) topics.push(title);
-  if(!topics.length)throw new HttpError(400,'No syllabus topics found. Include topic lines and optional Unit 1–5 headings.');
+  if(!topics.length)throw new HttpError(400,'No syllabus topics found. Include topic lines and optional numbered or Roman-numeral unit headings.');
   return topics;
 }
 

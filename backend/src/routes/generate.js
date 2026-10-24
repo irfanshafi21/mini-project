@@ -51,7 +51,7 @@ router.post('/papers/generate', async (req, res) => {
   const paper = {
       subject: paperSubject || 'UNASSIGNED',
       unit: b.unit || 'ALL',
-      units: b.units || (b.unit ? [b.unit] : [1,2,3,4,5]),
+      units: b.units || (b.unit ? [b.unit] : [...new Set(result.questions.map(question => question.unit))].sort((a,b) => a-b)),
       topic: b.topic ?? 'ALL',
       subtopic: b.subtopic ?? null,
       requestedMarks: b.totalMarks,

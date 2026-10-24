@@ -7,9 +7,37 @@ import { z } from 'zod';
 import { requireRegisteredSubject, recordGeneratedPaper } from './subjects.js';
 import { query } from '../db.js';
 import { normalizeName, objectiveFields, validateObjective } from '../validation.js';
-import { extractSyllabusText, questionHash, reuseSignature } from '../localModel.js';
+import { extractSyllabusText, questionHash, reuseSignature, syllabusTopics } from '../localModel.js';
+import { MAX_SYLLABUS_UNITS } from '../unitNumbers.js';
 
 const router = Router();
+const inspectedUploads = new Map();
+const uploadBody = z.object({
+  fileName: z.string().min(1).max(200),
+  mimeType: z.enum(['application/pdf', 'text/plain', 'image/jpeg', 'image/png', 'image/webp']),
+  data: z.string().min(1).max(7_000_000).regex(/^[A-Za-z0-9+/]+={0,2}$/),
+});
+const uploadKey = body => questionHash(`${body.mimeType}:${Buffer.from(body.data, 'base64').toString('hex')}`);
+function cacheInspectedUpload(key, text) {
+  const now = Date.now();
+  for (const [storedKey, value] of inspectedUploads) if (value.expiresAt <= now) inspectedUploads.delete(storedKey);
+  while (inspectedUploads.size >= 12) inspectedUploads.delete(inspectedUploads.keys().next().value);
+  inspectedUploads.set(key, { text, expiresAt: now + 15 * 60 * 1000 });
+}
+
+router.post('/syllabus/inspect', async (req, res) => {
+  const body = uploadBody.parse(req.body);
+  const text = await extractSyllabusText(body);
+  const topics = syllabusTopics(text);
+  const units = [...new Set(topics.map(item => item.unit))].filter(unit => unit >= 1 && unit <= MAX_SYLLABUS_UNITS).sort((a, b) => a - b);
+  cacheInspectedUpload(uploadKey(body), text);
+  res.json({
+    units,
+    topicCount: topics.length,
+    topicsByUnit: units.map(unit => ({ unit, count: topics.filter(item => item.unit === unit).length })),
+  });
+});
+
 // Serialize matching uploads in this server so concurrent requests share current history.
 const pending=new Map();
 router.post('/papers/from-syllabus',async(req,res,next)=>{
@@ -27,7 +55,10 @@ router.post('/papers/from-syllabus', async (req, res) => {
   let syllabusHash;
   let generationStartedAt=startedAt;
   {
-    body.preparedText = await extractSyllabusText(body);
+    const key = uploadKey(body);
+    const cached = inspectedUploads.get(key);
+    if (cached?.expiresAt > Date.now()) body.preparedText = cached.text;
+    else body.preparedText = await extractSyllabusText(body);
     syllabusHash = questionHash(body.preparedText);
     const history = (await query('SELECT question_hash,signature_hash FROM syllabus_history WHERE subject IS NOT DISTINCT FROM $1 AND syllabus_hash=$2',[body.subject || null,syllabusHash])).rows;
     body.previousQuestionHashes=history.map(r=>r.question_hash);
@@ -58,13 +89,13 @@ router.post('/papers/from-syllabus', async (req, res) => {
 
 const saveBody = z.object({
   subject: z.string().trim().min(1).max(60).transform(normalizeName),
-  unit: z.number().int().min(1).max(5).optional(),
+  unit: z.number().int().min(1).max(MAX_SYLLABUS_UNITS).optional(),
   questions: z.array(z.object({
     ...objectiveFields,
     topic: z.string().trim().min(1).max(200), subtopic: z.string().trim().min(1).max(200),
     text: z.string().trim().min(10).max(2000), marks: z.number().int().min(1).max(100),
     difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']),
-    unit: z.number().int().min(1).max(5).optional(),
+    unit: z.number().int().min(1).max(MAX_SYLLABUS_UNITS).optional(),
   }).superRefine(validateObjective)).min(1).max(100),
 });
 

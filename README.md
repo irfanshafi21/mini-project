@@ -355,7 +355,9 @@ For syllabus generation, Bloom level controls both the cognitive task and exact 
 
 ### 1. Extract the syllabus
 
-The backend reads text from a PDF or TXT file, or asks Gemini to transcribe syllabus photos (JPEG, PNG or WebP). If a PDF has little or no extractable text, Gemini reads the scanned PDF pages directly. It removes common headings and page formatting, and extracts topics with Unit 1–5 or Roman-numeral unit headings. Clear, high-resolution scans improve transcription. Each uploaded file is limited to **5 MB**, and extracted text must contain 30–100,000 characters. Visual transcription uses the configured Gemini API key before the regular question-generation request.
+The backend reads text from a PDF or TXT file, or asks Gemini to transcribe syllabus photos (JPEG, PNG or WebP). If a PDF has little or no extractable text, Gemini reads the scanned PDF pages directly. It detects numbered and Roman-numeral unit headings from the uploaded file, so the unit picker follows the syllabus (for example, six headings produce six choices). Clear, high-resolution scans improve transcription. Each uploaded file is limited to **5 MB**, and extracted text must contain 30–100,000 characters. The extracted syllabus is briefly cached after scanning so paper generation does not repeat the same PDF/OCR pass.
+
+For an uploaded syllabus, all detected units are included by default; you can select a subset. Questions are assigned across those selected units as evenly as the requested count permits, separately for each marks category. The preview includes a coverage table so you can see the actual unit counts for each question length. If a marks group contains fewer questions than the selected units, that group cannot cover every unit. The chosen theory/problem-solving style is sent to the generator and stored with the resulting paper.
 
 ### 2. Classify topics with trained ML
 

@@ -14,6 +14,7 @@ export const app = express();
 
 app.use(cors());           // lets the React frontend (another port) call this API
 app.use('/api/papers/from-syllabus', express.json({ limit: '7mb' }));
+app.use('/api/syllabus/inspect', express.json({ limit: '7mb' }));
 app.use('/api/papers/saved', express.json({ limit: '256kb' }));
 app.use('/api/model',express.json({limit:'256kb'}));
 app.use(express.json());

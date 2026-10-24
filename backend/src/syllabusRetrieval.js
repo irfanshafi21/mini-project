@@ -1,6 +1,5 @@
+import { parseUnitNumber, unitHeadingPattern } from './unitNumbers.js';
 const tokens = value => String(value || '').toLowerCase().normalize('NFKC').match(/[\p{L}\p{N}]+/gu) || [];
-const unitHeading = /^\s*unit\s*[-:]?\s*(1|2|3|4|5|I|II|III|IV|V)\b\s*[:.\-–—]?/i;
-const unitNumber = value => ({ I: 1, II: 2, III: 3, IV: 4, V: 5 }[String(value).toUpperCase()] || Number(value));
 const metadataLine = /^(?:recommended|suggested|prescribed|reference|text) *(?:books?|texts?|readings?|resources?)\b|^(?:authors?|publishers?|edition|isbn|doi)\s*[:\-]/i;
 
 export function syllabusPassages(text) {
@@ -9,10 +8,10 @@ export function syllabusPassages(text) {
   for (const raw of String(text || '').split(/\r?\n/)) {
     let line = raw.trim().replace(/^#{1,6}\s*/, '').replace(/^[-*•\d.)]+\s*/, '').replace(/\s+/g, ' ');
     if (!line) continue;
-    const heading = line.match(unitHeading);
+    const heading = line.match(unitHeadingPattern);
     if (heading) {
-      unit = unitNumber(heading[1]);
-      line = line.replace(unitHeading, '').trim();
+      unit = parseUnitNumber(heading[1]) || unit;
+      line = line.replace(unitHeadingPattern, '').trim();
       if (!line) continue;
     }
     if (metadataLine.test(line) || line.length < 12) continue;

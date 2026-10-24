@@ -6,6 +6,7 @@ import { HttpError } from '../errors.js';
 import { normalizeName, objectiveFields, validateObjective } from '../validation.js';
 import { toApi } from '../mapper.js';
 import { requireRegisteredSubject } from './subjects.js';
+import { MAX_SYLLABUS_UNITS } from '../unitNumbers.js';
 
 const router = Router();
 const subject = z.string().trim().min(1).max(60).transform(normalizeName);
@@ -18,7 +19,7 @@ const snapshotQuestion = z.object({
   // provenance rather than rejecting an otherwise editable question.
   bloomSource: z.preprocess(value => ['local-model','assigned','requested-llm','teacher-reviewed'].includes(value) ? value : undefined, z.enum(['local-model','assigned','requested-llm','teacher-reviewed']).optional()),
   text: z.string().trim().min(1).max(2000), marks: z.number().int().min(1).max(100),
-  unit: z.number().int().min(1).max(5), difficulty: z.enum(['EASY','MEDIUM','HARD']),
+  unit: z.number().int().min(1).max(MAX_SYLLABUS_UNITS), difficulty: z.enum(['EASY','MEDIUM','HARD']),
   topic: z.string().max(200), subtopic: z.string().max(200).optional(),
 }).superRefine(validateObjective);
 const snapshot = z.object({ subject:subject.optional(), title, questions: z.array(snapshotQuestion).min(1).max(100) });

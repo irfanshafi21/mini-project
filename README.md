@@ -31,6 +31,25 @@ flowchart LR
   D --> E[Save, print or download PDF]
 ~~~
 
+### Where do I go in the website?
+
+~~~mermaid
+flowchart LR
+  Welcome[Welcome page] -->|Open workspace| Home[Dashboard]
+  Home --> Create[Create a paper]
+  Home --> Bank[Question bank]
+  Home --> Subjects[Subjects]
+  Home --> Saved[Stored papers]
+  Create -->|Syllabus paper| Upload[Upload and inspect syllabus]
+  Create -->|Reuse saved questions| Select[Select bank questions]
+  Upload --> Configure[Choose units and paper settings]
+  Select --> Configure
+  Configure --> Preview[Review generated paper]
+  Preview --> Saved
+~~~
+
+The dashboard is the starting point. **Create a paper** has two routes: generate from a syllabus, or build from questions already saved in the question bank. A finished draft appears in the preview and is also saved under **Stored papers**.
+
 ### What can I do?
 
 | I want to… | The app lets me… |
@@ -43,33 +62,88 @@ flowchart LR
 ## How a paper is made
 
 ~~~mermaid
-flowchart TD
-  A[1. Upload syllabus] --> B[2. Read its units and topics]
-  B --> C[3. Choose units and question settings]
-  C --> D[4. Find matching syllabus lines]
-  D --> E[5. AI writes a question draft]
-  E --> F[6. Check count, marks, units and K levels]
-  F --> G[7. Review, edit and export]
-  F -. if a check fails .-> E
+flowchart TB
+  subgraph Browser[What you do in the website]
+    A[Choose PDF, TXT or syllabus photo] --> B[App reads the file and finds unit headings]
+    B --> C[Choose all units or selected units]
+    C --> D[Set marks, question style and K1 to K6 counts]
+    D --> E[Press Generate]
+    K[Review and edit the draft] --> L[Print or download PDF or TXT]
+    K --> M[Optionally add questions to the question bank]
+  end
+  subgraph Server[What the backend does]
+    F[Check the request and paper totals] --> G[Java plans marks and Bloom fills each slot]
+    G --> H[Match each slot to a unit and syllabus topic]
+    H --> I[Find supporting syllabus lines]
+    I --> J[Ask the configured AI provider to draft questions]
+    J --> N[Check the returned questions]
+    N --> O[Save the complete paper]
+  end
+  E --> F
+  O --> K
 ~~~
 
 The selected syllabus content guides question generation. The app skips book names, authors and other document details as exam topics. A blurry scan may be hard to read, so use a clear PDF or photo.
 
+### What happens at each stage?
+
+| Stage | In everyday words | What the app prepares |
+| --- | --- | --- |
+| **1. Inspect** | The website sends the selected file to the backend. | Readable text, detected unit numbers and topics. The unit choices are based on the uploaded syllabus. |
+| **2. Configure** | You choose units and paper requirements. | A list of question slots, each with its marks, question style, Bloom level and difficulty. |
+| **3. Find evidence** | The question maker looks up the assigned topic. | BM25 ranks passages from that unit so the prompt has relevant syllabus wording to use. |
+| **4. Draft** | Gemini or Groq writes the question text. | Structured question data, including the topic, subtopic and any needed problem data. |
+| **5. Check** | The backend checks the draft against the request. | Question count, marks, units, topic wording, Bloom level, question style, and objective-question fields. |
+| **6. Save and review** | The website displays the paper. | A stored-paper record, followed by the preview where you can review, edit and export. |
+
+If a generated batch fails its checks, the generator makes one correction attempt. If it still fails, the backend returns an error instead of saving an incomplete paper. Separate whole-paper checks can also stop saving when unit balance or the repeat limit is not met. A passed format check still cannot prove every technical fact or calculation, so a subject expert should review the paper.
+
 ## How the question maker works
 
 ~~~mermaid
-flowchart LR
-  S[Your syllabus] --> R[BM25 finds useful syllabus lines]
-  R --> P[Gemini or Groq writes a draft]
-  P --> V[App checks the requested format]
-  V --> Q[Draft paper for teacher review]
-  M[Small local ML classifiers] -. help label topics and Bloom tasks .-> V
+flowchart TB
+  Syllabus[Uploaded syllabus text] --> Parse[Split text into unit passages and topics]
+  Settings[Marks, styles and Bloom counts] --> Planner[Create exact question slots]
+  Parse --> Scope[Keep topics from selected units]
+  Planner --> Scope
+  Scope --> Search[BM25 ranks passages inside the assigned unit]
+  Search --> Prompt[Build one structured request using topic, evidence and slot rules]
+  Prompt --> Provider{Which provider is configured?}
+  Provider -->|Primary| AI[Gemini or Groq API]
+  Provider -. configured fallback if the primary service fails .-> Backup[Optional fallback API]
+  AI --> Normalize[Parse and normalize the response]
+  Backup --> Normalize
+  Normalize --> Review[Run question and whole-paper checks]
+  Review -->|Pass| Paper[Save and show the draft paper]
+  Review -->|Needs correction| Repair[Ask provider to correct the draft]
+  Repair --> Normalize
+  Local[Small local ML classifiers] -. assist topic and Bloom classification .-> Review
 ~~~
 
 - **BM25** is built-in text search. It finds syllabus lines related to a question topic.
 - **Gemini or Groq** is the online AI service that writes the question wording. Its key belongs in the backend settings, never in the website code or GitHub.
 - **Local ML** means small classifiers included in this project. They help label topic types and Bloom levels. They are not a local ChatGPT-style writer.
 - **Checks** look for things such as question count, marks, selected units, Bloom words, required numerical data and repeated wording. Passing these checks does not prove that every question is factually correct. A teacher still needs to review the paper.
+
+~~~mermaid
+flowchart LR
+  Request[Question slot] --> Prompt[Question prompt]
+  Evidence[Relevant lines from selected unit] --> Prompt
+  Topic[Exact syllabus topic and subtopic] --> Prompt
+  Bloom[Requested Bloom action and difficulty] --> Prompt
+  Style[Theory, problem or mixed style] --> Prompt
+  Prompt --> Draft[AI draft]
+  Draft --> Check1{Correct count and marks?}
+  Check1 -->|Yes| Check2{Right unit, topic and Bloom level?}
+  Check1 -->|No| Fix[Correction attempt]
+  Check2 -->|Yes| Check3{Matches style and has enough data?}
+  Check2 -->|No| Fix
+  Check3 -->|Yes| Accept[Include in paper]
+  Check3 -->|No| Fix
+  Fix --> Draft
+~~~
+
+This is why a Bloom label is only one part of the check. The question must also ask students to do the kind of thinking expected at that level, and its facts and task should stay connected to the selected syllabus topic.
 
 ### What does “training” mean here?
 
@@ -206,7 +280,7 @@ flowchart TD
   F --> G[Edit, save or download]
 ~~~
 
-The K counts for each marks section must add up to that section’s question count. The question marks must add up to the paper total. A paper can contain up to **100 questions** and **1,000 marks**. The syllabus repeat policy allows up to **20%** of earlier questions, rounded down.
+The K counts for each marks section must add up to that section’s question count. The question marks must add up to the paper total. When enough questions are requested, a marks section is checked for balanced unit coverage; its unit counts should differ by no more than one. A paper can contain up to **100 questions** and **1,000 marks**. The syllabus repeat policy allows up to **20%** of earlier questions, rounded down.
 
 ## Learn the project
 
@@ -266,10 +340,22 @@ erDiagram
   SAVED_PAPERS ||--o| AUTOMATIC_LEARNING_JOBS : may_queue
 ~~~
 
+~~~mermaid
+flowchart LR
+  File[Your syllabus file] -->|Sent for inspection and generation| Backend[Backend]
+  Backend -->|Extracted text kept briefly for the current flow| Cache[Short-lived server cache]
+  Backend -->|Topic evidence and question instructions| AI[Configured Gemini or Groq service]
+  Backend -->|Finished paper and questions| DB[(PostgreSQL)]
+  DB --> Stored[Stored papers]
+  DB --> Bank[Question bank only when you choose Add to question bank]
+  Browser[Website request] --> Backend
+  Secret[Provider API key stays in backend environment] --> Backend
+~~~
+
 - **Question bank:** questions that can be reused, grouped by subject and unit.
 - **Stored papers:** saved copies of complete papers. Saving a paper does not automatically add questions to the bank.
 - **Learning records:** review and training status; these are not bank questions.
-- **Syllabus file:** used while processing. The app does not keep a permanent syllabus library.
+- **Syllabus file:** sent to the backend for processing. Extracted text may be kept in a short-lived memory cache to avoid reading the same upload twice; the app does not keep a permanent syllabus library.
 
 ## If something goes wrong
 

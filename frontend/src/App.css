@@ -2461,6 +2461,16 @@ textarea { resize: vertical; }
 .stored-paper-card h2 { color: #204761; font-size: 21px; line-height: 1.35; }
 .stored-paper-card .paper-summary { border-color: #dce7ed; border-radius: 11px; background: #f5f9fb; }
 .stored-paper-card .stored-paper-actions { padding-top: 3px; }
+.workspace .stored-paper-card .stored-paper-actions > .primary {
+  color: #fff;
+  background: linear-gradient(135deg, #3486b5, #286b93);
+  box-shadow: 0 5px 14px #286b9322;
+}
+.workspace .stored-paper-card .stored-paper-actions > .primary:hover:not(:disabled),
+.workspace .stored-paper-card .stored-paper-actions > .primary:focus-visible {
+  color: #fff;
+  background: linear-gradient(135deg, #2e78a5, #225d82);
+}
 
 .workspace .panel, .generation-panel, .mark-section-config, .unit-coverage-panel {
   border-color: #dce6ed;

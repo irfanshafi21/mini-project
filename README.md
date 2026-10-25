@@ -8,7 +8,7 @@
 
 ### Build syllabus-grounded papers with AI and clear academic controls.
 
-A college examination workspace built with **React + Vite**, **Node.js + Express**, **Java**, **PostgreSQL**, a **Gemini API model**, and local ML classifiers for selected classification tasks.
+A college examination workspace built with **React + Vite**, **Node.js + Express**, **Java**, **PostgreSQL**, a configurable **Gemini or Groq API model**, BM25 syllabus retrieval, and local ML classifiers for selected classification tasks.
 
 ![React](https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white&style=for-the-badge)
 ![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white&style=for-the-badge)
@@ -18,13 +18,13 @@ A college examination workspace built with **React + Vite**, **Node.js + Express
 ![Python](https://img.shields.io/badge/Python-Model_training-3776ab?logo=python&logoColor=white&style=for-the-badge)
 ![ML](https://img.shields.io/badge/ML-Trained_locally-2b7884?style=for-the-badge)
 
-**React UI** → **Express API** → **Gemini + BM25 syllabus evidence + validation** → **Examination paper**
+**React UI** → **Express API** → **BM25 syllabus evidence + configured AI provider + validation** → **Examination paper**
 
 [Explore](#a-look-inside) · [Workflow](#the-workflow-at-a-glance) · [Install & run](#run-on-your-laptop) · [Learn from scratch](#learn-the-project-from-scratch) · [Architecture](#system-architecture) · [Code walkthrough](#code-walkthrough) · [Local ML](#how-our-own-model-works) · [Viva](#viva-and-project-explanation)
 
 </div>
 
-> **Question writing uses Gemini through the backend.** The API key stays in `backend/.env`; the React browser never receives it. Local BM25 retrieval, Bloom classification and quality checks continue to run in the backend. For a paid desktop product, keep a shared API key on a protected server rather than embedding it in the executable.
+> **Question writing uses the configured Gemini or Groq provider through the backend.** API keys stay in `backend/.env`; the React browser never receives them. Local BM25 retrieval, Bloom classification and structural quality checks continue to run in the backend. For a paid desktop product, keep API keys on a protected server rather than embedding them in the executable.
 
 <table>
 <tr>
@@ -326,10 +326,10 @@ For a bank-only paper, upload and retrieval are skipped: Express asks the Java p
 - Supported question values: **1, 2, 5, 10 and 16 marks**.
 - Enter the quantity required for each mark value. An unused category stays at **0**.
 - The question total updates live: two 2-mark questions and two 5-mark questions produce **4 questions**, worth **14 marks**.
-- The selected questions must equal the entered total marks. Papers support at most **50 questions** and **1,000 marks**.
+- The selected questions must equal the entered total marks. Papers support at most **100 questions** and **1,000 marks**.
 - With all category counts at zero, Java attempts an automatic denomination plan.
 - The final paper groups the selected mark values into consecutive sections, starting with **Section A**.
-- Each question shows its **Bloom level on the right**, such as K1 or K4. Section headings and paper totals retain marks. The PDF keeps this arrangement; TXT retains the K label without a per-question marks suffix. Browser printing uses print CSS and can wrap or paginate differently from the PDF.
+- Each question shows its **Bloom level and CO label on the right**, such as K1 · CO1 or K4 · CO3. The CO number follows the parsed syllabus unit number (a display convention, not a verified mapping to official course-outcome statements). Section headings and paper totals retain marks. The PDF keeps this arrangement; TXT retains the labels without a per-question marks suffix. Browser printing uses print CSS and can wrap or paginate differently from the PDF.
 - One-mark questions support **multiple choice** or **fill in the blanks**. Checked MCQs have four distinct options and one recorded correct answer.
 
 ## College Bloom mapping
@@ -365,17 +365,17 @@ Our multinomial Naive Bayes topic model learns four classes: **concept**, **proc
 
 A separate six-class Naive Bayes model learns **K1–K6** from complete question wording. It uses word and bigram context because opening verbs can overlap between Bloom levels.
 
-### 3. Generate with syllabus-grounded Gemini prompts
+### 3. Generate with syllabus-grounded API prompts
 
-Java plans marks and difficulty slots. For syllabus papers, users can select one or more units. The backend extracts the topics, restricts them to those units, and uses a local BM25 retriever to find the most relevant syllabus passage for each question slot. Gemini receives the exact topic, retrieved evidence, allowed subtopics, question format and required Bloom level as structured instructions. The API key stays on the backend; the browser never receives it.
+Java plans marks and difficulty slots. For syllabus papers, users can select one or more units. The backend extracts the topics, restricts them to those units, and uses a local BM25 retriever to find the most relevant syllabus passage for each question slot. The configured Gemini or Groq model receives the exact topic, retrieved evidence, allowed subtopics, question format and required Bloom level as structured instructions. Provider keys stay on the backend; the browser never receives them.
 
-The prompt maps K1 Remember and K2 Understand to EASY, K3 Apply and K4 Analyze to MEDIUM, and K5 Evaluate and K6 Create to HARD. Each level must change the actual reasoning task, not merely the opening verb. It uses original GATE-style precision as a quality reference: each stem names the task, uses clear technical terminology, and includes the assumptions, parameters, values and units needed for a unique answer. Numerical premises should be checked for sufficiency and consistency. MCQ distractors should be plausible and distinct. The generator must use only retrieved evidence from the selected syllabus, exclude course/document metadata, avoid generic filler and repeated questions, and never copy past GATE items. When a question truly depends on a visual or input data, Gemini may also return concise supporting material: a small labelled synthetic dataset for an ML/data task or a printable ASCII diagram for a diagram-dependent topic. The material is attached beneath the question stem and travels with previews, stored papers, TXT, print and PDF exports; it stays empty for questions that do not need it. The application checks the returned count, syllabus scope, question format, Bloom verb, numerical requirements and difficulty before saving a paper.
+The prompt maps K1 Remember and K2 Understand to EASY, K3 Apply and K4 Analyze to MEDIUM, and K5 Evaluate and K6 Create to HARD. Each level must change the actual reasoning task, not merely the opening verb. It uses original GATE-style precision as a quality reference: each stem names the task, uses clear technical terminology, and includes the assumptions, parameters, values and units needed for a unique answer. Numerical premises should be checked for sufficiency and consistency. MCQ distractors should be plausible and distinct. The generator must use only retrieved evidence from the selected syllabus, exclude course/document metadata, avoid generic filler and repeated questions, and never copy past GATE items. When a question truly depends on a visual or input data, the configured API model may also return concise supporting material: a small labelled synthetic dataset for an ML/data task or a printable ASCII diagram for a diagram-dependent topic. The material is attached beneath the question stem and travels with previews, stored papers, TXT, print and PDF exports; it stays empty for questions that do not need it. The application checks the returned count, syllabus scope, question format, Bloom verb, numerical requirements and difficulty before saving a paper.
 
-The local Naive Bayes models still classify topic families and Bloom tasks and support background review. They are not generative language models and do not replace Gemini's question-writing capability. Retrieval narrows the evidence supplied to Gemini; it cannot guarantee that every generated item is factually or pedagogically perfect, so teachers should review papers before use.
+The local Naive Bayes models still classify topic families and Bloom tasks and support background review. They are not generative language models and do not replace the API model's question-writing capability. Retrieval narrows the evidence supplied to the model; it cannot guarantee that every generated item is factually or pedagogically perfect, so teachers should review papers before use.
 
 ### GATE-referenced question quality
 
-GATE is used only as a **quality reference** for precise, technically rigorous assessment questions; the generator does not reproduce the official GATE exam pattern or copy past-paper questions. For every generated item, the prompt asks Gemini to:
+GATE is used only as a **quality reference** for precise, technically rigorous assessment questions; the generator does not reproduce the official GATE exam pattern or copy past-paper questions. For every generated item, the prompt asks the configured API model to:
 
 - Test one named concept or subtopic present in the selected syllabus evidence.
 - State exactly what students must determine, explain, compare, prove or construct, using the syllabus terminology.
@@ -386,6 +386,24 @@ GATE is used only as a **quality reference** for precise, technically rigorous a
 - Exclude questions about the syllabus document, course identity, coverage, year, author or reference books; these details are not examinable content.
 
 These prompt rules improve clarity and grounding but cannot guarantee factual correctness for every model response. Teachers should review the final paper, especially calculations and assumptions, before using it in an examination.
+
+### Strict checks before a syllabus paper is saved
+
+The backend validates each generated response and may ask the provider to repair a failed batch before returning an error. These safeguards improve consistency, but they are not proof that a question is academically correct.
+
+| Check | What the application enforces |
+| --- | --- |
+| **Requested structure** | The question count and each marks, difficulty and K-level slot must match the request. One-mark MCQs require four distinct options and one matching answer; fill-in questions require a blank and an answer. |
+| **Syllabus grounding** | Each question is tied to an exact topic from an included unit and must use its assigned syllabus subtopic. Course, author, book and document metadata are excluded as question content. |
+| **Bloom level** | The opening verb must be allowed for the selected K level. The prompt also requires the cognitive operation and toughness to match K1–K6; a verb check alone cannot establish that the reasoning truly meets the level. |
+| **Question style** | Theory, problem-solving, programming/SQL or mixed style is selected per marks section and checked against the question form. A numerical task needs a concrete calculation and usable values; the model also supplies a private answerability check that is removed before student display. |
+| **Long-answer shape** | Ten-mark questions require 3–4 labelled connected parts; sixteen-mark questions require 4–5. If part marks are supplied, they must add up to the question's marks. |
+| **Coverage and reuse** | The paper and each marks group are checked for balanced selected-unit coverage where the count permits (unit counts may differ by at most one). Syllabus history allows at most 20% repeats, rounded down. |
+| **Student-facing output** | Private answerability checks and answer keys are not included in the student paper. Question numbering, Bloom labels and CO-number labels carry through the preview and exports. |
+
+For clarity, the app currently prints `CO1`, `CO2`, and so on from the question's parsed syllabus unit number because that is the requested display convention. It does **not** infer or validate an institution's formal CO-to-unit mapping; faculty should supply or approve that mapping if formal course-outcome alignment is needed.
+
+**What remains a human review task:** confirm technical facts, assumptions, numerical answers, syllabus interpretation, Bloom cognitive demand and suitability for the course. A well-formed response and a model-written private check can still be wrong. Do not treat successful generation or a classifier score as a guarantee of correctness.
 
 ### 4. Control repetition
 
@@ -581,7 +599,7 @@ Read the data map from left to right: subjects provide a registered destination;
 | Python | Python 3; standard library only for classifier training |
 | VS Code | Convenient editor and terminals |
 
-PostgreSQL Stack Builder add-ons are optional. Gemini generation requires a Gemini API key from Google AI Studio and an internet connection. Local retrieval and classification do not replace the Gemini question-writing model.
+PostgreSQL Stack Builder add-ons are optional. API-based question generation requires the configured Gemini or Groq API key and an internet connection. Local retrieval and classification do not replace the question-writing model.
 
 ### 0. Get the source and check the tools
 
@@ -618,6 +636,7 @@ Edit `backend/.env`. Set your PostgreSQL connection string and paste your privat
 DATABASE_URL=postgresql://postgres:YOUR_DATABASE_PASSWORD@localhost:5432/questionbank
 PORT=4000
 AI_PROVIDER=gemini
+AI_FALLBACK_PROVIDER=
 GEMINI_API_KEY=your_primary_private_key
 GEMINI_API_KEY_FALLBACK_1=
 GEMINI_API_KEY_FALLBACK_2=
@@ -627,6 +646,8 @@ GEMINI_MODEL=gemini-3.8-flash
 Replace the sample database password and primary API key locally. If you have additional Gemini keys, enter them in `GEMINI_API_KEY_FALLBACK_1` and `GEMINI_API_KEY_FALLBACK_2`; leave unused fallback values blank. On authentication, quota/rate-limit, network, or provider-server errors, the backend tries the configured keys in order. The same model and prompt are used for every key. Gemini rate limits are project-scoped, so multiple keys from one Google project do not increase the same project rate limit; see the [official rate-limit documentation](https://ai.google.dev/gemini-api/docs/rate-limits). URL-encode special characters in the database URL. Keep `.env` private: never commit it or embed API keys in frontend code or an installer. Then run:
 
 To use Groq instead, set `AI_PROVIDER=groq`, add `GROQ_MODEL` and configure `GROQ_API_KEY`, `GROQ_API_KEY_FALLBACK_1` and `GROQ_API_KEY_FALLBACK_2`. Groq tries these keys one at a time in order and switches after authentication, quota/rate-limit, network or provider-server errors; it does not send duplicate requests simultaneously. Keys from the same Groq project may share quota limits, so fallback helps most when keys have independent quota or one key is invalid/temporarily unavailable. If all keys are unavailable, the app returns one clear provider error. Restart the backend after changing `.env`.
+
+To configure a second provider as a cross-provider fallback, set `AI_FALLBACK_PROVIDER=groq` (or `gemini`) and add at least one key for that provider. This fallback is attempted after a server-side provider failure; it is sequential, so the app does not send duplicate generation requests to both providers at once. Leave it blank if you only want one provider.
 
 ```powershell
 npm.cmd run db:init
@@ -1020,7 +1041,7 @@ Python trainers and seed datasets are in `backend/ml/`. The topic and Bloom clas
 | Saved-paper retrieval | Historical unsaved papers cannot be reconstructed automatically. |
 | Responsive academic UI | No application authentication/role-permission system is included. |
 
-Gemini generation depends on the configured provider quota, network and API key. For larger syllabus papers, Gemini handles groups of up to ten questions with at most three groups running concurrently; image uploads require an additional Gemini transcription request before question generation. The backend records preparation, generation and persistence durations in its server log to help diagnose slow runs. Current application bounds still include **50 questions**, **1,000 marks**, a **5 MB upload**, available topic/evidence coverage and the historical **20% repeat budget**, rounded down.
+API generation depends on the configured provider quota, network and API key. For larger syllabus papers, requests are batched and processed with bounded parallelism; image uploads may require an additional transcription request before question generation. The backend records preparation, generation and persistence durations in its server log to help diagnose slow runs. Current application bounds include **100 questions**, **1,000 marks**, a **5 MB upload**, available topic/evidence coverage and the historical **20% repeat budget**, rounded down.
 
 ## Moving to the college server
 

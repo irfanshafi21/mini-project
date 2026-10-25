@@ -36,6 +36,8 @@ test('Groq structured generation maps questions to the requested syllabus slot',
     assert.equal(result[0].difficulty, 'MEDIUM');
     assert.equal(request.response_format.type, 'json_schema');
     assert.equal(request.model, 'openai/gpt-oss-20b');
+    assert.match(request.messages[0].content,/every 10-mark question must contain 3–4 separate labelled subparts/);
+    assert.match(request.messages[0].content,/every 16-mark question must contain 4–5/);
     assert.equal(request.response_format.json_schema.schema.properties.questions.maxItems, slots.length + 2);
     assert.ok(request.messages[1].content.includes('Never write phrases'));
     assert.match(request.messages[1].content, /small synthetic dataset/);
@@ -47,7 +49,7 @@ test('Groq structured generation maps questions to the requested syllabus slot',
     assert.equal('options' in request.response_format.json_schema.schema.properties.questions.items.properties, false);
     assert.equal('answer' in request.response_format.json_schema.schema.properties.questions.items.properties, false);
     assert.equal(request.response_format.json_schema.schema.properties.questions.items.properties.openingVerb.type, 'string');
-    assert.equal(request.response_format.json_schema.schema.properties.questions.items.properties.questionCore.maxLength, 400);
+    assert.equal(request.response_format.json_schema.schema.properties.questions.items.properties.questionCore.maxLength, 800);
     assert.equal('topic' in request.response_format.json_schema.schema.properties.questions.items.properties, false);
     assert.ok(request.messages[1].content.includes(`Unit 1: ${topic}`));
     assert.equal('solution' in request.response_format.json_schema.schema.properties.questions.items.properties, false);
@@ -195,6 +197,7 @@ test('Gemini sends a backend-held key and schema-constrained syllabus prompt', a
     assert.match(url,/models\/gemini-3\.8-flash:generateContent$/);
     assert.equal(headers['x-goog-api-key'],'unit-test-key');
     assert.equal(request.generationConfig.responseMimeType,'application/json');
+    assert.match(request.systemInstruction.parts[0].text,/every 10-mark question must contain 3–4 separate labelled subparts/);
     const schema=request.generationConfig.responseJsonSchema.properties.questions;
     assert.equal(schema.minItems,1);
     assert.equal('enum' in schema.items.properties.subtopic,false);
@@ -203,7 +206,10 @@ test('Gemini sends a backend-held key and schema-constrained syllabus prompt', a
     assert.equal('answer' in schema.items.properties,false);
     assert.match(request.contents[0].parts[0].text,/K1 Remember/);
     assert.match(request.contents[0].parts[0].text,/K1\/K2 to EASY, K3\/K4 to MEDIUM, and K5\/K6 to HARD/);
-    assert.match(request.contents[0].parts[0].text,/10 marks asks for a substantial/);
+    assert.match(request.contents[0].parts[0].text,/10 marks requires a substantial response with 3–4 linked subparts/);
+    assert.match(request.contents[0].parts[0].text,/16 marks requires an integrated response with 4–5 linked subparts/);
+    assert.match(request.contents[0].parts[0].text,/put each subpart on a separate line and label them/);
+    assert.match(request.contents[0].parts[0].text,/the full response must require more than a single sentence/);
     assert.match(request.contents[0].parts[0].text,/authors, publishers, or books/);
     assert.match(request.contents[0].parts[0].text,/Use GATE as a reference for question quality only/);
     assert.match(request.contents[0].parts[0].text,/State all assumptions, definitions, input values, units, boundary conditions/);

@@ -1,6 +1,13 @@
 export const MAX_SYLLABUS_UNITS = 100;
 
-export const unitHeadingPattern = /^\s*unit\s*[-:]?\s*(\d+|[ivxlcdm]+)\b\s*[:.\-–—]?/i;
+// PDF text extraction can replace a dash with U+FFFD (�); syllabi also use
+// several dash/colon/period variants before a unit label. Accept these so
+// extraction noise does not collapse every section into Unit 1.
+const unitHeadingSeparators = String.raw`\s:;.,\-‐‑‒–—―−﹘﹣－�`;
+export const unitHeadingPattern = new RegExp(
+  String.raw`^\s*unit\b[${unitHeadingSeparators}]*([0-9]+|[ivxlcdm]+)\b[${unitHeadingSeparators}]*`,
+  'i',
+);
 
 export function parseUnitNumber(value) {
   const label = String(value || '').trim();
@@ -17,5 +24,14 @@ export function parseUnitNumber(value) {
     const next = values[roman[index + 1]] || 0;
     total += current < next ? -current : current;
   }
-  return total >= 1 && total <= MAX_SYLLABUS_UNITS ? total : undefined;
+  if (total < 1 || total > MAX_SYLLABUS_UNITS) return undefined;
+  let remaining = total;
+  let canonical = '';
+  for (const [value, numeral] of [[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']]) {
+    while (remaining >= value) {
+      canonical += numeral;
+      remaining -= value;
+    }
+  }
+  return canonical === roman ? total : undefined;
 }

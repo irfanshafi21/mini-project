@@ -26,13 +26,11 @@ function cacheInspectedUpload(key, text) {
 }
 
 router.post('/syllabus/inspect', async (req, res) => {
-  const startedAt=performance.now();
   const body = uploadBody.parse(req.body);
   const text = await extractSyllabusText(body);
   const topics = syllabusTopics(text);
   const units = [...new Set(topics.map(item => item.unit))].filter(unit => unit >= 1 && unit <= MAX_SYLLABUS_UNITS).sort((a, b) => a - b);
   cacheInspectedUpload(uploadKey(body), text);
-  console.info('[Syllabus scan timing]',JSON.stringify({durationMs:Math.round(performance.now()-startedAt),characters:text.length,unitCount:units.length,photo:/^image\//.test(body.mimeType)}));
   res.json({
     units,
     topicCount: topics.length,
@@ -65,8 +63,7 @@ router.post('/papers/from-syllabus', async (req, res) => {
     const history = (await query('SELECT question_hash,signature_hash FROM syllabus_history WHERE subject IS NOT DISTINCT FROM $1 AND syllabus_hash=$2',[body.subject || null,syllabusHash])).rows;
     body.previousQuestionHashes=history.map(r=>r.question_hash);
     body.previousSignatures=history.map(r=>r.signature_hash).filter(Boolean);
-    const provider=(process.env.AI_PROVIDER || 'gemini').toLowerCase();
-    body.reviewedQuestions=['gemini','groq'].includes(provider)?[]:(await query(`SELECT question FROM reviewed_examples WHERE review_source IN ('faculty','local') ORDER BY approved_at DESC LIMIT 500`)).rows.map(r=>r.question);
+    body.reviewedQuestions=(await query(`SELECT question FROM reviewed_examples WHERE review_source IN ('faculty','local') ORDER BY approved_at DESC LIMIT 500`)).rows.map(r=>r.question);
   }
   generationStartedAt=performance.now();
   const result = await generateSyllabusPaper(body);

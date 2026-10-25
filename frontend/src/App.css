@@ -2346,3 +2346,18 @@ textarea { resize: vertical; }
   .mark-section-config-heading h3 { font-size: 16px; }
 }
 @media print { .unit-coverage-panel { display: none !important; } }
+
+/* Keep the unit identifier beside Bloom level without squeezing the question text. */
+.paper-questions > li { grid-template-columns: 38px minmax(0, 1fr) 82px !important; }
+.paper-questions > li > .paper-question-meta { grid-column: 3; grid-row: 1; display: flex; align-items: flex-start; justify-self: end; gap: 7px; white-space: nowrap; }
+.paper-questions .paper-unit { display: inline-flex; min-width: 27px; min-height: 22px; align-items: center; justify-content: center; padding: 2px 5px; border: 1px solid #d9e7f0; border-radius: 6px; background: #f1f7fb; color: #52748c; font-size: 11px; font-weight: 650; line-height: 1; }
+.paper-questions > li > .paper-question-meta > .paper-bloom { position: static; width: auto; margin: 2px 0 0; color: #24678f; font-size: 13px; line-height: 1.3; text-align: right; }
+@media (max-width: 900px) {
+  .paper-questions > li { grid-template-columns: 26px minmax(0, 1fr) 72px !important; }
+  .paper-questions > li > .paper-question-meta { gap: 6px; }
+}
+@media (max-width: 560px) {
+  .paper-questions > li { grid-template-columns: 22px minmax(0, 1fr) 60px !important; column-gap: 6px !important; }
+  .paper-questions .paper-unit { min-width: 24px; min-height: 20px; padding: 2px 4px; font-size: 10px; }
+  .paper-questions > li > .paper-question-meta > .paper-bloom { font-size: 12px; }
+}

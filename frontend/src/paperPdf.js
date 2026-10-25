@@ -1,6 +1,8 @@
 import { plainText, questionBlocks, bloomLabel } from './paperText.js'
 import notoSansUrl from './assets/NotoSans-Regular.ttf?url'
 
+const pdfText = value => plainText(value).replace(/[−–—]/g, '-')
+
 let fontPromise
 async function fontData() {
   fontPromise ||= fetch(notoSansUrl).then(async r=>{
@@ -32,15 +34,15 @@ export async function createPaperPdf(paper, fontBase64) {
   } else {
     doc.setFont('helvetica', 'normal')
   }
-  const title=plainText(paper.title || 'Question paper'), subject=plainText((paper.subject || 'GENERAL').replaceAll('_',' '))
+  const title=pdfText(paper.title || 'Question paper'), subject=pdfText((paper.subject || 'GENERAL').replaceAll('_',' '))
   doc.setProperties({title,subject,creator:'Question Bank'})
   let y=25,number=0
-  const questionX=34,questionWidth=142,boxX=34,boxWidth=148,boxTextX=38,boxTextWidth=140
+  const questionX=34,questionWidth=136,boxX=34,boxWidth=148,boxTextX=38,boxTextWidth=140
   function page() {doc.addPage();y=20;doc.setFont(bodyFont,'normal');doc.setFontSize(9);doc.setTextColor(90,110,130);doc.text('QUESTION PAPER - CONTINUED',20,y);y+=12}
   function space(height) {if(y+height>275)page()}
   function lines(text,size=11,width=170,x=20,leading=5.8) {
     doc.setFont(bodyFont,'normal');doc.setFontSize(size);doc.setTextColor(30,46,60)
-    for(const line of doc.splitTextToSize(plainText(text),width)) {space(leading);doc.text(line,x,y);y+=leading}
+    for(const line of doc.splitTextToSize(pdfText(text),width)) {space(leading);doc.text(line,x,y);y+=leading}
   }
   function getQuestionBlocks(q) {
     return questionBlocks(q.text || `${q.topic || ''} - ${q.subtopic || ''}`)
@@ -49,7 +51,7 @@ export async function createPaperPdf(paper, fontBase64) {
     const available=boxWidth-8,gap=1.5
     doc.setFont(bodyFont,'normal');doc.setFontSize(8.5)
     const chips=relation.columns.map(text=>{
-      const wrapped=doc.splitTextToSize(text,available-5)
+      const wrapped=doc.splitTextToSize(pdfText(text),available-5)
       const width=Math.min(available,Math.max(10,...wrapped.map(line=>doc.getTextWidth(line)+5)))
       return {wrapped,width,height:Math.max(7,wrapped.length*3.7+3)}
     })
@@ -71,18 +73,18 @@ export async function createPaperPdf(paper, fontBase64) {
         })
       } else if(block.type==='code') {
         doc.setFont('courier','normal');doc.setFontSize(8.5)
-        const wrapped=doc.splitTextToSize(plainText(block.content),boxTextWidth)
+        const wrapped=doc.splitTextToSize(pdfText(block.content),boxTextWidth)
         height+=14+wrapped.length*5.2
       } else {
         doc.setFontSize(11)
         block.content.split(/\n+/).filter(Boolean).forEach(paragraph=>{
-          height+=doc.splitTextToSize(plainText(paragraph),questionWidth).length*6+2
+          height+=doc.splitTextToSize(pdfText(paragraph),questionWidth).length*6+2
         })
       }
     })
     if(q.questionType==='MCQ'&&Array.isArray(q.options)) {
       doc.setFontSize(10)
-      q.options.forEach((option,index)=>{height+=doc.splitTextToSize(`${String.fromCharCode(65+index)}. ${plainText(option)}`,questionWidth).length*5.5})
+      q.options.forEach((option,index)=>{height+=doc.splitTextToSize(`${String.fromCharCode(65+index)}. ${pdfText(option)}`,questionWidth).length*5.5})
     }
     return height+4
   }
@@ -90,11 +92,11 @@ export async function createPaperPdf(paper, fontBase64) {
     blocks.forEach(block=>{
       if(block.type==='schema') {
         block.relations.forEach(relation=>{
-          const layout=schemaCardLayout(relation),top=y-5,height=layout.height
-          space(height+6);doc.setDrawColor(217,229,237);doc.setFillColor(248,251,253);doc.roundedRect(boxX,top,boxWidth,height,2,2,'FD')
+          const layout=schemaCardLayout(relation),height=layout.height
+          space(height+6);const top=y-5;doc.setDrawColor(217,229,237);doc.setFillColor(248,251,253);doc.roundedRect(boxX,top,boxWidth,height,2,2,'FD')
           doc.setFillColor(237,245,250);doc.roundedRect(boxX+0.3,top+0.3,boxWidth-0.6,7,1.7,1.7,'F')
           doc.setDrawColor(217,229,237);doc.setLineWidth(0.25);doc.line(boxX,top+7.2,boxX+boxWidth,top+7.2)
-          doc.setFont('helvetica','bold');doc.setTextColor(49,95,128);doc.setFontSize(9);doc.text(relation.name,boxTextX,top+5)
+          doc.setFont('helvetica','bold');doc.setTextColor(49,95,128);doc.setFontSize(9);doc.text(pdfText(relation.name),boxTextX,top+5)
           let rowTop=top+9
           layout.rows.forEach((row,index)=>{
             let chipX=boxTextX
@@ -109,10 +111,10 @@ export async function createPaperPdf(paper, fontBase64) {
           y=top+height+8
         })
       } else if(block.type==='code') {
-        const label=plainText(block.label);doc.setFont('courier','normal');doc.setFontSize(8.5)
-        const wrapped=doc.splitTextToSize(plainText(block.content),boxTextWidth)
-        const top=y-5,height=11+wrapped.length*5.2
-        space(height+6);doc.setDrawColor(217,229,237);doc.setFillColor(248,251,253);doc.roundedRect(boxX,top,boxWidth,height,2,2,'FD')
+        const label=pdfText(block.label);doc.setFont('courier','normal');doc.setFontSize(8.5)
+        const wrapped=doc.splitTextToSize(pdfText(block.content),boxTextWidth)
+        const height=11+wrapped.length*5.2
+        space(height+6);const top=y-5;doc.setDrawColor(217,229,237);doc.setFillColor(248,251,253);doc.roundedRect(boxX,top,boxWidth,height,2,2,'FD')
         doc.setFillColor(237,245,250);doc.roundedRect(boxX+0.3,top+0.3,boxWidth-0.6,7,1.7,1.7,'F')
         doc.setDrawColor(217,229,237);doc.setLineWidth(0.25);doc.line(boxX,top+7.2,boxX+boxWidth,top+7.2)
         doc.setFont('helvetica','bold');doc.setTextColor(49,95,128);doc.setFontSize(8);doc.text(label.toUpperCase(),boxTextX,top+5)
@@ -140,7 +142,7 @@ export async function createPaperPdf(paper, fontBase64) {
     for(const q of questions) {
       const blocks=getQuestionBlocks(q)
       space(Math.max(18,estimateQuestionHeight(q,blocks)+2));doc.setFont(bodyFont,'normal');doc.setTextColor(30,46,60);doc.setFontSize(11)
-      doc.text(`${++number}.`,29,y,{align:'right'});doc.setFontSize(9);doc.text(bloomLabel(q),190,y,{align:'right'});doc.setFontSize(11);y+=2
+      doc.text(`${++number}.`,29,y,{align:'right'});doc.setFontSize(8);doc.setTextColor(82,109,126);doc.text(`CO${q.unit || '—'}`,177,y,{align:'center'});doc.setFontSize(9);doc.setTextColor(49,95,128);doc.text(bloomLabel(q),190,y,{align:'right'});doc.setFontSize(11);doc.setTextColor(30,46,60);y+=2
       drawQuestion(q,blocks)
       y+=4
     }
@@ -154,5 +156,5 @@ export async function createPaperPdf(paper, fontBase64) {
 }
 export async function downloadPaperPdf(paper) {
   const doc=await createPaperPdf(paper)
-  doc.save((plainText(paper.title || 'question-paper').replace(/[^a-z0-9 -]/gi,'').trim().slice(0,80) || 'question-paper')+'.pdf')
+  doc.save((pdfText(paper.title || 'question-paper').replace(/[^a-z0-9 -]/gi,'').trim().slice(0,80) || 'question-paper')+'.pdf')
 }

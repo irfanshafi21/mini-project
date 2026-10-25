@@ -2623,6 +2623,7 @@ textarea { resize: vertical; }
   .toast { z-index: 1000; color: #31536a; font-size: 14px; line-height: 1.45; bottom: calc(18px + env(safe-area-inset-bottom)); }
   .toast > span { flex: 1; min-width: 0; }
   .toast button { color: #31536a; }
-  .toast button:last-child { width: 36px; min-width: 36px; height: 36px; border-radius: 50%; color: #55758b; font-size: 23px; line-height: 1; }
+  .toast button:last-child { display: grid; place-items: center; width: 36px; min-width: 36px; height: 36px; border-radius: 50%; color: #55758b; font-size: 23px; line-height: 1; }
+  .toast button:last-child svg { display: block; }
   .toast button:last-child:hover { background: #edf4f8; }
 }

@@ -203,15 +203,15 @@ Read these files in order. Each one answers a simple question.
 
 | Step | Question | File |
 | --- | --- | --- |
-| **1. Website** | What do I see and click? | [App.jsx](frontend/src/App.jsx), [SyllabusPaper.jsx](frontend/src/SyllabusPaper.jsx) |
-| **2. Backend** | How does the website ask the server to work? | [app.js](backend/src/app.js), [syllabus route](backend/src/routes/syllabus.js) |
-| **3. Syllabus search** | How does it find useful lines? | [syllabusRetrieval.js](backend/src/syllabusRetrieval.js) |
-| **4. Question writing** | How are questions requested and checked? | [groqQuestionGenerator.js](backend/src/groqQuestionGenerator.js) |
-| **5. Paper plan** | How are marks and questions arranged? | [PaperEngine.java](core/src/PaperEngine.java), [javaCore.js](backend/src/javaCore.js) |
-| **6. Bloom levels** | How does it use K1–K6? | [blooms.js](backend/src/blooms.js), [bloom verbs](backend/ml/bloom-verbs.json) |
-| **7. Saved papers** | Where are papers and bank questions stored? | [schema.sql](backend/sql/schema.sql), [db.js](backend/src/db.js) |
-| **8. PDF output** | How is the PDF laid out? | [paperPdf.js](frontend/src/paperPdf.js) |
-| **9. Local learning** | How are the small classifiers updated? | [automaticLearning.js](backend/src/automaticLearning.js), [train_reviewed.py](backend/ml/train_reviewed.py) |
+| **1. Website** | What do I see and click? | [![App.jsx](https://img.shields.io/badge/App.jsx-Open-2f789e?style=for-the-badge)](frontend/src/App.jsx) [![SyllabusPaper.jsx](https://img.shields.io/badge/SyllabusPaper.jsx-Open-416f8b?style=for-the-badge)](frontend/src/SyllabusPaper.jsx) |
+| **2. Backend** | How does the website ask the server to work? | [![app.js](https://img.shields.io/badge/app.js-Open-2f789e?style=for-the-badge)](backend/src/app.js) [![syllabus.js](https://img.shields.io/badge/syllabus.js-Open-416f8b?style=for-the-badge)](backend/src/routes/syllabus.js) |
+| **3. Syllabus search** | How does it find useful lines? | [![syllabusRetrieval.js](https://img.shields.io/badge/syllabusRetrieval.js-Open-2f789e?style=for-the-badge)](backend/src/syllabusRetrieval.js) |
+| **4. Question writing** | How are questions requested and checked? | [![groqQuestionGenerator.js](https://img.shields.io/badge/groqQuestionGenerator.js-Open-2f789e?style=for-the-badge)](backend/src/groqQuestionGenerator.js) |
+| **5. Paper plan** | How are marks and questions arranged? | [![PaperEngine.java](https://img.shields.io/badge/PaperEngine.java-Open-2f789e?style=for-the-badge)](core/src/PaperEngine.java) [![javaCore.js](https://img.shields.io/badge/javaCore.js-Open-416f8b?style=for-the-badge)](backend/src/javaCore.js) |
+| **6. Bloom levels** | How does it use K1–K6? | [![blooms.js](https://img.shields.io/badge/blooms.js-Open-2f789e?style=for-the-badge)](backend/src/blooms.js) [![bloom-verbs.json](https://img.shields.io/badge/bloom--verbs.json-Open-416f8b?style=for-the-badge)](backend/ml/bloom-verbs.json) |
+| **7. Saved papers** | Where are papers and bank questions stored? | [![schema.sql](https://img.shields.io/badge/schema.sql-Open-2f789e?style=for-the-badge)](backend/sql/schema.sql) [![db.js](https://img.shields.io/badge/db.js-Open-416f8b?style=for-the-badge)](backend/src/db.js) |
+| **8. PDF output** | How is the PDF laid out? | [![paperPdf.js](https://img.shields.io/badge/paperPdf.js-Open-2f789e?style=for-the-badge)](frontend/src/paperPdf.js) |
+| **9. Local learning** | How are the small classifiers updated? | [![automaticLearning.js](https://img.shields.io/badge/automaticLearning.js-Open-2f789e?style=for-the-badge)](backend/src/automaticLearning.js) [![train_reviewed.py](https://img.shields.io/badge/train__reviewed.py-Open-416f8b?style=for-the-badge)](backend/ml/train_reviewed.py) |
 
 ### Project map
 

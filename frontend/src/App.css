@@ -2567,8 +2567,11 @@ textarea { resize: vertical; }
     cursor: pointer;
   }
   .question-card-open:focus-visible { outline-offset: 5px; }
-  .question-card-open .question-card-title { display: block; }
-  .question-card-open .question-tags { margin-top: 8px; padding-bottom: 4px; }
+  .question-card-open .question-card-title { display: block; max-height: 6.3em; margin: 10px 0 5px; overflow: hidden; mask-image: linear-gradient(to bottom, #000 78%, transparent); }
+  .question-card-open .question-options { display: none; }
+  .question-card-badges { display: inline-flex; align-items: center; gap: 6px; }
+  .question-card-badges .badge { border-radius: 999px; padding: 4px 8px; font-size: 10px; font-weight: 700; }
+  .question-card-badges .bloom-level-badge { background: #e8f2f8; color: #2d6687; }
   .question-card-open-hint { display: inline-flex; align-items: center; gap: 7px; margin-top: 9px; color: #5e89a4; font-size: 11px; font-weight: 700; }
   .question-card-open:hover .question-card-open-hint { color: #245f83; }
   .question-card-open-hint svg { transition: transform .16s ease; }

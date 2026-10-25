@@ -10,7 +10,12 @@
 
 **A plain-language guide to using the app and understanding how it works.**
 
-[Run it](#run-the-project) · [See the workflow](#how-a-paper-is-made) · [Understand the question maker](#how-the-question-maker-works) · [Study the code](#learn-the-project)
+<p align="center">
+  <a href="#run-the-project"><img src="https://img.shields.io/badge/Run%20it-Start%20here-2f789e?style=for-the-badge" alt="Run the project" /></a>
+  <a href="#how-a-paper-is-made"><img src="https://img.shields.io/badge/See%20the%20workflow-How%20it%20works-416f8b?style=for-the-badge" alt="See the workflow" /></a>
+  <a href="#how-the-question-maker-works"><img src="https://img.shields.io/badge/Question%20maker-How%20it%20works-416f8b?style=for-the-badge" alt="Understand the question maker" /></a>
+  <a href="#learn-the-project"><img src="https://img.shields.io/badge/Study%20the%20code-Learn%20the%20project-17364b?style=for-the-badge" alt="Study the code" /></a>
+</p>
 
 </div>
 
@@ -282,6 +287,10 @@ erDiagram
 
 **Upload → Choose → Generate → Review → Export**
 
-[Back to top](#top) · [Run the project](#run-the-project) · [Study the code](#learn-the-project)
+<p align="center">
+  <a href="#top"><img src="https://img.shields.io/badge/Back%20to%20top-↑-416f8b?style=for-the-badge" alt="Back to top" /></a>
+  <a href="#run-the-project"><img src="https://img.shields.io/badge/Run%20the%20project-Start%20here-2f789e?style=for-the-badge" alt="Run the project" /></a>
+  <a href="#learn-the-project"><img src="https://img.shields.io/badge/Study%20the%20code-Learn%20the%20project-17364b?style=for-the-badge" alt="Study the code" /></a>
+</p>
 
 </div>

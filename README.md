@@ -110,6 +110,17 @@ The unit choices come from headings found in the uploaded syllabus. The app acce
 
 The paper displays **CO1**, **CO2**, and similar labels beside Bloom levels, as requested. The number comes from the syllabus unit number. The app does not check whether this matches the college’s official Course Outcome mapping.
 
+### A look inside the app
+
+<table>
+  <tr>
+    <td align="center" width="50%"><img src="docs/images/readme-workspace.svg" alt="Question Bank workspace dashboard" width="100%" /><br /><b>Workspace</b></td>
+    <td align="center" width="50%"><img src="docs/images/readme-builder.svg" alt="Question paper builder with syllabus, units and Bloom levels" width="100%" /><br /><b>Paper builder</b></td>
+  </tr>
+</table>
+
+The paper preview below shows a **CO1** course-outcome label beside each Bloom level. In the real app, the CO number follows the detected syllabus unit.
+
 <img src="docs/images/readme-paper.svg" alt="Example question paper layout" width="100%" />
 
 ## Run the project

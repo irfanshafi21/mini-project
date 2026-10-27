@@ -2433,3 +2433,72 @@ textarea { resize: vertical; }
   .toast button:last-child svg { display: block; }
   .toast button:last-child:hover { background: #edf4f8; }
 }
+
+/* Accessibility and small-screen refinements. */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid #164f75;
+  outline-offset: 3px;
+}
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+button, a, input, select, textarea { touch-action: manipulation; }
+
+@media screen and (max-width: 760px) {
+  .sidebar {
+    position: static;
+    width: 100%;
+    min-height: 0;
+    align-items: stretch;
+    gap: 14px;
+    padding: 16px;
+  }
+  .sidebar .brand { margin: 0; }
+  .sidebar nav {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .sidebar .nav-item {
+    min-width: 0;
+    min-height: 48px;
+    justify-content: flex-start;
+    padding: 10px 12px;
+    white-space: normal;
+    text-align: left;
+  }
+  .main-shell { margin-left: 0; }
+  .workspace > main {
+    width: 100%;
+    max-width: none;
+    padding: 22px 16px 34px;
+  }
+  .workspace-topline { gap: 10px; }
+  .workspace-edition { text-align: right; }
+  .library, .generation-panel, .subject-directory, .subject-overview { min-width: 0; }
+  .table-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+  .question-detail-dialog, .editor-dialog { width: calc(100% - 24px); max-width: 600px; max-height: calc(100dvh - 24px); }
+  .text-button, .icon-button, .filter-reset, .pagination button,
+  .preview-actions button, .question-detail-actions button { min-height: 44px; }
+  .icon-button { min-width: 44px; }
+}
+
+@media screen and (max-width: 420px) {
+  .workspace > main { padding-inline: 12px; }
+  .sidebar { padding-inline: 12px; }
+  .workspace-topline { align-items: flex-start; font-size: 8px; }
+  .workspace-edition { max-width: 42%; font-size: 9px; }
+  .sidebar .nav-item { gap: 7px; padding-inline: 9px; font-size: 11px; }
+  .sidebar .nav-item svg { width: 17px; height: 17px; }
+  .filter-bar { min-width: 0; }
+  .paper-sheet { overflow-wrap: anywhere; }
+  .question-detail-meta { grid-template-columns: 1fr 1fr; }
+}
+
+@media (forced-colors: active) {
+  .nav-item.active, .source-card.selected, .subject-card:focus-visible,
+  .question-card:focus-within, .select-trigger:focus-visible {
+    border: 2px solid Highlight;
+  }
+  .skip-link { border: 1px solid ButtonText; }
+}

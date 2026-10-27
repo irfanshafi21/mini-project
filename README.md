@@ -73,7 +73,7 @@ flowchart TB
   end
   subgraph Server[What the backend does]
     F[Check the request and paper totals] --> G[Java plans marks and Bloom fills each slot]
-    G --> H[Match each slot to a unit and syllabus topic]
+    G --> H[Round-robin assign each slot to a selected unit and syllabus topic]
     H --> I[Find supporting syllabus lines]
     I --> J[Ask the configured AI provider to draft questions]
     J --> N[Check the returned questions]
@@ -124,6 +124,22 @@ flowchart TB
 - **Gemini or Groq** is the online AI service that writes the question wording. Its key belongs in the backend settings, never in the website code or GitHub.
 - **Local ML** means small classifiers included in this project. They help label topic types and Bloom levels. They are not a local ChatGPT-style writer.
 - **Checks** look for things such as question count, marks, selected units, Bloom words, required numerical data and repeated wording. Passing these checks does not prove that every question is factually correct. A teacher still needs to review the paper.
+
+### How unit distribution works: round robin
+
+Round robin means the planner takes turns through the selected units when assigning question slots. The AI receives each slot with its unit and topic already assigned; it does not choose a unit at random. Within a unit, the planner also moves through the topics found in that unit.
+
+~~~mermaid
+flowchart LR
+  Q1[Question 1] --> U1[Unit 1]
+  Q2[Question 2] --> U2[Unit 2]
+  Q3[Question 3] --> U3[Unit 3]
+  Q4[Question 4] --> U1
+  Q5[Question 5] --> U2
+  Q6[Question 6] --> U3
+~~~
+
+For example, with 3 selected units and 8 questions in one marks section, the cycle assigns **3 questions to Unit 1, 3 to Unit 2, and 2 to Unit 3**. The starting unit can shift between marks sections so sections do not all begin with the same unit. The app checks the finished paper and each marks section; where there are enough questions, unit counts must differ by no more than one. If the selected units or available topics cannot meet that balance, generation reports the issue instead of silently claiming even coverage.
 
 ~~~mermaid
 flowchart LR
